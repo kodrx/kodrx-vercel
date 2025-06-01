@@ -53,7 +53,7 @@
       nuevaRef.set(receta)
         .then(() => {
           const recetaID = nuevaRef.key;
-          const url = `https://kodrx.vercel.app/verificar.html?id=${recetaID}`;
+          const url = `https://kodrx-vercel.vercel.app/verificar.html?id=${recetaID}`;
           const qr = `https://api.qrserver.com/v1/create-qr-code/?data=${url}&size=200x200`;
 
           document.getElementById('resultado').innerHTML = `
