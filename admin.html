@@ -2,48 +2,47 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>KodRx | Panel de Verificación</title>
+  <title>KodRx | Verificación de Cédulas</title>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
   <style>
     body {
-      font-family: 'Segoe UI', sans-serif;
-      background: #f5f9f8;
-      color: #003366;
-      padding: 30px;
+      font-family: Arial, sans-serif;
+      background-color: #f6f6f6;
+      padding: 20px;
     }
-    h2 {
-      text-align: center;
-    }
-    .medico {
-      background: white;
+    .card {
+      background: #fff;
       border-radius: 10px;
       padding: 20px;
       margin: 20px auto;
-      max-width: 600px;
-      box-shadow: 0 0 15px rgba(0,0,0,0.1);
-    }
-    img.cedula {
-      max-width: 100%;
-      margin-top: 10px;
-      border-radius: 6px;
+      max-width: 500px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.05);
     }
     button {
-      background: #00b386;
+      background-color: #007070;
       color: white;
+      padding: 10px 20px;
+      margin-top: 10px;
       border: none;
-      padding: 10px 16px;
       border-radius: 6px;
       cursor: pointer;
-      font-weight: bold;
-      margin-top: 10px;
+    }
+    #successMsg {
+      background-color: #d4edda;
+      color: #155724;
+      padding: 10px;
+      border-radius: 6px;
+      margin-bottom: 20px;
+      display: none;
     }
   </style>
 </head>
 <body>
   <h2>Panel de Verificación de Cédulas</h2>
-  <div id="lista"></div>
+  <div id="successMsg">✅ Médico verificado con éxito</div>
+  <div id="usuariosContainer"></div>
 
   <script>
     const firebaseConfig = {
@@ -56,51 +55,40 @@
     const auth = firebase.auth();
     const db = firebase.database();
 
-    const correosAutorizados = [
-      "admin@kodrx.com",
-      "verificacion@kodrx.com"
-    ];
+    const correosPermitidos = ["verificacion@kodrx.com", "admin@kodrx.com"];
 
     auth.onAuthStateChanged(user => {
-      if (!user) {
+      if (!user || !correosPermitidos.includes(user.email)) {
+        alert("Acceso restringido.");
         window.location.href = "login.html";
-      } else if (!correosAutorizados.includes(user.email)) {
-        alert("⛔ Acceso restringido. No tienes permisos para ver esta página.");
-        window.location.href = "index.html";
-      } else {
-        cargarMedicos();
+        return;
       }
-    });
 
-    function cargarMedicos() {
-      const lista = document.getElementById("lista");
-      db.ref("usuarios").once("value").then(snapshot => {
-        lista.innerHTML = "";
+      db.ref("usuarios").orderByChild("verificado").equalTo(false).once("value", snapshot => {
+        const container = document.getElementById("usuariosContainer");
+        container.innerHTML = "";
         snapshot.forEach(child => {
           const data = child.val();
-          if (!data.verificado) {
-            const div = document.createElement("div");
-            div.className = "medico";
-            div.innerHTML = `
-              <strong>Nombre:</strong> ${data.nombre}<br>
-              <strong>Email:</strong> ${data.email}<br>
-              <strong>Cédula:</strong> ${data.cedula}<br>
-              <img src="${data.fotoCedula}" class="cedula" alt="Foto cédula"><br>
-              <button onclick="verificarMedico('${child.key}')">Marcar como verificado</button>
-            `;
-            lista.appendChild(div);
-          }
+          const uid = child.key;
+          const div = document.createElement("div");
+          div.className = "card";
+          div.innerHTML = `
+            <strong>Nombre:</strong> ${data.nombre}<br>
+            <strong>Email:</strong> ${data.email}<br>
+            <strong>Cédula:</strong> ${data.cedula}<br><br>
+            <button onclick="verificar('${uid}')">Marcar como verificado</button>
+          `;
+          container.appendChild(div);
         });
       });
-    }
+    });
 
-    function verificarMedico(uid) {
-      db.ref("usuarios/" + uid).update({
-        verificado: true
-      }).then(() => {
-        alert("✅ Médico verificado correctamente");
-        cargarMedicos();
-      });
+    function verificar(uid) {
+      firebase.database().ref("usuarios/" + uid + "/verificado").set(true)
+        .then(() => {
+          document.getElementById("successMsg").style.display = "block";
+          setTimeout(() => location.reload(), 1500);
+        });
     }
   </script>
 </body>

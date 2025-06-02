@@ -93,13 +93,23 @@
             });
           })
           .then(() => {
-            alert("✅ Registro exitoso. Espera la verificación manual.");
-            window.location.href = "index.html";
+            window.location.href = "verificacion_en_proceso.html";
           })
           .catch(err => alert("Error: " + err.message));
       } else {
         auth.signInWithEmailAndPassword(email, password)
-          .then(() => window.location.href = "index.html")
+          .then(cred => {
+            const uid = cred.user.uid;
+            return db.ref("usuarios/" + uid).once("value")
+              .then(snapshot => {
+                const datos = snapshot.val();
+                if (datos && datos.verificado) {
+                  window.location.href = "index.html";
+                } else {
+                  window.location.href = "verificacion_en_proceso.html";
+                }
+              });
+          })
           .catch(err => alert("Error: " + err.message));
       }
     };
