@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <title>KodRx | Emisión de Receta</title>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
   <style>
     body {
@@ -73,15 +74,21 @@
       messagingSenderId: "239675098141",
       appId: "1:239675098141:web:152ae3741b0ac79db7f2f4"
     };
-    firebase.initializeApp(firebaseConfig);
 
-  // Verificación de sesión
-  firebase.auth().onAuthStateChanged(function(user) {
-    if (!user) {
-      window.location.href = "login.html";
-    }
-  });
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
     const db = firebase.database();
+
+    let currentUser = null;
+
+    // Verifica sesión activa
+    auth.onAuthStateChanged(function(user) {
+      if (!user) {
+        window.location.href = "login.html";
+      } else {
+        currentUser = user;
+      }
+    });
 
     function guardarReceta() {
       const medico = document.getElementById('medico').value;
@@ -95,13 +102,20 @@
         return;
       }
 
+      if (!currentUser) {
+        alert("Usuario no autenticado.");
+        return;
+      }
+
       const receta = {
         medico,
         medicamento,
         dosis,
         duracion: dias,
         instrucciones,
-        fecha: new Date().toISOString()
+        fecha: new Date().toISOString(),
+        uid: currentUser.uid,
+        email: currentUser.email
       };
 
       const nuevaRef = db.ref('recetas').push();
