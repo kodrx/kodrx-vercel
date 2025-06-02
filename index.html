@@ -74,6 +74,15 @@
       appId: "1:239675098141:web:152ae3741b0ac79db7f2f4"
     };
     firebase.initializeApp(firebaseConfig);
+    <script>
+  firebase.auth().onAuthStateChanged(function(user) {
+    if (!user) {
+      // Redirige al login si no hay sesión activa
+      window.location.href = "login.html";
+    }
+  });
+</script>
+
     const db = firebase.database();
 
     function guardarReceta() {
