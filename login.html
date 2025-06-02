@@ -58,11 +58,18 @@
 
     let modoRegistro = true;
 
-    document.getElementById("toggleMode").onclick = () => {
+    const nombreInput = document.getElementById("nombre");
+    const cedulaInput = document.getElementById("cedula");
+    const toggle = document.getElementById("toggleMode");
+    const title = document.getElementById("formTitle");
+    const button = document.querySelector("button");
+
+    toggle.onclick = () => {
       modoRegistro = !modoRegistro;
-      document.getElementById("formTitle").textContent = modoRegistro ? "Registro Médico" : "Iniciar Sesión";
-      document.querySelectorAll("#nombre, #cedula").forEach(el => el.style.display = modoRegistro ? "block" : "none");
-      document.querySelector("button").textContent = modoRegistro ? "Registrarse" : "Iniciar sesión";
+      title.textContent = modoRegistro ? "Registro Médico" : "Iniciar Sesión";
+      nombreInput.style.display = cedulaInput.style.display = modoRegistro ? "block" : "none";
+      nombreInput.required = cedulaInput.required = modoRegistro;
+      button.textContent = modoRegistro ? "Registrarse" : "Iniciar sesión";
     };
 
     document.getElementById("authForm").onsubmit = (e) => {
@@ -71,8 +78,8 @@
       const password = document.getElementById("password").value;
 
       if (modoRegistro) {
-        const nombre = document.getElementById("nombre").value;
-        const cedula = document.getElementById("cedula").value;
+        const nombre = nombreInput.value;
+        const cedula = cedulaInput.value;
 
         auth.createUserWithEmailAndPassword(email, password)
           .then(cred => {
