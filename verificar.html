@@ -45,6 +45,13 @@
       appId: "1:239675098141:web:152ae3741b0ac79db7f2f4"
     };
     firebase.initializeApp(firebaseConfig);
+
+  // Verificación de sesión
+  firebase.auth().onAuthStateChanged(function(user) {
+    if (!user) {
+      window.location.href = "login.html";
+    }
+  });
     const db = firebase.database();
     const params = new URLSearchParams(window.location.search);
     const recetaId = params.get("id");
