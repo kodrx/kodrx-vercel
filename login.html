@@ -2,156 +2,100 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>KodRx | Acceso de Médicos</title>
+  <title>KodRx | Registro Médico</title>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-storage-compat.js"></script>
   <style>
     body {
-      font-family: 'Segoe UI', sans-serif;
-      background: #f5f9f8;
-      color: #003366;
-      padding: 30px;
-      text-align: center;
+      font-family: Arial, sans-serif;
+      background: #f1f1f1;
+      padding: 40px;
     }
-    .container {
-      background: white;
+    form {
+      background: #fff;
+      padding: 30px;
       max-width: 400px;
       margin: auto;
-      padding: 30px;
       border-radius: 10px;
-      box-shadow: 0 0 15px rgba(0,0,0,0.1);
+      box-shadow: 0 0 12px rgba(0,0,0,0.1);
     }
-    img.logo {
-      width: 150px;
-      margin-bottom: 20px;
-    }
-    input {
+    input, button {
       width: 100%;
-      padding: 10px;
+      padding: 12px;
       margin: 10px 0;
-      font-size: 1em;
-      border: 1px solid #ccc;
       border-radius: 6px;
+      border: 1px solid #ccc;
     }
     button {
-      background: #00e6a0;
+      background-color: #006666;
       color: white;
-      padding: 10px 20px;
       border: none;
-      border-radius: 6px;
-      font-size: 1em;
-      font-weight: bold;
-      cursor: pointer;
-    }
-    .toggle {
-      margin-top: 15px;
-      font-size: 0.9em;
-      color: #007766;
-      cursor: pointer;
-    }
-    .extra-fields {
-      display: none;
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <img src="logo-kodrx.png" class="logo" alt="KodRx Logo" />
-    <h2 id="form-title">Iniciar Sesión</h2>
-
-    <input type="email" id="email" placeholder="Correo electrónico" />
-    <input type="password" id="password" placeholder="Contraseña" />
-
-    <div class="extra-fields" id="extraFields">
-      <input type="text" id="nombre" placeholder="Nombre del médico" />
-      <input type="text" id="cedula" placeholder="Cédula profesional" />
-      <input type="file" id="fotoCedula" accept="image/*" />
-    </div>
-
-    <button onclick="handleAuth()">Acceder</button>
-    <p class="toggle" onclick="toggleMode()">¿No tienes cuenta? Regístrate aquí</p>
-    <div id="mensaje"></div>
-  </div>
+  <form id="authForm">
+    <h2 id="formTitle">Registro Médico</h2>
+    <input type="text" id="nombre" placeholder="Nombre completo" required />
+    <input type="text" id="cedula" placeholder="Cédula profesional" required />
+    <input type="email" id="email" placeholder="Correo electrónico" required />
+    <input type="password" id="password" placeholder="Contraseña" required />
+    <button type="submit">Registrarse</button>
+    <p id="toggleMode" style="cursor:pointer; color:#006666; text-align:center;">¿Ya tienes cuenta? Iniciar sesión</p>
+  </form>
 
   <script>
     const firebaseConfig = {
       apiKey: "AIzaSyBIjaOe4HcGNDk0xrqen8etBv0RyjyOJHw",
       authDomain: "kodrx-105b9.firebaseapp.com",
       databaseURL: "https://kodrx-105b9-default-rtdb.firebaseio.com",
-      projectId: "kodrx-105b9",
-      storageBucket: "kodrx-105b9.appspot.com"
+      projectId: "kodrx-105b9"
     };
     firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
     const db = firebase.database();
-    const storage = firebase.storage();
 
-    let isRegister = false;
+    let modoRegistro = true;
 
-    function toggleMode() {
-      isRegister = !isRegister;
-      document.getElementById("form-title").innerText = isRegister ? "Registrarse" : "Iniciar Sesión";
-      document.querySelector("button").innerText = isRegister ? "Registrarse" : "Acceder";
-      document.querySelector(".toggle").innerText = isRegister
-        ? "¿Ya tienes cuenta? Inicia sesión aquí"
-        : "¿No tienes cuenta? Regístrate aquí";
-      document.getElementById("extraFields").style.display = isRegister ? "block" : "none";
-      document.getElementById("mensaje").innerText = "";
-    }
+    document.getElementById("toggleMode").onclick = () => {
+      modoRegistro = !modoRegistro;
+      document.getElementById("formTitle").textContent = modoRegistro ? "Registro Médico" : "Iniciar Sesión";
+      document.querySelectorAll("#nombre, #cedula").forEach(el => el.style.display = modoRegistro ? "block" : "none");
+      document.querySelector("button").textContent = modoRegistro ? "Registrarse" : "Iniciar sesión";
+    };
 
-    function handleAuth() {
+    document.getElementById("authForm").onsubmit = (e) => {
+      e.preventDefault();
       const email = document.getElementById("email").value;
       const password = document.getElementById("password").value;
-      const mensaje = document.getElementById("mensaje");
 
-      if (isRegister) {
+      if (modoRegistro) {
         const nombre = document.getElementById("nombre").value;
         const cedula = document.getElementById("cedula").value;
-        const foto = document.getElementById("fotoCedula").files[0];
-
-        if (!nombre || !cedula || !foto) {
-          mensaje.innerText = "❌ Todos los campos son obligatorios.";
-          return;
-        }
 
         auth.createUserWithEmailAndPassword(email, password)
-          .then(userCredential => {
-            const uid = userCredential.user.uid;
-            return userCredential.user.updateProfile({ displayName: nombre }).then(() => {
-              const storageRef = storage.ref("cedulas/" + uid + ".jpg");
-              return storageRef.put(foto).then(snapshot => snapshot.ref.getDownloadURL())
-                .then(url => {
-                  return db.ref("usuarios/" + uid).set({
-                    nombre: nombre,
-                    cedula: cedula,
-                    email: email,
-                    fotoCedula: url,
-                    verificado: false,
-                    fechaRegistro: new Date().toISOString()
-                  });
-                });
+          .then(cred => {
+            const uid = cred.user.uid;
+            return db.ref("usuarios/" + uid).set({
+              nombre,
+              email,
+              cedula,
+              verificado: false,
+              fechaRegistro: new Date().toISOString()
             });
           })
           .then(() => {
-            mensaje.innerText = "✅ Registro exitoso. Redirigiendo...";
-            setTimeout(() => window.location.href = "index.html", 1500);
+            alert("✅ Registro exitoso. Espera la verificación manual.");
+            window.location.href = "index.html";
           })
-          .catch(error => {
-            mensaje.innerText = "❌ " + error.message;
-          });
+          .catch(err => alert("Error: " + err.message));
       } else {
         auth.signInWithEmailAndPassword(email, password)
-          .then(() => {
-            mensaje.innerText = "✅ Acceso exitoso. Redirigiendo...";
-            setTimeout(() => window.location.href = "index.html", 1500);
-          })
-          .catch(error => {
-            mensaje.innerText = "❌ " + error.message;
-          });
+          .then(() => window.location.href = "index.html")
+          .catch(err => alert("Error: " + err.message));
       }
-    }
+    };
   </script>
 </body>
 </html>
