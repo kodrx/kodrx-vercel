@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>KodRx | Panel de Verificación</title>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f5f9f8;
+      color: #003366;
+      padding: 30px;
+    }
+    h2 {
+      text-align: center;
+    }
+    .medico {
+      background: white;
+      border-radius: 10px;
+      padding: 20px;
+      margin: 20px auto;
+      max-width: 600px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.1);
+    }
+    img.cedula {
+      max-width: 100%;
+      margin-top: 10px;
+      border-radius: 6px;
+    }
+    button {
+      background: #00b386;
+      color: white;
+      border: none;
+      padding: 10px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: bold;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h2>Panel de Verificación de Cédulas</h2>
+  <div id="lista"></div>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyBIjaOe4HcGNDk0xrqen8etBv0RyjyOJHw",
+      authDomain: "kodrx-105b9.firebaseapp.com",
+      databaseURL: "https://kodrx-105b9-default-rtdb.firebaseio.com",
+      projectId: "kodrx-105b9"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.database();
+
+    const correosAutorizados = [
+      "admin@kodrx.com",
+      "verificacion@kodrx.com"
+    ];
+
+    auth.onAuthStateChanged(user => {
+      if (!user) {
+        window.location.href = "login.html";
+      } else if (!correosAutorizados.includes(user.email)) {
+        alert("⛔ Acceso restringido. No tienes permisos para ver esta página.");
+        window.location.href = "index.html";
+      } else {
+        cargarMedicos();
+      }
+    });
+
+    function cargarMedicos() {
+      const lista = document.getElementById("lista");
+      db.ref("usuarios").once("value").then(snapshot => {
+        lista.innerHTML = "";
+        snapshot.forEach(child => {
+          const data = child.val();
+          if (!data.verificado) {
+            const div = document.createElement("div");
+            div.className = "medico";
+            div.innerHTML = `
+              <strong>Nombre:</strong> ${data.nombre}<br>
+              <strong>Email:</strong> ${data.email}<br>
+              <strong>Cédula:</strong> ${data.cedula}<br>
+              <img src="${data.fotoCedula}" class="cedula" alt="Foto cédula"><br>
+              <button onclick="verificarMedico('${child.key}')">Marcar como verificado</button>
+            `;
+            lista.appendChild(div);
+          }
+        });
+      });
+    }
+
+    function verificarMedico(uid) {
+      db.ref("usuarios/" + uid).update({
+        verificado: true
+      }).then(() => {
+        alert("✅ Médico verificado correctamente");
+        cargarMedicos();
+      });
+    }
+  </script>
+</body>
+</html>
