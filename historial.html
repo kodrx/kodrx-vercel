@@ -3,30 +3,20 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Historial de Recetas - KodRx</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 </head>
-<body class="bg-gray-100 font-sans">
+<body class="bg-gray-100 text-gray-800">
 
-  <div class="max-w-6xl mx-auto p-6">
-    <h1 class="text-3xl font-bold mb-4 text-center text-blue-800">Historial de Recetas</h1>
-    <table class="min-w-full bg-white shadow rounded-lg overflow-hidden">
-      <thead class="bg-blue-600 text-white">
-        <tr>
-          <th class="py-2 px-4">Fecha</th>
-          <th class="py-2 px-4">Medicamentos</th>
-          <th class="py-2 px-4">Estado</th>
-          <th class="py-2 px-4">Ver más</th>
-        </tr>
-      </thead>
-      <tbody id="recetasBody" class="text-center">
-        <!-- Se llenará desde Firebase -->
-      </tbody>
-    </table>
+  <div class="max-w-3xl mx-auto p-6 mt-8 bg-white shadow-lg rounded">
+    <h1 class="text-2xl font-bold text-blue-700 text-center mb-6">📋 Historial de Recetas Emitidas</h1>
+    <div id="recetasContainer" class="space-y-4">
+      <p class="text-gray-500 text-center">Cargando recetas...</p>
+    </div>
   </div>
 
   <script>
@@ -40,28 +30,40 @@
       appId: "1:239675098141:web:152ae3741b0ac79db7f2f4"
     };
     firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
 
-    firebase.auth().onAuthStateChanged(function(user) {
+    firebase.auth().onAuthStateChanged(user => {
       if (!user) {
         window.location.href = "login.html";
-      } else {
-        const uid = user.uid;
-        const recetasRef = firebase.database().ref("recetas");
-        recetasRef.orderByChild("medicoUID").equalTo(uid).once("value", function(snapshot) {
-          const tbody = document.getElementById("recetasBody");
-          snapshot.forEach(function(childSnapshot) {
-            const receta = childSnapshot.val();
-            const row = document.createElement("tr");
-            row.innerHTML = `
-              <td class="py-2 px-4">${new Date(receta.timestamp).toLocaleString()}</td>
-              <td class="py-2 px-4">${receta.medicamentos.map(m => m.nombre).join(", ")}</td>
-              <td class="py-2 px-4 ${receta.surtida ? 'text-green-600' : 'text-yellow-600'}">${receta.surtida ? "Surtida" : "Pendiente"}</td>
-              <td class="py-2 px-4"><button class="text-blue-500 underline" onclick='alert(JSON.stringify(${JSON.stringify(receta)}, null, 2))'>Ver más</button></td>
-            `;
-            tbody.appendChild(row);
-          });
-        });
+        return;
       }
+
+      const uid = user.uid;
+      const contenedor = document.getElementById("recetasContainer");
+      db.ref("recetas/" + uid).once("value").then(snapshot => {
+        const recetas = snapshot.val();
+        if (!recetas) {
+          contenedor.innerHTML = "<p class='text-center text-gray-500'>No hay recetas registradas.</p>";
+          return;
+        }
+
+        contenedor.innerHTML = "";
+        Object.entries(recetas).forEach(([id, data]) => {
+          const div = document.createElement("div");
+          div.className = "p-4 bg-gray-50 rounded border";
+          div.innerHTML = `
+            <p><strong>Paciente:</strong> ${data.paciente.nombre} (${data.paciente.edad} años)</p>
+            <p><strong>Médico:</strong> ${data.medico}</p>
+            <p><strong>Fecha:</strong> ${new Date(data.fecha).toLocaleString()}</p>
+            <p><strong>Medicamentos:</strong></p>
+            <ul class="list-disc pl-6">
+              ${data.medicamentos.map(m => `<li><strong>${m.nombre}</strong>: ${m.dosis}, ${m.frecuencia}, ${m.duracion}</li>`).join("")}
+            </ul>
+            <a class="text-blue-600 hover:underline mt-2 inline-block" href="https://kodrx.app/verificar.html?id=${id}&uid=${uid}" target="_blank">🔎 Ver receta</a>
+          `;
+          contenedor.appendChild(div);
+        });
+      });
     });
   </script>
 
