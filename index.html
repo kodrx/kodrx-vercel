@@ -43,6 +43,17 @@
   </div>
 
   <script>
+    window.onload = function () {
+  const qrSection = document.getElementById("qrSection");
+  if (qrSection) {
+    qrSection.classList.add("hidden");
+  }
+  const nuevaReceta = document.getElementById("btnNuevaReceta");
+  if (nuevaReceta) {
+    nuevaReceta.classList.remove("hidden");
+  }
+};
+
     const firebaseConfig = {
       apiKey: "AIzaSyBIjaOe4HcGNDk0xrqen8etBv0RyjyOJHw",
       authDomain: "kodrx-105b9.firebaseapp.com",
