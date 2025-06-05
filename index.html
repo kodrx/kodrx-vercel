@@ -2,58 +2,52 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <title>KodRx - Panel Médico</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet" />
+  <meta charset="UTF-8">
+  <title>KodRx - Receta Médica Digital</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 </head>
-<body class="bg-gray-100 text-gray-800">
+<body class="bg-gray-100 text-gray-900">
 
-  <div class="max-w-3xl mx-auto p-6 bg-white shadow-lg rounded-lg mt-8">
-    <h1 class="text-3xl font-bold text-center text-blue-700 mb-6">Bienvenido, <span id="medicoNombre">Médico</span></h1>
-    <p class="text-center mb-4 text-gray-600">Cédula profesional: <span id="medicoCedula">0000000</span></p>
+  <div class="max-w-2xl mx-auto mt-10 bg-white p-6 rounded shadow">
+    <h1 class="text-2xl font-bold text-center mb-4">Receta Médica - KodRx</h1>
+    <button id="btnNuevaReceta" onclick="mostrarFormulario()" class="mb-4 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 hidden">➕ Nueva receta</button>
 
-    <div class="flex justify-center gap-4 mb-6">
-      <button onclick="mostrarFormulario()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">➕ Nueva receta</button>
-      <button onclick="location.href='historial.html'" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">📋 Ver historial</button>
-    </div>
+    <form id="formularioReceta" class="space-y-4">
+      <div>
+        <label class="block font-semibold">Nombre del paciente:</label>
+        <input type="text" id="nombrePaciente" required class="w-full border px-3 py-2 rounded">
+      </div>
+      <div>
+        <label class="block font-semibold">Edad del paciente:</label>
+        <input type="number" id="edadPaciente" required class="w-full border px-3 py-2 rounded">
+      </div>
+      <div>
+        <label class="block font-semibold">Signos vitales (opcional):</label>
+        <input type="text" id="signosVitales" class="w-full border px-3 py-2 rounded">
+      </div>
 
-    <form id="formularioReceta" class="space-y-4 hidden">
-      <h2 class="text-xl font-semibold text-gray-700">Datos del paciente</h2>
-      <input type="text" id="nombrePaciente" placeholder="Nombre completo del paciente" class="block w-full p-2 border rounded" required />
-      <input type="number" id="edadPaciente" placeholder="Edad del paciente" class="block w-full p-2 border rounded" required />
-      <input type="text" id="signosVitales" placeholder="Signos vitales (opcional)" class="block w-full p-2 border rounded" />
+      <div id="medicamentosContainer" class="space-y-2"></div>
+      <button type="button" onclick="agregarMedicamento()" class="bg-blue-600 text-white px-3 py-1 rounded">➕ Agregar medicamento</button>
 
-      <h2 class="text-xl font-semibold text-gray-700 mt-6">Medicamentos</h2>
-      <div id="medicamentosContainer"></div>
-
-      <button type="button" onclick="agregarMedicamento()" class="text-blue-600 hover:underline">+ Agregar otro medicamento</button>
-
-      <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded">💾 Guardar y generar QR</button>
+      <button type="submit" class="block w-full mt-4 bg-green-700 text-white py-2 rounded hover:bg-green-800">💾 Guardar y generar QR</button>
     </form>
 
-    <div id="qrSection" class="mt-8 text-center hidden">
-      <h2 class="text-lg font-semibold mb-2 text-gray-700">QR de la receta generada:</h2>
+    <div id="qrSection" class="hidden text-center mt-6">
+      <h2 class="text-xl font-bold mb-2 text-green-700">Receta generada</h2>
       <img id="codigoQR" class="mx-auto" />
-      <a id="descargarQR" href="#" download="receta_qr.png" class="mt-4 inline-block bg-gray-800 text-white px-4 py-2 rounded hover:bg-gray-900">⬇️ Descargar QR</a>
+      <a id="descargarQR" download="receta_kodrx.png" class="inline-block mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">⬇️ Descargar QR</a>
+    </div>
+
+    <div class="text-center mt-6">
+      <a href="historial.html" class="text-blue-600 hover:underline">📋 Ver historial</a>
     </div>
   </div>
 
   <script>
-    window.onload = function () {
-  const qrSection = document.getElementById("qrSection");
-  if (qrSection) {
-    qrSection.classList.add("hidden");
-  }
-  const nuevaReceta = document.getElementById("btnNuevaReceta");
-  if (nuevaReceta) {
-    nuevaReceta.classList.remove("hidden");
-  }
-};
-
     const firebaseConfig = {
       apiKey: "AIzaSyBIjaOe4HcGNDk0xrqen8etBv0RyjyOJHw",
       authDomain: "kodrx-105b9.firebaseapp.com",
@@ -64,103 +58,93 @@
       appId: "1:239675098141:web:152ae3741b0ac79db7f2f4"
     };
     firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
     const db = firebase.database();
 
-    let uid;
-    let nombre;
-    let cedula;
     let contadorMedicamentos = 0;
 
-    firebase.auth().onAuthStateChanged(function(user) {
-      if (user) {
-        uid = user.uid;
-        db.ref("usuarios/" + uid).once("value").then(snapshot => {
-          const datos = snapshot.val();
-          if (!datos || !datos.verificado) {
-            window.location.href = "verificacion_en_proceso.html";
-          } else {
-            nombre = datos.nombre;
-            cedula = datos.cedula;
-            document.getElementById("medicoNombre").textContent = nombre;
-            document.getElementById("medicoCedula").textContent = cedula;
-          }
-        });
-      } else {
-        window.location.href = "login.html";
-      }
-    });
+    window.onload = function () {
+      document.getElementById("qrSection").classList.add("hidden");
+      document.getElementById("btnNuevaReceta").classList.remove("hidden");
+    };
 
     function mostrarFormulario() {
       document.getElementById("formularioReceta").classList.remove("hidden");
-      if (contadorMedicamentos === 0) agregarMedicamento();
+      document.getElementById("qrSection").classList.add("hidden");
+      document.getElementById("btnNuevaReceta").classList.add("hidden");
     }
 
     function agregarMedicamento() {
-      if (contadorMedicamentos >= 3) return;
-      contadorMedicamentos++;
       const container = document.getElementById("medicamentosContainer");
-
       const div = document.createElement("div");
-      div.className = "bg-gray-50 p-4 rounded border border-gray-300 mb-4";
       div.innerHTML = `
-        <h3 class="font-semibold mb-2">Medicamento ${contadorMedicamentos}</h3>
-        <input type="text" placeholder="Nombre" class="block w-full mb-2 p-2 border rounded" name="nombre${contadorMedicamentos}" required />
-        <input type="text" placeholder="Dosis" class="block w-full mb-2 p-2 border rounded" name="dosis${contadorMedicamentos}" required />
-        <input type="text" placeholder="Frecuencia" class="block w-full mb-2 p-2 border rounded" name="frecuencia${contadorMedicamentos}" required />
-        <input type="text" placeholder="Duración" class="block w-full p-2 border rounded" name="duracion${contadorMedicamentos}" required />
+        <input type="text" placeholder="Nombre" class="mr-2 border px-2 py-1 rounded" required>
+        <input type="text" placeholder="Dosis" class="mr-2 border px-2 py-1 rounded" required>
+        <input type="text" placeholder="Frecuencia" class="mr-2 border px-2 py-1 rounded" required>
+        <input type="text" placeholder="Duración" class="border px-2 py-1 rounded" required>
       `;
       container.appendChild(div);
+      contadorMedicamentos++;
     }
 
     document.getElementById("formularioReceta").addEventListener("submit", function(e) {
       e.preventDefault();
+
+      const nombre = document.getElementById("nombrePaciente").value;
+      const edad = document.getElementById("edadPaciente").value;
+      const signos = document.getElementById("signosVitales").value;
       const medicamentos = [];
 
-      for (let i = 1; i <= contadorMedicamentos; i++) {
+      const contenedor = document.getElementById("medicamentosContainer").children;
+      for (let i = 0; i < contenedor.length; i++) {
+        const inputs = contenedor[i].querySelectorAll("input");
         medicamentos.push({
-          nombre: this[`nombre${i}`].value,
-          dosis: this[`dosis${i}`].value,
-          frecuencia: this[`frecuencia${i}`].value,
-          duracion: this[`duracion${i}`].value
+          nombre: inputs[0].value,
+          dosis: inputs[1].value,
+          frecuencia: inputs[2].value,
+          duracion: inputs[3].value
         });
       }
 
-      const receta = {
-        medico: nombre,
-        cedula: cedula,
-        fecha: new Date().toISOString(),
-        paciente: {
-          nombre: document.getElementById("nombrePaciente").value,
-          edad: document.getElementById("edadPaciente").value,
-          signos_vitales: document.getElementById("signosVitales").value
-        },
-        medicamentos: medicamentos
-      };
+      auth.onAuthStateChanged(user => {
+        if (user) {
+          const uid = user.uid;
+          db.ref("usuarios/" + uid).once("value").then(snapshot => {
+            const datos = snapshot.val();
+            const receta = {
+              medico: datos.nombre,
+              cedula: datos.cedula,
+              fecha: new Date().toISOString(),
+              paciente: {
+                nombre: nombre,
+                edad: edad,
+                signos_vitales: signos
+              },
+              medicamentos: medicamentos
+            };
+            const recetaRef = db.ref("recetas/" + uid).push();
+            recetaRef.set(receta).then(() => {
+              const qrURL = `https://kodrx.app/verificar.html?id=${recetaRef.key}&uid=${uid}`;
+              const qrImg = document.getElementById("codigoQR");
+              const qrDownload = document.getElementById("descargarQR");
+              qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrURL)}`;
+              qrDownload.href = qrImg.src;
+              document.getElementById("qrSection").classList.remove("hidden");
 
-      const recetaRef = db.ref("recetas/" + uid).push();
-      recetaRef.set(receta).then(() => {
-  const qrURL = `https://kodrx.app/verificar.html?id=${recetaRef.key}&uid=${uid}`;
-  const qrImg = document.getElementById("codigoQR");
-  const qrDownload = document.getElementById("descargarQR");
-  
-  qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrURL)}`;
-  qrDownload.href = qrImg.src;
-  
-  document.getElementById("qrSection").classList.remove("hidden");
-
-  // Reiniciar formulario
-  document.getElementById("formularioReceta").reset();
-  document.getElementById("medicamentosContainer").innerHTML = "";
-  contadorMedicamentos = 0;
-
-  // Oculta formulario de nueva receta (opcional, según diseño)
-  document.getElementById("formularioReceta").classList.add("hidden");
-
-  // Muestra el botón para crear una nueva receta
-  document.getElementById("btnNuevaReceta").classList.remove("hidden");
-});
-
+              // Limpiar formulario
+              document.getElementById("formularioReceta").reset();
+              document.getElementById("medicamentosContainer").innerHTML = "";
+              contadorMedicamentos = 0;
+              document.getElementById("formularioReceta").classList.add("hidden");
+              document.getElementById("btnNuevaReceta").classList.remove("hidden");
+            });
+          });
+        } else {
+          window.location.href = "login.html";
+        }
+      });
     });
   </script>
+
 </body>
 </html>
