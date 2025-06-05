@@ -129,6 +129,20 @@
       const recetaRef = db.ref("recetas/" + uid).push();
       recetaRef.set(receta).then(() => {
         const qrURL = `https://kodrx.app/verificar.html?id=${recetaRef.key}&uid=${uid}`;
+  const qrImg = document.getElementById("codigoQR");
+  const qrDownload = document.getElementById("descargarQR");
+  qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrURL)}`;
+  qrDownload.href = qrImg.src;
+  document.getElementById("qrSection").classList.remove("hidden");
+
+
+  document.getElementById("formularioReceta").reset();
+  document.getElementById("medicamentosContainer").innerHTML = "";
+  contadorMedicamentos = 0;
+
+  
+  document.getElementById("formularioReceta").classList.add("hidden");
+});        const qrURL = `https://kodrx.app/verificar.html?id=${recetaRef.key}&uid=${uid}`;
         const qrImg = document.getElementById("codigoQR");
         const qrDownload = document.getElementById("descargarQR");
         qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrURL)}`;
