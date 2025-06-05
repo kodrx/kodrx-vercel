@@ -1,0 +1,69 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Historial de Recetas - KodRx</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+</head>
+<body class="bg-gray-100 font-sans">
+
+  <div class="max-w-6xl mx-auto p-6">
+    <h1 class="text-3xl font-bold mb-4 text-center text-blue-800">Historial de Recetas</h1>
+    <table class="min-w-full bg-white shadow rounded-lg overflow-hidden">
+      <thead class="bg-blue-600 text-white">
+        <tr>
+          <th class="py-2 px-4">Fecha</th>
+          <th class="py-2 px-4">Medicamentos</th>
+          <th class="py-2 px-4">Estado</th>
+          <th class="py-2 px-4">Ver más</th>
+        </tr>
+      </thead>
+      <tbody id="recetasBody" class="text-center">
+        <!-- Se llenará desde Firebase -->
+      </tbody>
+    </table>
+  </div>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyBIjaOe4HcGNDk0xrqen8etBv0RyjyOJHw",
+      authDomain: "kodrx-105b9.firebaseapp.com",
+      databaseURL: "https://kodrx-105b9-default-rtdb.firebaseio.com",
+      projectId: "kodrx-105b9",
+      storageBucket: "kodrx-105b9.appspot.com",
+      messagingSenderId: "239675098141",
+      appId: "1:239675098141:web:152ae3741b0ac79db7f2f4"
+    };
+    firebase.initializeApp(firebaseConfig);
+
+    firebase.auth().onAuthStateChanged(function(user) {
+      if (!user) {
+        window.location.href = "login.html";
+      } else {
+        const uid = user.uid;
+        const recetasRef = firebase.database().ref("recetas");
+        recetasRef.orderByChild("medicoUID").equalTo(uid).once("value", function(snapshot) {
+          const tbody = document.getElementById("recetasBody");
+          snapshot.forEach(function(childSnapshot) {
+            const receta = childSnapshot.val();
+            const row = document.createElement("tr");
+            row.innerHTML = `
+              <td class="py-2 px-4">${new Date(receta.timestamp).toLocaleString()}</td>
+              <td class="py-2 px-4">${receta.medicamentos.map(m => m.nombre).join(", ")}</td>
+              <td class="py-2 px-4 ${receta.surtida ? 'text-green-600' : 'text-yellow-600'}">${receta.surtida ? "Surtida" : "Pendiente"}</td>
+              <td class="py-2 px-4"><button class="text-blue-500 underline" onclick='alert(JSON.stringify(${JSON.stringify(receta)}, null, 2))'>Ver más</button></td>
+            `;
+            tbody.appendChild(row);
+          });
+        });
+      }
+    });
+  </script>
+
+</body>
+</html>
