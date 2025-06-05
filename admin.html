@@ -55,7 +55,7 @@
     const auth = firebase.auth();
     const db = firebase.database();
 
-    const correosPermitidos = ["verificacion@kodrx.com", "admin@kodrx.com"];
+    const correosPermitidos = ["verificacion@kodrx.app", "admin@kodrx.app"];
 
     auth.onAuthStateChanged(user => {
       if (!user || !correosPermitidos.includes(user.email)) {
