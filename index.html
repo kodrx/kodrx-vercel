@@ -128,27 +128,27 @@
 
       const recetaRef = db.ref("recetas/" + uid).push();
       recetaRef.set(receta).then(() => {
-        const qrURL = `https://kodrx.app/verificar.html?id=${recetaRef.key}&uid=${uid}`;
+  const qrURL = `https://kodrx.app/verificar.html?id=${recetaRef.key}&uid=${uid}`;
   const qrImg = document.getElementById("codigoQR");
   const qrDownload = document.getElementById("descargarQR");
+  
   qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrURL)}`;
   qrDownload.href = qrImg.src;
+  
   document.getElementById("qrSection").classList.remove("hidden");
 
-
+  // Reiniciar formulario
   document.getElementById("formularioReceta").reset();
   document.getElementById("medicamentosContainer").innerHTML = "";
   contadorMedicamentos = 0;
 
-  
+  // Oculta formulario de nueva receta (opcional, según diseño)
   document.getElementById("formularioReceta").classList.add("hidden");
-});        const qrURL = `https://kodrx.app/verificar.html?id=${recetaRef.key}&uid=${uid}`;
-        const qrImg = document.getElementById("codigoQR");
-        const qrDownload = document.getElementById("descargarQR");
-        qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrURL)}`;
-        qrDownload.href = qrImg.src;
-        document.getElementById("qrSection").classList.remove("hidden");
-      });
+
+  // Muestra el botón para crear una nueva receta
+  document.getElementById("btnNuevaReceta").classList.remove("hidden");
+});
+
     });
   </script>
 </body>
