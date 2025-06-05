@@ -4,18 +4,19 @@
 <head>
   <meta charset="UTF-8">
   <title>Historial de Recetas - KodRx</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 </head>
-<body class="bg-gray-100 text-gray-800">
+<body class="bg-gray-100 text-gray-900">
 
-  <div class="max-w-3xl mx-auto p-6 mt-8 bg-white shadow-lg rounded">
-    <h1 class="text-2xl font-bold text-blue-700 text-center mb-6">📋 Historial de Recetas Emitidas</h1>
-    <div id="recetasContainer" class="space-y-4">
-      <p class="text-gray-500 text-center">Cargando recetas...</p>
+  <div class="max-w-4xl mx-auto mt-10 p-6 bg-white rounded shadow">
+    <h1 class="text-2xl font-bold text-center mb-4">🗂 Historial de Recetas Emitidas</h1>
+    <div id="contenedorHistorial" class="space-y-4"></div>
+    <div class="text-center mt-6">
+      <a href="index.html" class="text-blue-600 hover:underline">⬅️ Regresar</a>
     </div>
   </div>
 
@@ -31,41 +32,43 @@
     };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
+    const auth = firebase.auth();
 
-    firebase.auth().onAuthStateChanged(user => {
-      if (!user) {
-        window.location.href = "login.html";
-        return;
-      }
+    auth.onAuthStateChanged(user => {
+      if (user) {
+        const uid = user.uid;
+        db.ref("recetas/" + uid).once("value").then(snapshot => {
+          const recetas = snapshot.val();
+          const contenedor = document.getElementById("contenedorHistorial");
 
-      const uid = user.uid;
-      const contenedor = document.getElementById("recetasContainer");
-      db.ref("recetas/" + uid).once("value").then(snapshot => {
-        const recetas = snapshot.val();
-        if (!recetas) {
-          contenedor.innerHTML = "<p class='text-center text-gray-500'>No hay recetas registradas.</p>";
-          return;
-        }
+          if (!recetas) {
+            contenedor.innerHTML = "<p class='text-center text-gray-500'>No hay recetas emitidas todavía.</p>";
+            return;
+          }
 
-        contenedor.innerHTML = "";
-        Object.entries(recetas).forEach(([id, data]) => {
-          const div = document.createElement("div");
-          div.className = "p-4 bg-gray-50 rounded border";
-          div.innerHTML = `
-            <p><strong>Paciente:</strong> ${data.paciente.nombre} (${data.paciente.edad} años)</p>
-            <p><strong>Médico:</strong> ${data.medico}</p>
-            <p><strong>Fecha:</strong> ${new Date(data.fecha).toLocaleString()}</p>
-            <p><strong>Medicamentos:</strong></p>
-            <ul class="list-disc pl-6">
-              ${data.medicamentos.map(m => `<li><strong>${m.nombre}</strong>: ${m.dosis}, ${m.frecuencia}, ${m.duracion}</li>`).join("")}
-            </ul>
-            <a class="text-blue-600 hover:underline mt-2 inline-block" href="https://kodrx.app/verificar.html?id=${id}&uid=${uid}" target="_blank">🔎 Ver receta</a>
-          `;
-          contenedor.appendChild(div);
+          Object.keys(recetas).reverse().forEach(key => {
+            const r = recetas[key];
+            const tarjeta = document.createElement("div");
+            tarjeta.className = "p-4 bg-gray-50 rounded border border-gray-200";
+
+            tarjeta.innerHTML = `
+              <h2 class="font-bold text-lg mb-2">${r.paciente.nombre} (${r.paciente.edad} años)</h2>
+              <p><strong>Fecha:</strong> ${new Date(r.fecha).toLocaleString()}</p>
+              <p><strong>Médico:</strong> ${r.medico}</p>
+              <p><strong>Cédula:</strong> ${r.cedula}</p>
+              <p><strong>Signos vitales:</strong> ${r.paciente.signos_vitales || 'No registrados'}</p>
+              <ul class="mt-2 list-disc list-inside text-sm text-gray-700">
+                ${r.medicamentos.map(m => `<li>${m.nombre} - ${m.dosis}, ${m.frecuencia}, ${m.duracion}</li>`).join("")}
+              </ul>
+              <a href="verificar.html?id=${key}&uid=${uid}" class="inline-block mt-2 text-blue-600 hover:underline" target="_blank">🔎 Ver QR</a>
+            `;
+            contenedor.appendChild(tarjeta);
+          });
         });
-      });
+      } else {
+        window.location.href = "login.html";
+      }
     });
   </script>
-
 </body>
 </html>
