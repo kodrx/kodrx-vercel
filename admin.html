@@ -1,95 +1,98 @@
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <title>KodRx | Verificación de Cédulas</title>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background-color: #f6f6f6;
-      padding: 20px;
-    }
-    .card {
-      background: #fff;
-      border-radius: 10px;
-      padding: 20px;
-      margin: 20px auto;
-      max-width: 500px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.05);
-    }
-    button {
-      background-color: #007070;
-      color: white;
-      padding: 10px 20px;
-      margin-top: 10px;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-    }
-    #successMsg {
-      background-color: #d4edda;
-      color: #155724;
-      padding: 10px;
-      border-radius: 6px;
-      margin-bottom: 20px;
-      display: none;
-    }
-  </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Panel de Administración | KodRx</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet" />
 </head>
-<body>
-  <h2>Panel de Verificación de Cédulas</h2>
-  <div id="successMsg">✅ Médico verificado con éxito</div>
-  <div id="usuariosContainer"></div>
+<body class="bg-gray-100 text-gray-800 min-h-screen">
 
+  <div id="loginSection" class="flex flex-col items-center justify-center h-screen">
+    <div class="bg-white p-8 rounded shadow-md w-full max-w-md">
+      <h2 class="text-2xl font-bold text-center text-green-700 mb-6">Acceso Administrador</h2>
+      <input type="email" id="adminEmail" placeholder="Correo administrador" class="w-full border p-2 rounded mb-4" />
+      <input type="password" id="adminPassword" placeholder="Contraseña" class="w-full border p-2 rounded mb-4" />
+      <button id="adminLoginBtn" class="w-full bg-green-600 text-white font-semibold py-2 rounded hover:bg-green-700">Ingresar</button>
+      <p id="adminLoginError" class="text-red-600 text-center mt-4 hidden"></p>
+    </div>
+  </div>
+
+  <div id="adminPanel" class="hidden p-6">
+    <h1 class="text-3xl font-bold text-center mb-6 text-green-700">Panel de Verificación KodRx</h1>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div class="bg-white p-4 rounded shadow">
+        <h2 class="text-xl font-semibold mb-2">Médicos registrados</h2>
+        <ul id="medicosList" class="text-sm space-y-1"></ul>
+      </div>
+
+      <div class="bg-white p-4 rounded shadow">
+        <h2 class="text-xl font-semibold mb-2">Farmacias registradas</h2>
+        <ul id="farmaciasList" class="text-sm space-y-1"></ul>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
   <script>
     const firebaseConfig = {
       apiKey: "AIzaSyBIjaOe4HcGNDk0xrqen8etBv0RyjyOJHw",
       authDomain: "kodrx-105b9.firebaseapp.com",
       databaseURL: "https://kodrx-105b9-default-rtdb.firebaseio.com",
-      projectId: "kodrx-105b9"
+      projectId: "kodrx-105b9",
+      storageBucket: "kodrx-105b9.appspot.com",
+      messagingSenderId: "239675098141",
+      appId: "1:239675098141:web:152ae3741b0ac79db7f2f4"
     };
     firebase.initializeApp(firebaseConfig);
-    const auth = firebase.auth();
     const db = firebase.database();
 
-    const correosPermitidos = ["verificacion@kodrx.app", "admin@kodrx.app"];
+    document.getElementById("adminLoginBtn").addEventListener("click", () => {
+      const email = document.getElementById("adminEmail").value.trim();
+      const password = document.getElementById("adminPassword").value.trim();
+      const errorMsg = document.getElementById("adminLoginError");
 
-    auth.onAuthStateChanged(user => {
-      if (!user || !correosPermitidos.includes(user.email)) {
-        alert("Acceso restringido.");
-        window.location.href = "login.html";
+      if (email !== "admin@kodrx.app") {
+        errorMsg.textContent = "Solo el correo admin@kodrx.app está autorizado.";
+        errorMsg.classList.remove("hidden");
         return;
       }
 
-      db.ref("usuarios").orderByChild("verificado").equalTo(false).once("value", snapshot => {
-        const container = document.getElementById("usuariosContainer");
-        container.innerHTML = "";
-        snapshot.forEach(child => {
-          const data = child.val();
-          const uid = child.key;
-          const div = document.createElement("div");
-          div.className = "card";
-          div.innerHTML = `
-            <strong>Nombre:</strong> ${data.nombre}<br>
-            <strong>Email:</strong> ${data.email}<br>
-            <strong>Cédula:</strong> ${data.cedula}<br><br>
-            <button onclick="verificar('${uid}')">Marcar como verificado</button>
-          `;
-          container.appendChild(div);
-        });
-      });
-    });
-
-    function verificar(uid) {
-      firebase.database().ref("usuarios/" + uid + "/verificado").set(true)
+      firebase.auth().signInWithEmailAndPassword(email, password)
         .then(() => {
-          document.getElementById("successMsg").style.display = "block";
-          setTimeout(() => location.reload(), 1500);
+          document.getElementById("loginSection").classList.add("hidden");
+          document.getElementById("adminPanel").classList.remove("hidden");
+
+          const medicosList = document.getElementById("medicosList");
+          const farmaciasList = document.getElementById("farmaciasList");
+
+          db.ref("usuarios").once("value").then(snapshot => {
+            snapshot.forEach(child => {
+              const val = child.val();
+              const li = document.createElement("li");
+              li.textContent = `${val.nombre || 'Sin nombre'} - ${val.cedula || 'Sin cédula'} - ${val.verificado ? '✅ Verificado' : '🕒 Pendiente'}`;
+              medicosList.appendChild(li);
+            });
+          });
+
+          db.ref("farmacias").once("value").then(snapshot => {
+            snapshot.forEach(child => {
+              const val = child.val();
+              const li = document.createElement("li");
+              li.textContent = `${val.nombre || 'Sin nombre'} - ${val.colonia || ''}, ${val.municipio || ''}, ${val.estado || ''} - ${val.verificada ? '✅ Verificada' : '🕒 Pendiente'}`;
+              farmaciasList.appendChild(li);
+            });
+          });
+        })
+        .catch(error => {
+          errorMsg.textContent = "Error al iniciar sesión: " + error.message;
+          errorMsg.classList.remove("hidden");
         });
-    }
+    });
   </script>
 </body>
 </html>
