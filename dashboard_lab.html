@@ -1,0 +1,139 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Dashboard Laboratorios | KodRx</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-gray-100 text-gray-900">
+  <div class="max-w-5xl mx-auto mt-10 p-6 bg-white rounded-lg shadow space-y-6">
+    <h1 class="text-3xl font-bold text-center text-green-700">Dashboard para Laboratorios</h1>
+
+    <div class="grid md:grid-cols-3 gap-6 text-center">
+      <div class="p-4 bg-green-100 rounded shadow">
+        <p class="text-xl font-bold" id="totalRecetas">0</p>
+        <p>Total de recetas emitidas</p>
+      </div>
+      <div class="p-4 bg-blue-100 rounded shadow">
+        <p class="text-xl font-bold" id="totalSurtidas">0</p>
+        <p>Total de recetas surtidas</p>
+      </div>
+      <div class="p-4 bg-purple-100 rounded shadow">
+        <p class="text-xl font-bold" id="farmaciasActivas">0</p>
+        <p>Farmacias activas</p>
+      </div>
+    </div>
+
+    <div>
+      <h2 class="text-xl font-bold mb-2">Medicamentos más prescritos</h2>
+      <canvas id="graficoMedicamentos" height="100"></canvas>
+    </div>
+
+    <div>
+      <h2 class="text-xl font-bold mt-8 mb-2">Médicos más activos</h2>
+      <ul id="topMedicos" class="list-disc list-inside text-sm"></ul>
+    </div>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyBIjaOe4HcGNDk0xrqen8etBv0RyjyOJHw",
+      authDomain: "kodrx-105b9.firebaseapp.com",
+      databaseURL: "https://kodrx-105b9-default-rtdb.firebaseio.com",
+      projectId: "kodrx-105b9",
+      storageBucket: "kodrx-105b9.appspot.com",
+      messagingSenderId: "239675098141",
+      appId: "1:239675098141:web:152ae3741b0ac79db7f2f4"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    let medicamentosCount = {};
+    let medicosCount = {};
+    let surtidas = 0;
+
+    db.ref("recetas/").on("value", snapshot => {
+      const data = snapshot.val();
+      let total = 0;
+      medicamentosCount = {};
+      medicosCount = {};
+      surtidas = 0;
+
+      for (let key in data) {
+        const receta = data[key];
+        total++;
+
+        if (receta.estado === "surtido") surtidas++;
+
+        if (receta.medicamentos) {
+          receta.medicamentos.forEach(med => {
+            medicamentosCount[med.nombre] = (medicamentosCount[med.nombre] || 0) + 1;
+          });
+        }
+
+        if (receta.medicoUID) {
+          medicosCount[receta.medicoUID] = (medicosCount[receta.medicoUID] || 0) + 1;
+        }
+      }
+
+      document.getElementById("totalRecetas").innerText = total;
+      document.getElementById("totalSurtidas").innerText = surtidas;
+
+      actualizarGraficoMedicamentos();
+      actualizarListaMedicos();
+    });
+
+    db.ref("farmacias/").on("value", snapshot => {
+      const data = snapshot.val();
+      document.getElementById("farmaciasActivas").innerText = Object.keys(data || {}).length;
+    });
+
+    function actualizarGraficoMedicamentos() {
+      const ctx = document.getElementById("graficoMedicamentos").getContext("2d");
+      const labels = Object.keys(medicamentosCount);
+      const values = Object.values(medicamentosCount);
+
+      if (window.grafico) window.grafico.destroy();
+
+      window.grafico = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Cantidad',
+            data: values,
+            backgroundColor: 'rgba(34, 197, 94, 0.5)',
+            borderColor: 'rgba(34, 197, 94, 1)',
+            borderWidth: 1
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: { display: false }
+          }
+        }
+      });
+    }
+
+    function actualizarListaMedicos() {
+      const top = Object.entries(medicosCount)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5);
+
+      const ul = document.getElementById("topMedicos");
+      ul.innerHTML = "";
+      top.forEach(([uid, count]) => {
+        const li = document.createElement("li");
+        li.textContent = `UID: ${uid} – ${count} recetas`;
+        ul.appendChild(li);
+      });
+    }
+  </script>
+</body>
+</html>
