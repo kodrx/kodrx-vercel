@@ -45,6 +45,51 @@
 
     const reader = new Html5Qrcode("reader");
 
+    function mostrarReceta(uid, recetaId) {
+      db.ref("recetas/" + uid + "/" + recetaId).once("value").then(snapshot => {
+        const receta = snapshot.val();
+        if (receta) {
+          const contenedor = document.getElementById("datosReceta");
+          let medicamentosList = receta.medicamentos.map(med => `<li>${med.nombre} - ${med.dosis}, ${med.frecuencia}</li>`).join("");
+          const acciones = document.getElementById("acciones");
+
+          let alertaEstado = "";
+
+          if (receta.surtida && receta.surtida.farmacia) {
+            alertaEstado = `<p class="text-red-600"><strong>✅ Ya fue completamente surtida por:</strong> ${receta.surtida.farmacia}</p>`;
+            acciones.classList.add("hidden");
+          } else if (receta.parcial && receta.parcial.medicamentos.length > 0) {
+            alertaEstado = `
+              <p class="text-yellow-600"><strong>⚠ Parcialmente surtida:</strong></p>
+              <ul class="ml-4 list-disc text-yellow-700">${receta.parcial.medicamentos.map(m => `<li>${m}</li>`).join("")}</ul>`;
+            acciones.classList.remove("hidden");
+          } else {
+            acciones.classList.remove("hidden");
+          }
+
+          contenedor.innerHTML = `
+            <p><strong>Nombre completo del paciente:</strong> ${receta.nombrePaciente || 'N/A'}</p>
+            <p><strong>Edad:</strong> ${receta.edadPaciente || 'N/A'}</p>
+            <p><strong>Fecha:</strong> ${receta.fecha || 'N/A'}</p>
+            <p><strong>Medicamentos:</strong></p>
+            <ul class="list-disc ml-6">${medicamentosList}</ul>
+            ${alertaEstado}
+          `;
+          document.getElementById("recetaInfo").classList.remove("hidden");
+
+          const form = document.getElementById("formParcial");
+          form.innerHTML = receta.medicamentos.map(med => `
+            <label class="block">
+              <input type="checkbox" name="medicamento" value="${med.nombre}" class="mr-2" />
+              ${med.nombre} - ${med.dosis}, ${med.frecuencia}
+            </label>
+          `).join("");
+        } else {
+          alert("Receta no encontrada.");
+        }
+      });
+    }
+
     function onScanSuccess(decodedText) {
       if (decodedText.includes("id=") && decodedText.includes("uid=")) {
         reader.stop();
@@ -53,46 +98,13 @@
         const uid = urlParams.get("uid");
         window.recetaActual = { uid, recetaId };
 
-        db.ref("recetas/" + uid + "/" + recetaId).once("value").then(snapshot => {
-          const receta = snapshot.val();
-          if (receta) {
-            const contenedor = document.getElementById("datosReceta");
-            let medicamentosList = receta.medicamentos.map(med => `<li>${med.nombre} - ${med.dosis}, ${med.frecuencia}</li>`).join("");
-            const acciones = document.getElementById("acciones");
-
-            let alertaEstado = "";
-
-            if (receta.surtida && receta.surtida.farmacia) {
-              alertaEstado = `<p class="text-red-600"><strong>✅ Ya fue completamente surtida por:</strong> ${receta.surtida.farmacia}</p>`;
-              acciones.classList.add("hidden");
-            } else if (receta.parcial && receta.parcial.medicamentos.length > 0) {
-              alertaEstado = `
-                <p class="text-yellow-600"><strong>⚠ Parcialmente surtida:</strong></p>
-                <ul class="ml-4 list-disc text-yellow-700">${receta.parcial.medicamentos.map(m => `<li>${m}</li>`).join("")}</ul>`;
-              acciones.classList.remove("hidden");
-            } else {
-              acciones.classList.remove("hidden");
-            }
-
-            contenedor.innerHTML = `
-              <p><strong>Nombre completo del paciente:</strong> ${receta.nombrePaciente || 'N/A'}</p>
-              <p><strong>Edad:</strong> ${receta.edadPaciente || 'N/A'}</p>
-              <p><strong>Fecha:</strong> ${receta.fecha || 'N/A'}</p>
-              <p><strong>Medicamentos:</strong></p>
-              <ul class="list-disc ml-6">${medicamentosList}</ul>
-              ${alertaEstado}
-            `;
-            document.getElementById("recetaInfo").classList.remove("hidden");
-
-            const form = document.getElementById("formParcial");
-            form.innerHTML = receta.medicamentos.map(med => `
-              <label class="block">
-                <input type="checkbox" name="medicamento" value="${med.nombre}" class="mr-2" />
-                ${med.nombre} - ${med.dosis}, ${med.frecuencia}
-              </label>
-            `).join("");
+        // Esperar a que Firebase confirme usuario logueado
+        firebase.auth().onAuthStateChanged(user => {
+          if (user) {
+            mostrarReceta(uid, recetaId);
           } else {
-            alert("Receta no encontrada.");
+            alert("No hay sesión activa. Por favor, inicia sesión.");
+            window.location.href = "farmacia_login.html";
           }
         });
       } else {
