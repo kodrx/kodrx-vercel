@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Farmacia | Verificador de Recetas KodRx</title>
+  <title>Farmacia | Verificador KodRx</title>
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet"/>
   <script src="https://unpkg.com/html5-qrcode"></script>
 </head>
@@ -54,7 +54,6 @@
           const acciones = document.getElementById("acciones");
 
           let alertaEstado = "";
-
           if (receta.surtida && receta.surtida.farmacia) {
             alertaEstado = `<p class="text-red-600"><strong>✅ Ya fue completamente surtida por:</strong> ${receta.surtida.farmacia}</p>`;
             acciones.classList.add("hidden");
@@ -68,9 +67,11 @@
           }
 
           contenedor.innerHTML = `
-            <p><strong>Nombre completo del paciente:</strong> ${receta.nombrePaciente || 'N/A'}</p>
+            <p><strong>Nombre del paciente:</strong> ${receta.nombrePaciente || 'N/A'}</p>
             <p><strong>Edad del paciente:</strong> ${receta.edadPaciente || 'N/A'}</p>
             <p><strong>Fecha:</strong> ${receta.fecha || 'N/A'}</p>
+            <p><strong>Médico:</strong> ${receta.nombreMedico || 'N/A'}</p>
+            <p><strong>Cédula profesional:</strong> ${receta.cedula || 'N/A'}</p>
             <p><strong>Medicamentos:</strong></p>
             <ul class="list-disc ml-6">${medicamentosList}</ul>
             ${alertaEstado}
