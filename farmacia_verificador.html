@@ -4,30 +4,24 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Verificar Receta | KodRx Farmacias</title>
-  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <title>Farmacia | Verificador de Recetas KodRx</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet"/>
+  <script src="https://unpkg.com/html5-qrcode"></script>
 </head>
-<body class="bg-gray-100 text-gray-800">
-  <div class="max-w-xl mx-auto mt-10 p-6 bg-white rounded shadow">
-    <h2 class="text-2xl font-bold mb-4 text-center text-green-700">Verificador de Recetas - Farmacia</h2>
+<body class="bg-gray-100 min-h-screen flex flex-col items-center justify-start py-10 text-gray-800">
+  <h1 class="text-2xl font-bold text-green-700 mb-4">Escanear Receta Médica</h1>
 
-    <div id="infoFarmacia" class="mb-4 text-sm text-gray-600 text-center hidden"></div>
+  <div id="reader" class="w-80 mb-6 border border-gray-300 rounded-md"></div>
 
-    <input type="text" id="idReceta" placeholder="ID de la receta (desde QR)" class="w-full border p-2 rounded mb-4" />
-    <button id="buscarBtn" class="w-full bg-green-600 text-white font-bold py-2 px-4 rounded hover:bg-green-700">Buscar receta</button>
-
-    <div id="recetaDatos" class="mt-6 hidden border-t pt-4">
-      <h3 class="font-bold text-lg mb-2 text-center">Datos de la Receta</h3>
-      <div id="contenidoReceta" class="text-sm mb-4"></div>
-      <button id="surtirBtn" class="w-full bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700">Marcar como surtida</button>
-    </div>
-
-    <p id="mensaje" class="text-center mt-4 text-green-600 font-semibold hidden">¡Receta marcada como surtida!</p>
+  <div id="recetaInfo" class="hidden w-full max-w-xl bg-white p-4 rounded shadow-md">
+    <h2 class="text-xl font-semibold mb-2 text-green-700">Receta escaneada</h2>
+    <div id="datosReceta" class="text-sm space-y-2"></div>
+    <button onclick="marcarComoSurtida()" class="mt-4 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Marcar como surtida</button>
   </div>
 
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
   <script>
     const firebaseConfig = {
       apiKey: "AIzaSyBIjaOe4HcGNDk0xrqen8etBv0RyjyOJHw",
@@ -41,59 +35,56 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    let uidFarmacia = null;
+    const reader = new Html5Qrcode("reader");
 
-    firebase.auth().onAuthStateChanged(function(user) {
-      if (user) {
-        db.ref("farmacias/" + user.uid).once("value").then(snapshot => {
-          const data = snapshot.val();
-          if (data && data.verificada) {
-            uidFarmacia = user.uid;
-            document.getElementById("infoFarmacia").innerText = "Sesión activa: " + data.nombre;
-            document.getElementById("infoFarmacia").classList.remove("hidden");
+    function onScanSuccess(decodedText, decodedResult) {
+      if (decodedText.includes("id=") && decodedText.includes("uid=")) {
+        reader.stop();
+        const urlParams = new URLSearchParams(decodedText.split("?")[1]);
+        const recetaId = urlParams.get("id");
+        const uid = urlParams.get("uid");
+
+        db.ref("recetas/" + uid + "/" + recetaId).once("value").then(snapshot => {
+          const receta = snapshot.val();
+          if (receta) {
+            const contenedor = document.getElementById("datosReceta");
+            contenedor.innerHTML = `
+              <p><strong>Paciente:</strong> ${receta.nombrePaciente || 'N/A'}</p>
+              <p><strong>Edad:</strong> ${receta.edadPaciente || 'N/A'}</p>
+              <p><strong>Fecha:</strong> ${receta.fecha || 'N/A'}</p>
+              <p><strong>Medicamentos:</strong></p>
+              <ul class="list-disc ml-6">
+                ${receta.medicamentos.map(med => `<li>${med.nombre} - ${med.dosis}, ${med.frecuencia}</li>`).join("")}
+              </ul>
+            `;
+            document.getElementById("recetaInfo").classList.remove("hidden");
+
+            // Guardar los datos actuales para futura acción
+            window.recetaActual = { uid, recetaId };
           } else {
-            alert("Tu cuenta de farmacia aún no ha sido verificada.");
-            window.location.href = "login.html";
+            alert("Receta no encontrada.");
           }
         });
       } else {
-        window.location.href = "login.html";
+        alert("Código no válido.");
       }
-    });
+    }
 
-    document.getElementById("buscarBtn").addEventListener("click", () => {
-      const recetaID = document.getElementById("idReceta").value.trim();
-      if (!recetaID) return;
+    function marcarComoSurtida() {
+      if (window.recetaActual) {
+        const { uid, recetaId } = window.recetaActual;
+        const farmacia = firebase.auth().currentUser?.email || "farmacia_desconocida";
+        db.ref("recetas/" + uid + "/" + recetaId + "/surtida").set({
+          farmacia: farmacia,
+          fecha: new Date().toISOString()
+        }).then(() => {
+          alert("Receta marcada como surtida correctamente.");
+          window.location.reload();
+        });
+      }
+    }
 
-      db.ref("recetas/" + recetaID).once("value").then(snapshot => {
-        const receta = snapshot.val();
-        if (receta) {
-          let html = `
-            <p><strong>Paciente:</strong> ${receta.paciente || "N/A"}</p>
-            <p><strong>Edad:</strong> ${receta.edad || "N/A"}</p>
-            <p><strong>Médico:</strong> ${receta.nombreMedico || "UID: " + receta.medicoUID}</p>
-            <p><strong>Medicamentos:</strong></p>
-            <ul class="list-disc list-inside">
-              ${(receta.medicamentos || []).map(m => `<li>${m.nombre} - ${m.dosis} - ${m.tiempo}</li>`).join("")}
-            </ul>
-          `;
-          document.getElementById("contenidoReceta").innerHTML = html;
-          document.getElementById("recetaDatos").classList.remove("hidden");
-
-          document.getElementById("surtirBtn").onclick = () => {
-            db.ref("recetas/" + recetaID).update({
-              estado: "surtido",
-              uidFarmacia: uidFarmacia,
-              fechaSurtido: new Date().toISOString()
-            }).then(() => {
-              document.getElementById("mensaje").classList.remove("hidden");
-            });
-          };
-        } else {
-          alert("Receta no encontrada.");
-        }
-      });
-    });
+    reader.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, onScanSuccess);
   </script>
 </body>
 </html>
