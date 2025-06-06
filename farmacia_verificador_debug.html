@@ -1,0 +1,88 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Diagnóstico KodRx | Verificador</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; background: #f8fafc; }
+    .box { border: 1px solid #ccc; background: #fff; padding: 16px; margin-bottom: 16px; border-radius: 6px; }
+    pre { background: #eee; padding: 8px; border-radius: 4px; overflow-x: auto; }
+  </style>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+  <script src="https://unpkg.com/html5-qrcode"></script>
+</head>
+<body>
+  <h2>Diagnóstico del lector de QR para farmacias</h2>
+  <div id="reader" style="width: 300px; margin-bottom: 20px;"></div>
+
+  <div class="box">
+    <h3>Datos del QR escaneado</h3>
+    <p><strong>Texto completo:</strong> <span id="qrText">Esperando...</span></p>
+    <p><strong>UID:</strong> <span id="uid">-</span></p>
+    <p><strong>ID de receta:</strong> <span id="recetaId">-</span></p>
+  </div>
+
+  <div class="box">
+    <h3>Resultado de la consulta a Firebase</h3>
+    <pre id="firebaseResult">Sin datos todavía.</pre>
+  </div>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyBIjaOe4HcGNDk0xrqen8etBv0RyjyOJHw",
+      authDomain: "kodrx-105b9.firebaseapp.com",
+      databaseURL: "https://kodrx-105b9-default-rtdb.firebaseio.com",
+      projectId: "kodrx-105b9",
+      storageBucket: "kodrx-105b9.appspot.com",
+      messagingSenderId: "239675098141",
+      appId: "1:239675098141:web:152ae3741b0ac79db7f2f4"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    const reader = new Html5Qrcode("reader");
+
+    function onScanSuccess(decodedText) {
+      document.getElementById("qrText").innerText = decodedText;
+
+      try {
+        const url = new URL(decodedText);
+        const recetaId = url.searchParams.get("id");
+        const uid = url.searchParams.get("uid");
+        document.getElementById("uid").innerText = uid;
+        document.getElementById("recetaId").innerText = recetaId;
+
+        if (!recetaId || !uid) {
+          document.getElementById("firebaseResult").innerText = "❌ Error: No se encontraron parámetros válidos en el QR.";
+          return;
+        }
+
+        firebase.auth().onAuthStateChanged(user => {
+          if (user) {
+            db.ref("recetas/" + uid + "/" + recetaId).once("value").then(snapshot => {
+              const receta = snapshot.val();
+              if (receta) {
+                document.getElementById("firebaseResult").innerText = JSON.stringify(receta, null, 2);
+              } else {
+                document.getElementById("firebaseResult").innerText = "❌ No se encontró la receta en la ruta indicada.";
+              }
+            }).catch(err => {
+              document.getElementById("firebaseResult").innerText = "❌ Error de Firebase: " + err.message;
+            });
+          } else {
+            document.getElementById("firebaseResult").innerText = "⚠ Usuario no autenticado.";
+          }
+        });
+      } catch (e) {
+        document.getElementById("firebaseResult").innerText = "❌ Error al procesar el QR: " + e.message;
+      }
+    }
+
+    reader.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, onScanSuccess);
+  </script>
+</body>
+</html>
