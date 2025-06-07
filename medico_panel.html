@@ -2,52 +2,52 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>KodRx | Panel Médico</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/uuid@9.0.0/dist/umd/uuidv4.min.js"></script>
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
 </head>
-<body class="bg-gray-100 text-gray-800">
+<body class="bg-gray-100">
 
-  <nav class="bg-white shadow p-4 flex justify-between items-center">
-    <h1 class="text-xl font-bold text-green-600">KodRx | Médico</h1>
-    <div>
-      <button onclick="mostrarFormulario()" class="bg-green-600 text-white px-4 py-2 rounded mr-2">Nueva receta</button>
-      <a href="historial.html" class="bg-blue-600 text-white px-4 py-2 rounded mr-2">Historial</a>
-      <button onclick="cerrarSesion()" class="bg-red-600 text-white px-4 py-2 rounded">Cerrar sesión</button>
+<nav class="bg-white shadow p-4 flex justify-between items-center">
+  <h1 class="text-xl font-bold text-green-600">KodRx | Médico</h1>
+  <div>
+    <button id="btnNuevaReceta" class="bg-green-600 text-white px-4 py-2 rounded mr-2">Nueva receta</button>
+    <a href="historial.html" class="bg-blue-600 text-white px-4 py-2 rounded mr-2">Historial</a>
+    <button id="btnCerrarSesion" class="bg-red-600 text-white px-4 py-2 rounded">Cerrar sesión</button>
+  </div>
+</nav>
+
+<main class="max-w-4xl mx-auto p-6">
+  <section class="mb-6 bg-white p-4 rounded shadow">
+    <p><strong>Médico:</strong> <span id="nombreMedico"></span></p>
+    <p><strong>Cédula:</strong> <span id="cedulaMedico"></span></p>
+  </section>
+
+  <form id="formularioReceta" class="space-y-4 bg-white p-6 rounded shadow">
+    <h2 class="text-xl font-semibold mb-4">Nueva Receta</h2>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <input type="text" id="nombrePaciente" placeholder="Nombre del paciente" required class="border p-2 rounded">
+      <input type="number" id="edadPaciente" placeholder="Edad" required class="border p-2 rounded">
     </div>
-  </nav>
+    <textarea id="signosVitales" placeholder="Signos vitales (opcional)" class="w-full border p-2 rounded"></textarea>
 
-  <main class="max-w-4xl mx-auto p-6">
-    <section class="mb-6 bg-white p-4 rounded shadow">
-      <p><strong>Médico:</strong> <span id="nombreMedico"></span></p>
-      <p><strong>Cédula:</strong> <span id="cedulaMedico"></span></p>
-    </section>
+    <div id="medicamentosContainer" class="space-y-2"></div>
+    <button type="button" id="btnAgregar" class="bg-blue-500 text-white px-3 py-2 rounded">+ Agregar medicamento</button>
+    <button type="submit" class="bg-green-600 text-white px-6 py-2 rounded">Guardar y generar QR</button>
+  </form>
 
-    <form id="formularioReceta" class="space-y-4 bg-white p-6 rounded shadow">
-      <h2 class="text-xl font-semibold mb-4">Nueva Receta</h2>
+  <section id="qrSection" class="hidden mt-6 text-center bg-white p-6 rounded shadow">
+    <p class="mb-4">Receta generada correctamente. Escanéala desde la farmacia.</p>
+    <img id="codigoQR" class="mx-auto my-4" />
+    <a id="descargarQR" download="receta_qr.png" class="bg-green-600 text-white px-4 py-2 rounded">Descargar QR</a>
+  </section>
+</main>
 
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <input type="text" id="nombrePaciente" placeholder="Nombre del paciente" required class="border p-2 rounded">
-        <input type="number" id="edadPaciente" placeholder="Edad" required class="border p-2 rounded">
-      </div>
-      <textarea id="signosVitales" placeholder="Signos vitales (opcional)" class="w-full border p-2 rounded"></textarea>
-
-      <div id="medicamentosContainer" class="space-y-2"></div>
-      <button type="button" onclick="agregarMedicamento()" class="bg-blue-500 text-white px-3 py-2 rounded">+ Agregar medicamento</button>
-      <button type="submit" class="bg-green-600 text-white px-6 py-2 rounded">Guardar y generar QR</button>
-    </form>
-
-    <section id="qrSection" class="hidden mt-6 text-center bg-white p-6 rounded shadow">
-      <p class="mb-4">Receta generada correctamente. Escanéala desde la farmacia.</p>
-      <img id="codigoQR" class="mx-auto my-4" />
-      <a id="descargarQR" download="receta_qr.png" class="bg-green-600 text-white px-4 py-2 rounded">Descargar QR</a>
-    </section>
-  </main>
+<datalist id="sugerencias"></datalist>
 
 <script>
   const firebaseConfig = {
@@ -65,7 +65,6 @@
 
   let uid = "";
   let contadorMedicamentos = 0;
-  let catalogo = [];
 
   auth.onAuthStateChanged(user => {
     if (!user) {
@@ -77,11 +76,11 @@
         if (!datos || !datos.verificado) {
           window.location.href = "verificacion_en_proceso.html";
         } else {
-          document.getElementById("nombreMedico").textContent = datos.nombre;
-          document.getElementById("cedulaMedico").textContent = datos.cedula;
+          document.getElementById("nombreMedico").textContent = datos.nombre || "N/A";
+          document.getElementById("cedulaMedico").textContent = datos.cedula || "N/A";
         }
       });
-      cargarCatalogo();
+      cargarMedicamentos();
     }
   });
 
@@ -91,36 +90,47 @@
     });
   }
 
+  document.getElementById("btnCerrarSesion").addEventListener("click", cerrarSesion);
+  document.getElementById("btnNuevaReceta").addEventListener("click", mostrarFormulario);
+  document.getElementById("btnAgregar").addEventListener("click", agregarMedicamento);
+
+  function mostrarFormulario() {
+    document.getElementById("qrSection").classList.add("hidden");
+    document.getElementById("formularioReceta").reset();
+    document.getElementById("medicamentosContainer").innerHTML = "";
+    contadorMedicamentos = 0;
+    agregarMedicamento();
+    document.getElementById("formularioReceta").classList.remove("hidden");
+  }
+
   function agregarMedicamento() {
-    const contenedor = document.getElementById("medicamentosContainer");
-    const index = contadorMedicamentos++;
     const div = document.createElement("div");
     div.className = "flex gap-2 items-center";
     div.innerHTML = \`
-      <input list="sugerencias" name="medicamento" class="flex-1 border p-2 rounded" placeholder="Medicamento" />
-      <input type="text" name="dosis" class="w-1/3 border p-2 rounded" placeholder="Dosis" />
-      <input type="text" name="duracion" class="w-1/3 border p-2 rounded" placeholder="Duración" />
+      <input list="sugerencias" class="flex-1 border p-2 rounded" placeholder="Medicamento" />
+      <input type="text" class="w-1/3 border p-2 rounded" placeholder="Dosis" />
+      <input type="text" class="w-1/3 border p-2 rounded" placeholder="Duración" />
     \`;
-    contenedor.appendChild(div);
+    document.getElementById("medicamentosContainer").appendChild(div);
+    contadorMedicamentos++;
   }
 
-  function cargarCatalogo() {
-    const dataList = document.createElement("datalist");
-    dataList.id = "sugerencias";
-    db.ref("catalogo_medicamentos").once("value", snapshot => {
+  function cargarMedicamentos() {
+    db.ref("catalogo_medicamentos").once("value").then(snapshot => {
+      const dataList = document.getElementById("sugerencias");
+      dataList.innerHTML = "";
       snapshot.forEach(child => {
         const option = document.createElement("option");
         option.value = child.val().nombre;
         dataList.appendChild(option);
       });
-      document.body.appendChild(dataList);
     });
   }
 
   document.getElementById("formularioReceta").addEventListener("submit", e => {
     e.preventDefault();
 
-    const nombre = document.getElementById("nombrePaciente").value.trim();
+    const nombre = document.getElementById("nombrePaciente").value;
     const edad = document.getElementById("edadPaciente").value;
     const signos = document.getElementById("signosVitales").value;
 
@@ -149,17 +159,9 @@
       qrImg.src = \`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=\${encodeURIComponent(qrURL)}\`;
       qrDownload.href = qrImg.src;
       document.getElementById("qrSection").classList.remove("hidden");
-      document.getElementById("formularioReceta").reset();
-      document.getElementById("medicamentosContainer").innerHTML = "";
-      contadorMedicamentos = 0;
       document.getElementById("formularioReceta").classList.add("hidden");
     });
   });
-
-  function mostrarFormulario() {
-    document.getElementById("qrSection").classList.add("hidden");
-    document.getElementById("formularioReceta").classList.remove("hidden");
-  }
 </script>
 
 </body>
