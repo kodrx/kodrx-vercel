@@ -3,124 +3,83 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Panel de Administración | KodRx</title>
+  <title>KodRx | Panel de Administrador</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet" />
 </head>
-<body class="bg-gray-100 text-gray-800 min-h-screen">
+<body class="bg-gray-100 p-6">
+  <div class="max-w-4xl mx-auto bg-white shadow rounded p-6">
+    <h1 class="text-2xl font-bold text-green-700 mb-4">Panel de Administración KodRx</h1>
 
-<div id="loginSection" class="flex flex-col items-center justify-center h-screen">
-  <div class="bg-white p-8 rounded shadow-md w-full max-w-md">
-    <h2 class="text-2xl font-bold text-center text-green-700 mb-6">Acceso Administrador</h2>
-    <input type="email" id="adminEmail" placeholder="Correo administrador" class="w-full border p-2 rounded mb-4" />
-    <input type="password" id="adminPassword" placeholder="Contraseña" class="w-full border p-2 rounded mb-4" />
-    <button id="adminLoginBtn" class="w-full bg-green-600 text-white font-semibold py-2 rounded hover:bg-green-700">Ingresar</button>
-    <p id="adminLoginError" class="text-red-600 text-center mt-4 hidden"></p>
-  </div>
-</div>
-
-<div id="adminPanel" class="hidden p-6">
-  <h1 class="text-3xl font-bold text-center mb-6 text-green-700">Panel de Verificación KodRx</h1>
-  <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-    <div class="bg-white p-4 rounded shadow">
-      <h2 class="text-xl font-semibold mb-2">Médicos registrados</h2>
-      <ul id="medicosList" class="text-sm space-y-2"></ul>
-    </div>
-    <div class="bg-white p-4 rounded shadow">
-      <h2 class="text-xl font-semibold mb-2">Farmacias registradas</h2>
-      <ul id="farmaciasList" class="text-sm space-y-2"></ul>
+    <div id="medicamentosSection">
+      <h2 class="text-xl font-semibold text-gray-800 mb-2">Catálogo de Medicamentos</h2>
+      <form id="formNuevoMedicamento" class="mb-4 flex gap-2 flex-wrap">
+        <input id="nombreMedicamento" type="text" placeholder="Nombre del medicamento" required class="border px-3 py-2 rounded flex-grow" />
+        <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">Agregar</button>
+      </form>
+      <ul id="listaMedicamentos" class="space-y-2 text-gray-800"></ul>
     </div>
   </div>
-</div>
 
-<!-- Modal -->
-<div id="infoModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
-  <div class="bg-white p-6 rounded shadow-lg w-full max-w-md relative">
-    <button onclick="cerrarModal()" class="absolute top-2 right-2 text-gray-600 hover:text-black">&times;</button>
-    <h2 class="text-xl font-bold mb-4 text-green-700">Información Detallada</h2>
-    <div id="modalContent" class="text-sm space-y-2"></div>
-  </div>
-</div>
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyBIjaOe4HcGNDk0xrqen8etBv0RyjyOJHw",
+      authDomain: "kodrx-105b9.firebaseapp.com",
+      databaseURL: "https://kodrx-105b9-default-rtdb.firebaseio.com",
+      projectId: "kodrx-105b9",
+      storageBucket: "kodrx-105b9.appspot.com",
+      messagingSenderId: "239675098141",
+      appId: "1:239675098141:web:152ae3741b0ac79db7f2f4"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
 
-<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
-<script>
-  const firebaseConfig = {
-    apiKey: "AIzaSyBIjaOe4HcGNDk0xrqen8etBv0RyjyOJHw",
-    authDomain: "kodrx-105b9.firebaseapp.com",
-    databaseURL: "https://kodrx-105b9-default-rtdb.firebaseio.com",
-    projectId: "kodrx-105b9",
-    storageBucket: "kodrx-105b9.appspot.com",
-    messagingSenderId: "239675098141",
-    appId: "1:239675098141:web:152ae3741b0ac79db7f2f4"
-  };
-  firebase.initializeApp(firebaseConfig);
-  const db = firebase.database();
-
-  document.getElementById("adminLoginBtn").addEventListener("click", () => {
-    const email = document.getElementById("adminEmail").value.trim();
-    const password = document.getElementById("adminPassword").value.trim();
-    const errorMsg = document.getElementById("adminLoginError");
-
-    if (email !== "admin@kodrx.app") {
-      errorMsg.textContent = "Solo el correo admin@kodrx.app está autorizado.";
-      errorMsg.classList.remove("hidden");
-      return;
-    }
-
-    firebase.auth().signInWithEmailAndPassword(email, password)
-      .then(() => {
-        document.getElementById("loginSection").classList.add("hidden");
-        document.getElementById("adminPanel").classList.remove("hidden");
-
-        const medicosList = document.getElementById("medicosList");
-        const farmaciasList = document.getElementById("farmaciasList");
-
-        db.ref("usuarios").once("value").then(snapshot => {
-          snapshot.forEach(child => {
-            const val = child.val();
-            const li = document.createElement("li");
-            li.innerHTML = `<a href="#" onclick='verDetalles(${JSON.stringify(val)})' class="text-blue-600 hover:underline">${val.nombre || 'Sin nombre'}</a> ${val.verificado ? '✅' : '🕒'}`;
-            medicosList.appendChild(li);
-          });
-        });
-
-        db.ref("farmacias").once("value").then(snapshot => {
-          snapshot.forEach(child => {
-            const val = child.val();
-            const li = document.createElement("li");
-            li.innerHTML = `<a href="#" onclick='verDetalles(${JSON.stringify(val)}, "${child.key}")' class="text-blue-600 hover:underline">${val.nombre || 'Sin nombre'}</a> ${val.verificada ? '✅' : '<button class="ml-2 bg-blue-500 text-white px-2 py-1 rounded" onclick="verificarFarmacia(\'' + child.key + '\')">Verificar</button>'}`;
-            farmaciasList.appendChild(li);
-          });
-        });
-      })
-      .catch(error => {
-        errorMsg.textContent = "Error al iniciar sesión: " + error.message;
-        errorMsg.classList.remove("hidden");
-      });
-  });
-
-  function verificarFarmacia(uid) {
-    db.ref("farmacias/" + uid).update({ verificada: true }).then(() => {
-      alert("Farmacia verificada correctamente.");
-      location.reload();
+    // Autenticación del admin
+    firebase.auth().onAuthStateChanged(user => {
+      if (!user || user.email !== "admin@kodrx.app") {
+        window.location.href = "login.html";
+      } else {
+        cargarMedicamentos();
+      }
     });
-  }
 
-  function verDetalles(data) {
-    const content = document.getElementById("modalContent");
-    content.innerHTML = "";
-    for (let key in data) {
-      content.innerHTML += `<p><strong>${key}:</strong> ${data[key]}</p>`;
+    const listaMedicamentos = document.getElementById("listaMedicamentos");
+    const formNuevo = document.getElementById("formNuevoMedicamento");
+
+    formNuevo.addEventListener("submit", e => {
+      e.preventDefault();
+      const nombre = document.getElementById("nombreMedicamento").value.trim();
+      if (nombre) {
+        const nuevoRef = db.ref("catalogo_medicamentos").push();
+        nuevoRef.set({ nombre });
+        document.getElementById("nombreMedicamento").value = "";
+      }
+    });
+
+    function cargarMedicamentos() {
+      db.ref("catalogo_medicamentos").on("value", snapshot => {
+        listaMedicamentos.innerHTML = "";
+        snapshot.forEach(child => {
+          const data = child.val();
+          const li = document.createElement("li");
+          li.className = "flex justify-between items-center bg-gray-50 px-4 py-2 border rounded";
+          li.innerHTML = \`
+            <span>\${data.nombre}</span>
+            <button onclick="eliminarMedicamento('\${child.key}')" class="text-red-600 hover:underline">Eliminar</button>
+          \`;
+          listaMedicamentos.appendChild(li);
+        });
+      });
     }
-    document.getElementById("infoModal").classList.remove("hidden");
-    document.getElementById("infoModal").classList.add("flex");
-  }
 
-  function cerrarModal() {
-    document.getElementById("infoModal").classList.add("hidden");
-  }
-</script>
+    function eliminarMedicamento(id) {
+      if (confirm("¿Seguro que deseas eliminar este medicamento?")) {
+        db.ref("catalogo_medicamentos/" + id).remove();
+      }
+    }
+  </script>
 </body>
 </html>
