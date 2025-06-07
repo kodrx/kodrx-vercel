@@ -2,9 +2,9 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
   <title>KodRx | Panel Médico</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
@@ -12,106 +12,152 @@
 </head>
 <body class="bg-gray-100">
 
-<nav class="bg-white shadow p-4 flex justify-between items-center">
-  <h1 class="text-xl font-bold text-green-600">KodRx | Médico</h1>
-  <div>
-    <button id="btnNuevaReceta" class="bg-green-600 text-white px-4 py-2 rounded mr-2">Nueva receta</button>
-    <a href="historial.html" class="bg-blue-600 text-white px-4 py-2 rounded mr-2">Historial</a>
-    <button id="btnCerrarSesion" class="bg-red-600 text-white px-4 py-2 rounded">Cerrar sesión</button>
-  </div>
-</nav>
-
-<main class="max-w-4xl mx-auto p-6">
-  <section class="mb-6 bg-white p-4 rounded shadow">
-    <p><strong>Médico:</strong> <span id="nombreMedico"></span></p>
-    <p><strong>Cédula:</strong> <span id="cedulaMedico"></span></p>
-  </section>
-
-  <form id="formularioReceta" class="space-y-4 bg-white p-6 rounded shadow">
-    <h2 class="text-xl font-semibold mb-4">Nueva Receta</h2>
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <input type="text" id="nombrePaciente" placeholder="Nombre del paciente" required class="border p-2 rounded">
-      <input type="number" id="edadPaciente" placeholder="Edad" required class="border p-2 rounded">
+  <nav class="bg-white shadow p-4 flex justify-between items-center">
+    <h1 class="text-xl font-bold text-green-600">KodRx | Médico</h1>
+    <div>
+      <button id="btnNuevaReceta" class="bg-green-600 text-white px-4 py-2 rounded mr-2">Nueva receta</button>
+      <a href="historial.html" class="bg-blue-600 text-white px-4 py-2 rounded mr-2">Historial</a>
+      <button id="btnCerrarSesion" class="bg-red-600 text-white px-4 py-2 rounded">Cerrar sesión</button>
     </div>
-    <textarea id="signosVitales" placeholder="Signos vitales (opcional)" class="w-full border p-2 rounded"></textarea>
+  </nav>
 
-    <div id="medicamentosContainer" class="space-y-2"></div>
-    <button type="button" id="btnAgregar" class="bg-blue-500 text-white px-3 py-2 rounded">+ Agregar medicamento</button>
-    <button type="submit" class="bg-green-600 text-white px-6 py-2 rounded">Guardar y generar QR</button>
-  </form>
+  <main class="max-w-4xl mx-auto p-6">
+    <section class="mb-6 bg-white p-4 rounded shadow">
+      <p><strong>Médico:</strong> <span id="nombreMedico"></span></p>
+      <p><strong>Cédula:</strong> <span id="cedulaMedico"></span></p>
+    </section>
 
-  <section id="qrSection" class="hidden mt-6 text-center bg-white p-6 rounded shadow">
-    <p class="mb-4">Receta generada correctamente. Escanéala desde la farmacia.</p>
-    <img id="codigoQR" class="mx-auto my-4" />
-    <a id="descargarQR" download="receta_qr.png" class="bg-green-600 text-white px-4 py-2 rounded">Descargar QR</a>
-  </section>
-</main>
+    <form id="formularioReceta" class="space-y-4 bg-white p-6 rounded shadow hidden">
+      <h2 class="text-xl font-semibold mb-4">Nueva Receta</h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <input type="text" id="nombrePaciente" placeholder="Nombre del paciente" required class="border p-2 rounded">
+        <input type="number" id="edadPaciente" placeholder="Edad" required class="border p-2 rounded">
+      </div>
+      <textarea id="signosVitales" placeholder="Signos vitales (opcional)" class="w-full border p-2 rounded"></textarea>
 
-<datalist id="sugerencias"></datalist>
+      <div id="medicamentosContainer" class="space-y-2"></div>
+      <button type="button" id="btnAgregar" class="bg-blue-500 text-white px-3 py-2 rounded">+ Agregar medicamento</button>
+      <button type="submit" class="bg-green-600 text-white px-6 py-2 rounded">Guardar y generar QR</button>
+    </form>
 
-<script>
-  const firebaseConfig = {
-    apiKey: "AIzaSyBIjaOe4HcGNDk0xrqen8etBv0RyjyOJHw",
-    authDomain: "kodrx-105b9.firebaseapp.com",
-    databaseURL: "https://kodrx-105b9-default-rtdb.firebaseio.com",
-    projectId: "kodrx-105b9",
-    storageBucket: "kodrx-105b9.appspot.com",
-    messagingSenderId: "239675098141",
-    appId: "1:239675098141:web:152ae3741b0ac79db7f2f4"
-  };
-  firebase.initializeApp(firebaseConfig);
-  const db = firebase.database();
-  const auth = firebase.auth();
+    <section id="qrSection" class="hidden mt-6 text-center bg-white p-6 rounded shadow">
+      <p class="mb-4">Receta generada correctamente. Escanéala desde la farmacia.</p>
+      <img id="codigoQR" class="mx-auto my-4" />
+      <a id="descargarQR" download="receta_qr.png" class="bg-green-600 text-white px-4 py-2 rounded">Descargar QR</a>
+    </section>
+  </main>
 
-  let uid = "";
-  let contadorMedicamentos = 0;
+  <datalist id="sugerencias"></datalist>
 
-  auth.onAuthStateChanged(user => {
-    if (!user) {
-      window.location.href = "login.html";
-    } else {
-      uid = user.uid;
-      db.ref("usuarios/" + uid).once("value").then(snapshot => {
-        const datos = snapshot.val();
-        if (!datos || !datos.verificado) {
-          window.location.href = "verificacion_en_proceso.html";
-        } else {
-          document.getElementById("nombreMedico").textContent = datos.nombre || "N/A";
-          document.getElementById("cedulaMedico").textContent = datos.cedula || "N/A";
-        }
-      });
-      cargarMedicamentos();
-    }
-  });
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyBIjaOe4HcGNDk0xrqen8etBv0RyjyOJHw",
+      authDomain: "kodrx-105b9.firebaseapp.com",
+      databaseURL: "https://kodrx-105b9-default-rtdb.firebaseio.com",
+      projectId: "kodrx-105b9",
+      storageBucket: "kodrx-105b9.appspot.com",
+      messagingSenderId: "239675098141",
+      appId: "1:239675098141:web:152ae3741b0ac79db7f2f4"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    const auth = firebase.auth();
+    let uid = "";
+    let contadorMedicamentos = 0;
 
-  function cerrarSesion() {
-    auth.signOut().then(() => {
-      window.location.href = "login.html";
+    auth.onAuthStateChanged(user => {
+      if (!user) {
+        window.location.href = "login.html";
+      } else {
+        uid = user.uid;
+        db.ref("usuarios/" + uid).once("value").then(snapshot => {
+          const datos = snapshot.val();
+          if (!datos || !datos.verificado) {
+            window.location.href = "verificacion_en_proceso.html";
+          } else {
+            document.getElementById("nombreMedico").textContent = datos.nombre || "N/A";
+            document.getElementById("cedulaMedico").textContent = datos.cedula || "N/A";
+          }
+        });
+        cargarMedicamentos();
+      }
     });
-  }
 
-  document.getElementById("btnCerrarSesion").addEventListener("click", cerrarSesion);
-  document.getElementById("btnNuevaReceta").addEventListener("click", mostrarFormulario);
-  document.getElementById("btnAgregar").addEventListener("click", agregarMedicamento);
+    function cerrarSesion() {
+      auth.signOut().then(() => {
+        window.location.href = "login.html";
+      });
+    }
 
-  function mostrarFormulario() {
-    document.getElementById("qrSection").classList.add("hidden");
-    document.getElementById("formularioReceta").reset();
-    document.getElementById("medicamentosContainer").innerHTML = "";
-    contadorMedicamentos = 0;
-    agregarMedicamento();
-    document.getElementById("formularioReceta").classList.remove("hidden");
-  }
+    function mostrarFormulario() {
+      document.getElementById("qrSection").classList.add("hidden");
+      document.getElementById("formularioReceta").reset();
+      document.getElementById("medicamentosContainer").innerHTML = "";
+      contadorMedicamentos = 0;
+      agregarMedicamento();
+      document.getElementById("formularioReceta").classList.remove("hidden");
+    }
 
-  function agregarMedicamento() {
-    const div = document.createElement("div");
-    div.className = "flex gap-2 items-center";
-    
+    function agregarMedicamento() {
+      const div = document.createElement("div");
+      div.className = "flex gap-2 items-center";
       div.innerHTML = "<input list='sugerencias' class='flex-1 border p-2 rounded' placeholder='Medicamento' />" +
                       "<input type='text' class='w-1/3 border p-2 rounded' placeholder='Dosis' />" +
                       "<input type='text' class='w-1/3 border p-2 rounded' placeholder='Duración' />";
+      document.getElementById("medicamentosContainer").appendChild(div);
+      contadorMedicamentos++;
+    }
 
-      <input list="sugerencias" class="flex-1 border p-2 rounded" placeholder="Medicamento" />
-      <input type="text" class="w-1/3 border p-2 rounded" placeholder="Dosis" />
-      <input type="text" class="w-1/3 border p-2 rounded" placeholder="Duración" />
-    \
+    function cargarMedicamentos() {
+      db.ref("catalogo_medicamentos").once("value").then(snapshot => {
+        const dataList = document.getElementById("sugerencias");
+        dataList.innerHTML = "";
+        snapshot.forEach(child => {
+          const option = document.createElement("option");
+          option.value = child.val().nombre;
+          dataList.appendChild(option);
+        });
+      });
+    }
+
+    document.getElementById("btnCerrarSesion").addEventListener("click", cerrarSesion);
+    document.getElementById("btnNuevaReceta").addEventListener("click", mostrarFormulario);
+    document.getElementById("btnAgregar").addEventListener("click", agregarMedicamento);
+
+    document.getElementById("formularioReceta").addEventListener("submit", e => {
+      e.preventDefault();
+      const nombre = document.getElementById("nombrePaciente").value;
+      const edad = document.getElementById("edadPaciente").value;
+      const signos = document.getElementById("signosVitales").value;
+      const medicamentos = Array.from(document.querySelectorAll("#medicamentosContainer > div")).map(div => {
+        const inputs = div.querySelectorAll("input");
+        return {
+          nombre: inputs[0].value,
+          dosis: inputs[1].value,
+          duracion: inputs[2].value
+        };
+      });
+
+      const receta = {
+        paciente: { nombre, edad, signos },
+        medicamentos,
+        uid_medico: uid,
+        timestamp: new Date().toISOString(),
+        surtido: false
+      };
+
+      const recetaRef = db.ref("recetas").push();
+      recetaRef.set(receta).then(() => {
+        const qrURL = \`https://kodrx.app/verificar.html?id=\${recetaRef.key}&uid=\${uid}\`;
+        const qrImg = document.getElementById("codigoQR");
+        const qrDownload = document.getElementById("descargarQR");
+        qrImg.src = \`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=\${encodeURIComponent(qrURL)}\`;
+        qrDownload.href = qrImg.src;
+        document.getElementById("qrSection").classList.remove("hidden");
+        document.getElementById("formularioReceta").classList.add("hidden");
+      });
+    });
+  </script>
+
+</body>
+</html>
