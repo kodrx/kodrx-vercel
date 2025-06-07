@@ -1,0 +1,105 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>KodRx | Nueva Receta Médica</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet"/>
+</head>
+<body class="bg-gray-50 py-10 px-4 text-gray-800">
+  <div class="max-w-2xl mx-auto bg-white shadow-md rounded-lg p-6">
+    <h1 class="text-2xl font-bold text-green-700 mb-4">Emitir Nueva Receta Médica</h1>
+
+    <form id="formularioReceta" class="space-y-4">
+      <div>
+        <label class="block mb-1 font-medium">Nombre del paciente:</label>
+        <input id="nombrePaciente" type="text" class="w-full border rounded px-3 py-2" required />
+      </div>
+
+      <div>
+        <label class="block mb-1 font-medium">Edad del paciente:</label>
+        <input id="edadPaciente" type="number" min="0" class="w-full border rounded px-3 py-2" required />
+      </div>
+
+      <div>
+        <label class="block mb-1 font-medium">Signos vitales:</label>
+        <input id="signosVitales" type="text" class="w-full border rounded px-3 py-2" placeholder="Ej: presión 120/80" />
+      </div>
+
+      <div id="medicamentosContainer">
+        <label class="block mb-2 font-semibold">Medicamentos:</label>
+        <div class="medicamentoItem space-y-2 mb-4">
+          <input list="medicamentosSugeridos" class="medicamentoNombre w-full border px-3 py-2 rounded" placeholder="Nombre del medicamento" />
+          <datalist id="medicamentosSugeridos">
+            <option value="Paracetamol 500 mg" />
+            <option value="Ibuprofeno 400 mg" />
+            <option value="Amoxicilina 500 mg" />
+            <option value="Diclofenaco 50 mg" />
+            <option value="Metformina 850 mg" />
+            <option value="Loratadina 10 mg" />
+          </datalist>
+          <input type="text" class="medicamentoDosis w-full border px-3 py-2 rounded" placeholder="Dosis (ej: 1 tableta)" />
+          <input type="text" class="medicamentoFrecuencia w-full border px-3 py-2 rounded" placeholder="Frecuencia (ej: cada 12 horas)" />
+          <input type="text" class="medicamentoDuracion w-full border px-3 py-2 rounded" placeholder="Duración (ej: 5 días)" />
+        </div>
+      </div>
+
+      <button type="button" onclick="agregarMedicamento()" class="bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600">Agregar otro medicamento</button>
+
+      <div class="pt-4">
+        <button type="submit" class="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700">Generar Receta</button>
+      </div>
+    </form>
+
+    <div id="recetaGuardada" class="hidden mt-6 p-4 bg-green-100 border border-green-400 rounded text-green-800">
+      Receta guardada correctamente.
+    </div>
+  </div>
+
+  <script>
+    const medicamentosContainer = document.getElementById("medicamentosContainer");
+
+    function agregarMedicamento() {
+      const div = document.createElement("div");
+      div.classList.add("medicamentoItem", "space-y-2", "mb-4");
+      div.innerHTML = \`
+        <input list="medicamentosSugeridos" class="medicamentoNombre w-full border px-3 py-2 rounded" placeholder="Nombre del medicamento" />
+        <input type="text" class="medicamentoDosis w-full border px-3 py-2 rounded" placeholder="Dosis (ej: 1 tableta)" />
+        <input type="text" class="medicamentoFrecuencia w-full border px-3 py-2 rounded" placeholder="Frecuencia (ej: cada 12 horas)" />
+        <input type="text" class="medicamentoDuracion w-full border px-3 py-2 rounded" placeholder="Duración (ej: 5 días)" />
+      \`;
+      medicamentosContainer.appendChild(div);
+    }
+
+    document.getElementById("formularioReceta").addEventListener("submit", function(e) {
+      e.preventDefault();
+      const nombre = document.getElementById("nombrePaciente").value.trim();
+      const edad = document.getElementById("edadPaciente").value.trim();
+      const signos = document.getElementById("signosVitales").value.trim();
+
+      const medicamentoItems = document.querySelectorAll(".medicamentoItem");
+      const medicamentos = Array.from(medicamentoItems).map(item => {
+        return {
+          nombre: item.querySelector(".medicamentoNombre").value.trim(),
+          dosis: item.querySelector(".medicamentoDosis").value.trim(),
+          frecuencia: item.querySelector(".medicamentoFrecuencia").value.trim(),
+          duracion: item.querySelector(".medicamentoDuracion").value.trim()
+        };
+      });
+
+      console.log("Receta generada:", {
+        paciente: { nombre, edad, signos_vitales: signos },
+        medicamentos
+      });
+
+      document.getElementById("recetaGuardada").classList.remove("hidden");
+      document.getElementById("formularioReceta").reset();
+      medicamentosContainer.innerHTML = "";
+      agregarMedicamento(); // reiniciar con uno
+    });
+
+    agregarMedicamento(); // inicial
+  </script>
+</body>
+</html>
