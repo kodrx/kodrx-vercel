@@ -67,10 +67,11 @@
           }
 
           contenedor.innerHTML = `
-            <p><strong>Nombre del paciente:</strong> ${receta.nombrePaciente || 'N/A'}</p>
-            <p><strong>Edad del paciente:</strong> ${receta.edadPaciente || 'N/A'}</p>
+            <p><strong>Nombre del paciente:</strong> ${receta.paciente?.nombre || 'N/A'}</p>
+            <p><strong>Edad del paciente:</strong> ${receta.paciente?.edad || 'N/A'}</p>
+            <p><strong>Signos vitales:</strong> ${receta.paciente?.signos_vitales || 'N/A'}</p>
             <p><strong>Fecha:</strong> ${receta.fecha || 'N/A'}</p>
-            <p><strong>Médico:</strong> ${receta.nombreMedico || 'N/A'}</p>
+            <p><strong>Médico:</strong> ${receta.medico || 'N/A'}</p>
             <p><strong>Cédula profesional:</strong> ${receta.cedula || 'N/A'}</p>
             <p><strong>Medicamentos:</strong></p>
             <ul class="list-disc ml-6">${medicamentosList}</ul>
