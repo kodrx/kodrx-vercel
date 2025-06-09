@@ -145,12 +145,16 @@
         });
 
         const receta = {
-          paciente: { nombre, edad, signos },
-          medicamentos,
-          uid_medico: uid,
-          timestamp: new Date().toISOString(),
-          surtido: false
-        };
+  nombrePaciente: nombre,
+  edadPaciente: edad,
+  signosVitales: signos,
+  medicamentos,
+  uid_medico: uid,
+  nombre_medico: nombreMedico,
+  cedula_medico: cedula,
+  timestamp: new Date().toISOString(),
+  surtido: false
+};
 
         const recetaRef = db.ref("recetas").push();
         recetaRef.set(receta).then(() => {
