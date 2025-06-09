@@ -3,34 +3,33 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Escanear Receta Médica</title>
+  <title>Escanear Receta - KodRx</title>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
   <style>
     body { font-family: Arial, sans-serif; padding: 20px; }
-    .section { margin-bottom: 20px; }
     .hidden { display: none; }
-    .botones { margin-top: 20px; }
-    .botones button { margin-right: 10px; }
+    .botones button { margin: 10px 10px 0 0; }
+    #qr-reader { width: 100%; max-width: 400px; margin-bottom: 20px; }
   </style>
 </head>
 <body>
-  <h2>📄 Escanear Receta Médica</h2>
-  <div id="infoReceta" class="section">
-    <strong>Receta escaneada</strong>
-    <p><b>Nombre del paciente:</b> <span id="nombrePaciente">Cargando...</span></p>
-    <p><b>Edad del paciente:</b> <span id="edadPaciente">Cargando...</span></p>
+  <h2>📷 Escanear Receta Médica</h2>
+
+  <div id="qr-reader"></div>
+
+  <div id="infoReceta" class="hidden">
+    <h3>Receta escaneada</h3>
+    <p><b>Nombre del paciente:</b> <span id="nombrePaciente">-</span></p>
+    <p><b>Edad del paciente:</b> <span id="edadPaciente">-</span></p>
     <p><b>Fecha:</b> <span id="fechaReceta">-</span></p>
     <p><b>Médico:</b> <span id="nombreMedico">-</span></p>
     <p><b>Cédula profesional:</b> <span id="cedulaMedico">-</span></p>
     <p><b>Medicamentos:</b></p>
     <ul id="listaMedicamentos"></ul>
-  </div>
-
-  <div class="botones hidden" id="botonesSurtido">
-    <button onclick="actualizarSurtido(true)">Surtida Completamente</button>
-    <button onclick="actualizarSurtido(false)">Surtida Parcialmente</button>
+    <div class="botones" id="botonesSurtido"></div>
   </div>
 
   <script>
@@ -45,27 +44,33 @@
     };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
-    const auth = firebase.auth();
 
-    const params = new URLSearchParams(window.location.search);
-    const id = params.get("id");
-    const uid = params.get("uid");
+    let recetaID = "";
+    let uid = "";
 
-    const nombrePaciente = document.getElementById("nombrePaciente");
-    const edadPaciente = document.getElementById("edadPaciente");
-    const fechaReceta = document.getElementById("fechaReceta");
-    const nombreMedico = document.getElementById("nombreMedico");
-    const cedulaMedico = document.getElementById("cedulaMedico");
-    const listaMedicamentos = document.getElementById("listaMedicamentos");
-    const botonesSurtido = document.getElementById("botonesSurtido");
+    function onScanSuccess(decodedText, decodedResult) {
+      if (decodedText.includes("id=") && decodedText.includes("uid=")) {
+        const params = new URLSearchParams(decodedText.split("?")[1]);
+        recetaID = params.get("id");
+        uid = params.get("uid");
+        document.getElementById("qr-reader").remove();
+        cargarReceta();
+      }
+    }
 
-    if (!id || !uid) {
-      nombrePaciente.innerText = "Parámetros inválidos";
-    } else {
-      db.ref("recetas/" + id).once("value").then(snapshot => {
+    function cargarReceta() {
+      const nombrePaciente = document.getElementById("nombrePaciente");
+      const edadPaciente = document.getElementById("edadPaciente");
+      const fechaReceta = document.getElementById("fechaReceta");
+      const nombreMedico = document.getElementById("nombreMedico");
+      const cedulaMedico = document.getElementById("cedulaMedico");
+      const listaMedicamentos = document.getElementById("listaMedicamentos");
+      const botonesSurtido = document.getElementById("botonesSurtido");
+
+      db.ref("recetas/" + recetaID).once("value").then(snapshot => {
         const receta = snapshot.val();
         if (!receta) {
-          nombrePaciente.innerText = "Receta no encontrada.";
+          alert("❌ Receta no encontrada.");
           return;
         }
 
@@ -82,23 +87,33 @@
           listaMedicamentos.appendChild(li);
         });
 
-        if (receta.surtido === false) {
-          botonesSurtido.classList.remove("hidden");
-        } else if (receta.surtido === "parcial") {
-          botonesSurtido.classList.remove("hidden");
+        const botones = `
+          <button onclick="actualizarSurtido(true)">Surtida Completamente</button>
+          <button onclick="actualizarSurtido(false)">Surtida Parcialmente</button>
+        `;
+        if (receta.surtido === false || receta.surtido === "parcial") {
+          botonesSurtido.innerHTML = botones;
         } else {
-          botonesSurtido.innerHTML = "<p><b>Esta receta ya fue surtida completamente.</b></p>";
+          botonesSurtido.innerHTML = "<b>✅ Esta receta ya fue surtida completamente.</b>";
         }
+
+        document.getElementById("infoReceta").classList.remove("hidden");
       });
     }
 
     function actualizarSurtido(completo) {
       const valor = completo ? true : "parcial";
-      db.ref("recetas/" + id + "/surtido").set(valor).then(() => {
-        alert("Estado actualizado correctamente.");
+      db.ref("recetas/" + recetaID + "/surtido").set(valor).then(() => {
+        alert("✅ Estado actualizado correctamente.");
         location.reload();
       });
     }
+
+    new Html5Qrcode("qr-reader").start(
+      { facingMode: "environment" },
+      { fps: 10, qrbox: 250 },
+      onScanSuccess
+    );
   </script>
 </body>
 </html>
