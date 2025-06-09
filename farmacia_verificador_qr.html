@@ -1,0 +1,108 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>KodRx - Verificador de Recetas para Farmacias</title>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+  <script src="https://unpkg.com/html5-qrcode"></script>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; background: #f9f9f9; }
+    .hidden { display: none; }
+    .receta-container { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 0 8px rgba(0,0,0,0.1); margin-top: 20px; }
+    button { margin-top: 10px; padding: 10px 20px; }
+  </style>
+</head>
+<body>
+  <h2>Verificador de Recetas - Farmacia</h2>
+  <div id="qr-reader" style="width: 300px;"></div>
+
+  <div id="recetaContainer" class="hidden receta-container">
+    <p><strong>Nombre del paciente:</strong> <span id="nombrePaciente">N/A</span></p>
+    <p><strong>Edad:</strong> <span id="edadPaciente">N/A</span></p>
+    <p><strong>Signos vitales:</strong> <span id="signosVitales">N/A</span></p>
+    <p><strong>Médico:</strong> <span id="nombreMedico">N/A</span> | <strong>Cédula:</strong> <span id="cedulaMedico">N/A</span></p>
+    <div id="listaMedicamentos"></div>
+    <button onclick="marcarComoSurtida('total')">Marcar como surtida completamente</button>
+    <button onclick="marcarComoSurtida('parcial')">Marcar como surtida parcialmente</button>
+  </div>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyBIjaOe4HcGNDk0xrqen8etBv0RyjyOJHw",
+      authDomain: "kodrx-105b9.firebaseapp.com",
+      databaseURL: "https://kodrx-105b9-default-rtdb.firebaseio.com",
+      projectId: "kodrx-105b9",
+      storageBucket: "kodrx-105b9.appspot.com",
+      messagingSenderId: "239675098141",
+      appId: "1:239675098141:web:152ae3741b0ac79db7f2f4"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    let recetaID = "";
+    let uid = "";
+    let qrScanner;
+
+    function onScanSuccess(decodedText, decodedResult) {
+      if (decodedText.includes("id=") && decodedText.includes("uid=")) {
+        const params = new URLSearchParams(decodedText.split("?")[1]);
+        recetaID = params.get("id");
+        uid = params.get("uid");
+
+        qrScanner.stop().then(() => {
+          document.getElementById("qr-reader").remove();
+          cargarReceta();
+        }).catch(err => {
+          console.error("Error al detener el escáner:", err);
+          alert("No se pudo cerrar la cámara correctamente.");
+        });
+      }
+    }
+
+    function cargarReceta() {
+      db.ref("recetas/" + recetaID).once("value").then(snapshot => {
+        const receta = snapshot.val();
+        if (!receta) {
+          alert("Receta no encontrada.");
+          return;
+        }
+
+        document.getElementById("nombrePaciente").textContent = receta.nombrePaciente || "N/A";
+        document.getElementById("edadPaciente").textContent = receta.edadPaciente || "N/A";
+        document.getElementById("signosVitales").textContent = receta.signosVitales || "N/A";
+        document.getElementById("nombreMedico").textContent = receta.nombre_medico || "N/A";
+        document.getElementById("cedulaMedico").textContent = receta.cedula_medico || "N/A";
+
+        const lista = document.getElementById("listaMedicamentos");
+        lista.innerHTML = "";
+        receta.medicamentos.forEach(med => {
+          const item = document.createElement("p");
+          item.textContent = `🩺 ${med.nombre} - ${med.dosis} - ${med.duracion}`;
+          lista.appendChild(item);
+        });
+
+        document.getElementById("recetaContainer").classList.remove("hidden");
+      });
+    }
+
+    function marcarComoSurtida(tipo) {
+      const campo = tipo === "total" ? "surtido" : "surtido_parcial";
+      db.ref("recetas/" + recetaID).update({ [campo]: true }).then(() => {
+        alert("Estado actualizado correctamente.");
+        location.reload();
+      });
+    }
+
+    // Iniciar escaneo
+    qrScanner = new Html5Qrcode("qr-reader");
+    qrScanner.start(
+      { facingMode: "environment" },
+      { fps: 10, qrbox: 250 },
+      onScanSuccess
+    );
+  </script>
+</body>
+</html>
