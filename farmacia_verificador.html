@@ -2,34 +2,37 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Farmacia | Verificador KodRx</title>
-  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet"/>
-  <script src="https://unpkg.com/html5-qrcode"></script>
+  <meta charset="UTF-8">
+  <title>Escanear Receta Médica</title>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    .section { margin-bottom: 20px; }
+    .hidden { display: none; }
+    .botones { margin-top: 20px; }
+    .botones button { margin-right: 10px; }
+  </style>
 </head>
-<body class="bg-gray-100 min-h-screen flex flex-col items-center justify-start py-10 text-gray-800">
-  <h1 class="text-2xl font-bold text-green-700 mb-4">Escanear Receta Médica</h1>
-
-  <div id="reader" class="w-80 mb-6 border border-gray-300 rounded-md"></div>
-
-  <div id="recetaInfo" class="hidden w-full max-w-xl bg-white p-4 rounded shadow-md">
-    <h2 class="text-xl font-semibold mb-2 text-green-700">Receta escaneada</h2>
-    <div id="datosReceta" class="text-sm space-y-2"></div>
-    <div id="acciones" class="flex gap-4 mt-4">
-      <button onclick="marcarComoSurtida()" id="btnTotal" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Surtida Completamente</button>
-      <button onclick="mostrarParcial()" id="btnParcial" class="bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600">Surtida Parcialmente</button>
-    </div>
-    <div id="parcialForm" class="hidden mt-6 border-t pt-4">
-      <p class="mb-2 text-sm font-semibold">Selecciona los medicamentos que fueron surtidos:</p>
-      <form id="formParcial" class="space-y-2"></form>
-      <button onclick="enviarParcial()" class="mt-3 bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">Enviar</button>
-    </div>
+<body>
+  <h2>📄 Escanear Receta Médica</h2>
+  <div id="infoReceta" class="section">
+    <strong>Receta escaneada</strong>
+    <p><b>Nombre del paciente:</b> <span id="nombrePaciente">Cargando...</span></p>
+    <p><b>Edad del paciente:</b> <span id="edadPaciente">Cargando...</span></p>
+    <p><b>Fecha:</b> <span id="fechaReceta">-</span></p>
+    <p><b>Médico:</b> <span id="nombreMedico">-</span></p>
+    <p><b>Cédula profesional:</b> <span id="cedulaMedico">-</span></p>
+    <p><b>Medicamentos:</b></p>
+    <ul id="listaMedicamentos"></ul>
   </div>
 
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+  <div class="botones hidden" id="botonesSurtido">
+    <button onclick="actualizarSurtido(true)">Surtida Completamente</button>
+    <button onclick="actualizarSurtido(false)">Surtida Parcialmente</button>
+  </div>
+
   <script>
     const firebaseConfig = {
       apiKey: "AIzaSyBIjaOe4HcGNDk0xrqen8etBv0RyjyOJHw",
@@ -42,114 +45,60 @@
     };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
+    const auth = firebase.auth();
 
-    const reader = new Html5Qrcode("reader");
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get("id");
+    const uid = params.get("uid");
 
-    function mostrarReceta(uid, recetaId) {
-      db.ref("recetas/" + uid + "/" + recetaId).once("value").then(snapshot => {
+    const nombrePaciente = document.getElementById("nombrePaciente");
+    const edadPaciente = document.getElementById("edadPaciente");
+    const fechaReceta = document.getElementById("fechaReceta");
+    const nombreMedico = document.getElementById("nombreMedico");
+    const cedulaMedico = document.getElementById("cedulaMedico");
+    const listaMedicamentos = document.getElementById("listaMedicamentos");
+    const botonesSurtido = document.getElementById("botonesSurtido");
+
+    if (!id || !uid) {
+      nombrePaciente.innerText = "Parámetros inválidos";
+    } else {
+      db.ref("recetas/" + id).once("value").then(snapshot => {
         const receta = snapshot.val();
-        if (receta) {
-          const contenedor = document.getElementById("datosReceta");
-          let medicamentosList = receta.medicamentos.map(med => `<li>${med.nombre} - ${med.dosis}, ${med.frecuencia}</li>`).join("");
-          const acciones = document.getElementById("acciones");
+        if (!receta) {
+          nombrePaciente.innerText = "Receta no encontrada.";
+          return;
+        }
 
-          let alertaEstado = "";
-          if (receta.surtida && receta.surtida.farmacia) {
-            alertaEstado = `<p class="text-red-600"><strong>✅ Ya fue completamente surtida por:</strong> ${receta.surtida.farmacia}</p>`;
-            acciones.classList.add("hidden");
-          } else if (receta.parcial && receta.parcial.medicamentos.length > 0) {
-            alertaEstado = `
-              <p class="text-yellow-600"><strong>⚠ Parcialmente surtida:</strong></p>
-              <ul class="ml-4 list-disc text-yellow-700">${receta.parcial.medicamentos.map(m => `<li>${m}</li>`).join("")}</ul>`;
-            acciones.classList.remove("hidden");
-          } else {
-            acciones.classList.remove("hidden");
-          }
+        nombrePaciente.innerText = receta.nombre_paciente || "N/A";
+        edadPaciente.innerText = receta.edad_paciente || "N/A";
+        fechaReceta.innerText = receta.timestamp || "-";
+        nombreMedico.innerText = receta.nombre_medico || "N/A";
+        cedulaMedico.innerText = receta.cedula_medico || "N/A";
 
-          contenedor.innerHTML = `
-            <p><strong>Nombre del paciente:</strong> ${receta.paciente?.nombre || 'N/A'}</p>
-            <p><strong>Edad del paciente:</strong> ${receta.paciente?.edad || 'N/A'}</p>
-            <p><strong>Signos vitales:</strong> ${receta.paciente?.signos_vitales || 'N/A'}</p>
-            <p><strong>Fecha:</strong> ${receta.fecha || 'N/A'}</p>
-            <p><strong>Médico:</strong> ${receta.medico || 'N/A'}</p>
-            <p><strong>Cédula profesional:</strong> ${receta.cedula || 'N/A'}</p>
-            <p><strong>Medicamentos:</strong></p>
-            <ul class="list-disc ml-6">${medicamentosList}</ul>
-            ${alertaEstado}
-          `;
-          document.getElementById("recetaInfo").classList.remove("hidden");
+        listaMedicamentos.innerHTML = "";
+        receta.medicamentos.forEach(med => {
+          const li = document.createElement("li");
+          li.textContent = `${med.nombre} - ${med.dosis}, ${med.duracion}`;
+          listaMedicamentos.appendChild(li);
+        });
 
-          const form = document.getElementById("formParcial");
-          form.innerHTML = receta.medicamentos.map(med => `
-            <label class="block">
-              <input type="checkbox" name="medicamento" value="${med.nombre}" class="mr-2" />
-              ${med.nombre} - ${med.dosis}, ${med.frecuencia}
-            </label>
-          `).join("");
+        if (receta.surtido === false) {
+          botonesSurtido.classList.remove("hidden");
+        } else if (receta.surtido === "parcial") {
+          botonesSurtido.classList.remove("hidden");
         } else {
-          alert("Receta no encontrada.");
+          botonesSurtido.innerHTML = "<p><b>Esta receta ya fue surtida completamente.</b></p>";
         }
       });
     }
 
-    function onScanSuccess(decodedText) {
-      try {
-        const url = new URL(decodedText);
-        const recetaId = url.searchParams.get("id");
-        const uid = url.searchParams.get("uid");
-
-        if (recetaId && uid) {
-          reader.stop();
-          firebase.auth().onAuthStateChanged(user => {
-            if (user) {
-              window.recetaActual = { uid, recetaId };
-              mostrarReceta(uid, recetaId);
-            } else {
-              alert("Sesión no activa.");
-              window.location.href = "farmacia_login.html";
-            }
-          });
-        } else {
-          alert("QR no válido.");
-        }
-      } catch (e) {
-        alert("QR malformado.");
-      }
-    }
-
-    function mostrarParcial() {
-      document.getElementById("parcialForm").classList.remove("hidden");
-    }
-
-    function enviarParcial() {
-      const checkboxes = document.querySelectorAll('input[name="medicamento"]:checked');
-      const medicamentos = Array.from(checkboxes).map(cb => cb.value);
-      const { uid, recetaId } = window.recetaActual;
-      const farmacia = firebase.auth().currentUser?.email || "farmacia_desconocida";
-
-      db.ref("recetas/" + uid + "/" + recetaId + "/parcial").set({
-        farmacia: farmacia,
-        fecha: new Date().toISOString(),
-        medicamentos: medicamentos
-      }).then(() => {
-        alert("Receta marcada como parcialmente surtida.");
-        window.location.reload();
+    function actualizarSurtido(completo) {
+      const valor = completo ? true : "parcial";
+      db.ref("recetas/" + id + "/surtido").set(valor).then(() => {
+        alert("Estado actualizado correctamente.");
+        location.reload();
       });
     }
-
-    function marcarComoSurtida() {
-      const { uid, recetaId } = window.recetaActual;
-      const farmacia = firebase.auth().currentUser?.email || "farmacia_desconocida";
-      db.ref("recetas/" + uid + "/" + recetaId + "/surtida").set({
-        farmacia: farmacia,
-        fecha: new Date().toISOString()
-      }).then(() => {
-        alert("Receta marcada como surtida correctamente.");
-        window.location.reload();
-      });
-    }
-
-    reader.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, onScanSuccess);
   </script>
 </body>
 </html>
