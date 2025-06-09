@@ -2,33 +2,30 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Diagnóstico KodRx | Verificador</title>
-  <style>
-    body { font-family: sans-serif; padding: 20px; background: #f8fafc; }
-    .box { border: 1px solid #ccc; background: #fff; padding: 16px; margin-bottom: 16px; border-radius: 6px; }
-    pre { background: #eee; padding: 8px; border-radius: 4px; overflow-x: auto; }
-  </style>
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+  <meta charset="UTF-8">
+  <title>Debug Farmacia Verificador - KodRx</title>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
   <script src="https://unpkg.com/html5-qrcode"></script>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    pre { background: #f4f4f4; padding: 10px; border-radius: 5px; }
+    .hidden { display: none; }
+  </style>
 </head>
 <body>
-  <h2>Diagnóstico del lector de QR para farmacias</h2>
-  <div id="reader" style="width: 300px; margin-bottom: 20px;"></div>
+  <h2>🔍 Debug KodRx | Verificador de Recetas</h2>
+  <div id="qr-reader" style="width:300px;"></div>
 
-  <div class="box">
+  <div id="resultado" class="hidden">
     <h3>Datos del QR escaneado</h3>
-    <p><strong>Texto completo:</strong> <span id="qrText">Esperando...</span></p>
-    <p><strong>UID:</strong> <span id="uid">-</span></p>
-    <p><strong>ID de receta:</strong> <span id="recetaId">-</span></p>
-  </div>
+    <p><strong>Texto completo:</strong> <span id="textoQR"></span></p>
+    <p><strong>UID:</strong> <span id="uid"></span></p>
+    <p><strong>ID de receta:</strong> <span id="idReceta"></span></p>
 
-  <div class="box">
     <h3>Resultado de la consulta a Firebase</h3>
-    <pre id="firebaseResult">Sin datos todavía.</pre>
+    <pre id="firebaseResultado">Consultando...</pre>
   </div>
 
   <script>
@@ -44,45 +41,39 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    const reader = new Html5Qrcode("reader");
+    let qrScanner = new Html5Qrcode("qr-reader");
 
-    function onScanSuccess(decodedText) {
-      document.getElementById("qrText").innerText = decodedText;
+    function onScanSuccess(decodedText, decodedResult) {
+      const urlParams = new URLSearchParams(decodedText.split("?")[1]);
+      const recetaID = urlParams.get("id");
+      const uid = urlParams.get("uid");
 
-      try {
-        const url = new URL(decodedText);
-        const recetaId = url.searchParams.get("id");
-        const uid = url.searchParams.get("uid");
-        document.getElementById("uid").innerText = uid;
-        document.getElementById("recetaId").innerText = recetaId;
+      document.getElementById("textoQR").textContent = decodedText;
+      document.getElementById("uid").textContent = uid;
+      document.getElementById("idReceta").textContent = recetaID;
 
-        if (!recetaId || !uid) {
-          document.getElementById("firebaseResult").innerText = "❌ Error: No se encontraron parámetros válidos en el QR.";
-          return;
-        }
+      qrScanner.stop().then(() => {
+        document.getElementById("qr-reader").remove();
+        document.getElementById("resultado").classList.remove("hidden");
 
-        firebase.auth().onAuthStateChanged(user => {
-          if (user) {
-            db.ref("recetas/" + uid + "/" + recetaId).once("value").then(snapshot => {
-              const receta = snapshot.val();
-              if (receta) {
-                document.getElementById("firebaseResult").innerText = JSON.stringify(receta, null, 2);
-              } else {
-                document.getElementById("firebaseResult").innerText = "❌ No se encontró la receta en la ruta indicada.";
-              }
-            }).catch(err => {
-              document.getElementById("firebaseResult").innerText = "❌ Error de Firebase: " + err.message;
-            });
+        db.ref("recetas/" + recetaID).once("value").then(snapshot => {
+          const receta = snapshot.val();
+          if (!receta) {
+            document.getElementById("firebaseResultado").textContent = "❌ Receta no encontrada con ese ID";
           } else {
-            document.getElementById("firebaseResult").innerText = "⚠ Usuario no autenticado.";
+            document.getElementById("firebaseResultado").textContent = JSON.stringify(receta, null, 2);
           }
+        }).catch(err => {
+          document.getElementById("firebaseResultado").textContent = "❌ Error en la consulta: " + err;
         });
-      } catch (e) {
-        document.getElementById("firebaseResult").innerText = "❌ Error al procesar el QR: " + e.message;
-      }
+      });
     }
 
-    reader.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, onScanSuccess);
+    qrScanner.start(
+      { facingMode: "environment" },
+      { fps: 10, qrbox: 250 },
+      onScanSuccess
+    );
   </script>
 </body>
 </html>
