@@ -5,129 +5,114 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>KodRx | Escanear Receta Médica</title>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
   <style>
-    body { font-family: Arial, sans-serif; padding: 1em; background: #f9f9f9; }
-    h2 { color: #0d1a40; }
-    .highlight { color: #00b894; font-weight: bold; }
-    .card { background: white; border-radius: 10px; padding: 20px; box-shadow: 0 0 10px rgba(0,0,0,0.1); margin-top: 1em; }
-    .btn { padding: 10px 20px; margin: 10px 5px; border: none; border-radius: 5px; cursor: pointer; font-size: 1em; }
-    .btn-blue { background: #007bff; color: white; }
-    .btn-orange { background: #ffa500; color: white; }
-    .hidden { display: none; }
+    body { font-family: Arial, sans-serif; background: #f8f9fa; margin: 0; padding: 0; }
+    header { background: #001b44; color: white; padding: 1rem; text-align: center; font-size: 1.2rem; }
+    header span { color: #00c7a0; font-weight: bold; }
+    #scanner { width: 100%; max-width: 400px; margin: 20px auto; }
+    #resultado, #acciones { max-width: 600px; margin: 1rem auto; background: white; padding: 1rem; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+    button { margin: 0.5rem; padding: 0.7rem 1rem; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; }
+    .btn-completo { background: #0062ff; color: white; }
+    .btn-parcial { background: orange; color: white; }
+    .oculto { display: none; }
   </style>
 </head>
 <body>
-  <h2><span class="highlight">KodRx</span> | Escanear Receta Médica</h2>
-  <div id="reader" style="width:100%; max-width:400px; margin:auto;"></div>
+<header><span>KodRx</span> | Escanear Receta Médica</header>
 
-  <div id="resultado" class="card hidden">
-    <h3>Receta escaneada</h3>
-    <p><strong>Nombre del paciente:</strong> <span id="nombrePaciente">N/A</span></p>
-    <p><strong>Edad del paciente:</strong> <span id="edadPaciente">N/A</span></p>
-    <p><strong>Fecha:</strong> <span id="fechaReceta">N/A</span></p>
-    <p><strong>Médico:</strong> <span id="nombreMedico">N/A</span></p>
-    <p><strong>Cédula profesional:</strong> <span id="cedulaMedico">N/A</span></p>
-    <p><strong>Medicamentos:</strong></p>
-    <ul id="listaMedicamentos"></ul>
-    <button id="surtidaBtn" class="btn btn-blue">Surtida Completamente</button>
-    <button id="parcialBtn" class="btn btn-orange">Surtida Parcialmente</button>
+<div id="scanner"></div>
+
+<div id="resultado" class="oculto">
+  <h3>Receta escaneada</h3>
+  <p><strong>Nombre del paciente:</strong> <span id="nombrePaciente"></span></p>
+  <p><strong>Edad del paciente:</strong> <span id="edadPaciente"></span></p>
+  <p><strong>Fecha:</strong> <span id="fechaReceta"></span></p>
+  <p><strong>Médico:</strong> <span id="nombreMedico"></span></p>
+  <p><strong>Cédula profesional:</strong> <span id="cedulaMedico"></span></p>
+  <div><strong>Medicamentos:</strong><ul id="listaMedicamentos"></ul></div>
+  <div id="acciones">
+    <button class="btn-completo" onclick="surtir(true)">Surtida Completamente</button>
+    <button class="btn-parcial" onclick="surtir(false)">Surtida Parcialmente</button>
   </div>
+</div>
 
-  <div id="parcialSection" class="card hidden">
-    <h4>Selecciona los medicamentos surtidos:</h4>
-    <form id="parcialForm"></form>
-    <button id="confirmarParcial" class="btn btn-orange">Confirmar parcial</button>
-  </div>
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyBIjaOe4HcGNDk0xrqen8etBv0RyjyOJHw",
+    authDomain: "kodrx-105b9.firebaseapp.com",
+    databaseURL: "https://kodrx-105b9-default-rtdb.firebaseio.com",
+    projectId: "kodrx-105b9",
+    storageBucket: "kodrx-105b9.appspot.com",
+    messagingSenderId: "239675098141",
+    appId: "1:239675098141:web:152ae3741b0ac79db7f2f4"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
 
-  <script>
-    const firebaseConfig = {
-      apiKey: "AIzaSyBIjaOe4HcGNDk0xrqen8etBv0RyjyOJHw",
-      authDomain: "kodrx-105b9.firebaseapp.com",
-      databaseURL: "https://kodrx-105b9-default-rtdb.firebaseio.com",
-      projectId: "kodrx-105b9",
-      storageBucket: "kodrx-105b9.appspot.com",
-      messagingSenderId: "239675098141",
-      appId: "1:239675098141:web:152ae3741b0ac79db7f2f4"
+  let recetaActual = null;
+  let recetaId = null;
+
+  function mostrarReceta(data) {
+    recetaActual = data;
+    document.getElementById("nombrePaciente").innerText = data.nombre_paciente || "N/A";
+    document.getElementById("edadPaciente").innerText = data.edad_paciente || "N/A";
+    document.getElementById("fechaReceta").innerText = new Date(data.timestamp).toLocaleString();
+    document.getElementById("nombreMedico").innerText = data.nombre_medico || "N/A";
+    document.getElementById("cedulaMedico").innerText = data.cedula_medico || "N/A";
+
+    const lista = document.getElementById("listaMedicamentos");
+    lista.innerHTML = "";
+    (data.medicamentos || []).forEach(m => {
+      const li = document.createElement("li");
+      li.textContent = `${m.nombre || "?"} - ${m.dosis || "?"}, ${m.duracion || "?"}`;
+      lista.appendChild(li);
+    });
+
+    document.getElementById("resultado").classList.remove("oculto");
+  }
+
+  function surtir(completo) {
+    if (!recetaId || !recetaActual) return alert("Receta no cargada.");
+    const user = firebase.auth().currentUser;
+    const datosSurtido = {
+      surtido: true,
+      surtido_parcial: !completo,
+      surtida_por: user?.email || "Farmacia desconocida"
     };
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
+    db.ref("recetas/" + recetaId).update(datosSurtido).then(() => {
+      alert(completo ? "Receta marcada como surtida completamente." : "Receta marcada como surtida parcialmente.");
+      location.reload();
+    });
+  }
 
-    function mostrarReceta(data, recetaId) {
-      window.recetaActual = data;
-      document.getElementById("nombrePaciente").textContent = data.nombre_paciente || "N/A";
-      document.getElementById("edadPaciente").textContent = data.edad_paciente || "N/A";
-      document.getElementById("fechaReceta").textContent = new Date(data.timestamp).toLocaleString();
-      document.getElementById("nombreMedico").textContent = data.nombre_medico || "N/A";
-      document.getElementById("cedulaMedico").textContent = data.cedula_medico || "N/A";
-
-      const lista = document.getElementById("listaMedicamentos");
-      lista.innerHTML = "";
-      data.medicamentos?.forEach((med, i) => {
-        const li = document.createElement("li");
-        let surtido = (data.surtido_parcial || []).includes(i) ? "✅" : "";
-        li.textContent = `${med.nombre} - ${med.dosis}, ${med.duracion} ${surtido}`;
-        lista.appendChild(li);
-      });
-
-      document.getElementById("resultado").classList.remove("hidden");
-
-      document.getElementById("surtidaBtn").onclick = () => {
-        db.ref("recetas/" + recetaId + "/surtido").set(true).then(() => alert("Receta marcada como surtida"));
-      };
-
-      document.getElementById("parcialBtn").onclick = () => {
-        const form = document.getElementById("parcialForm");
-        form.innerHTML = "";
-        data.medicamentos?.forEach((med, i) => {
-          const label = document.createElement("label");
-          label.innerHTML = `<input type="checkbox" value="${i}"> ${med.nombre} - ${med.dosis}, ${med.duracion}`;
-          label.style.display = "block";
-          form.appendChild(label);
-        });
-        document.getElementById("parcialSection").classList.remove("hidden");
-      };
-
-      document.getElementById("confirmarParcial").onclick = () => {
-        const seleccionados = Array.from(document.querySelectorAll("#parcialForm input:checked")).map(cb => parseInt(cb.value));
-        db.ref("recetas/" + recetaId + "/surtido_parcial").set(seleccionados).then(() => {
-          alert("Receta marcada como parcialmente surtida");
-          window.location.reload();
-        });
-      };
-    }
-
-    function procesarQR(qrText) {
-      const url = new URL(qrText);
-      const recetaId = url.searchParams.get("id");
+  function escanearQR() {
+    const html5QrCode = new Html5Qrcode("scanner");
+    html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, qrCodeMessage => {
+      html5QrCode.stop();
+      const url = new URL(qrCodeMessage);
+      recetaId = url.searchParams.get("id");
       const uid = url.searchParams.get("uid");
+      if (!recetaId || !uid) return alert("QR inválido.");
 
       db.ref("recetas/" + recetaId).once("value").then(snapshot => {
-        if (snapshot.exists()) {
-          mostrarReceta(snapshot.val(), recetaId);
-        } else {
-          alert("Receta no encontrada");
-        }
+        const data = snapshot.val();
+        if (!data) return alert("Receta no encontrada.");
+        mostrarReceta(data);
       });
-    }
+    });
+  }
 
-    const html5QrCode = new Html5Qrcode("reader");
-    Html5Qrcode.getCameras().then(devices => {
-      if (devices && devices.length) {
-        html5QrCode.start(
-          { facingMode: "environment" },
-          { fps: 10, qrbox: 250 },
-          qrCodeMessage => {
-            html5QrCode.stop();
-            procesarQR(qrCodeMessage);
-          },
-          errorMessage => {}
-        );
-      }
-    }).catch(err => console.error("Error al iniciar cámara", err));
-  </script>
+  firebase.auth().onAuthStateChanged(user => {
+    if (!user) {
+      window.location.href = "farmacia_login.html";
+    } else {
+      escanearQR();
+    }
+  });
+</script>
 </body>
 </html>
