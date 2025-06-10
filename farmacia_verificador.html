@@ -2,75 +2,45 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <title>KodRx | Escanear Receta</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>KodRx | Escanear Receta Médica</title>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-  <script src="https://unpkg.com/html5-qrcode"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
   <style>
-    body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f8f9fa; }
-    header {
-      background-color: #0a2240;
-      color: white;
-      padding: 1rem;
-      text-align: center;
-    }
-    header h1 {
-      margin: 0;
-      font-size: 1.4rem;
-    }
-    header span {
-      color: #19c99c;
-      font-weight: bold;
-    }
-    #qr-reader {
-      width: 300px;
-      margin: 2rem auto;
-    }
-    #resultado {
-      max-width: 600px;
-      margin: 2rem auto;
-      background: white;
-      padding: 1.5rem;
-      border-radius: 8px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    }
-    .titulo-seccion {
-      font-weight: bold;
-      margin-top: 1rem;
-    }
-    ul { padding-left: 1.2rem; }
-    button {
-      margin-top: 1rem;
-      padding: 0.5rem 1rem;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-    }
-    .completo { background: #007bff; color: white; }
-    .parcial { background: #ff9800; color: white; margin-left: 10px; }
+    body { font-family: Arial, sans-serif; padding: 1em; background: #f9f9f9; }
+    h2 { color: #0d1a40; }
+    .highlight { color: #00b894; font-weight: bold; }
+    .card { background: white; border-radius: 10px; padding: 20px; box-shadow: 0 0 10px rgba(0,0,0,0.1); margin-top: 1em; }
+    .btn { padding: 10px 20px; margin: 10px 5px; border: none; border-radius: 5px; cursor: pointer; font-size: 1em; }
+    .btn-blue { background: #007bff; color: white; }
+    .btn-orange { background: #ffa500; color: white; }
+    .hidden { display: none; }
   </style>
 </head>
 <body>
-  <header>
-    <h1><span>KodRx</span> | Escanear Receta Médica</h1>
-  </header>
+  <h2><span class="highlight">KodRx</span> | Escanear Receta Médica</h2>
+  <div id="reader" style="width:100%; max-width:400px; margin:auto;"></div>
 
-  <div id="qr-reader"></div>
-
-  <div id="resultado" style="display:none;">
-    <div class="titulo-seccion">Receta escaneada</div>
-    <p><strong>Nombre del paciente:</strong> <span id="nombrePaciente"></span></p>
-    <p><strong>Edad del paciente:</strong> <span id="edadPaciente"></span></p>
-    <p><strong>Fecha:</strong> <span id="fechaReceta"></span></p>
-    <p><strong>Médico:</strong> <span id="nombreMedico"></span></p>
-    <p><strong>Cédula profesional:</strong> <span id="cedula"></span></p>
-    <div class="titulo-seccion">Medicamentos:</div>
+  <div id="resultado" class="card hidden">
+    <h3>Receta escaneada</h3>
+    <p><strong>Nombre del paciente:</strong> <span id="nombrePaciente">N/A</span></p>
+    <p><strong>Edad del paciente:</strong> <span id="edadPaciente">N/A</span></p>
+    <p><strong>Fecha:</strong> <span id="fechaReceta">N/A</span></p>
+    <p><strong>Médico:</strong> <span id="nombreMedico">N/A</span></p>
+    <p><strong>Cédula profesional:</strong> <span id="cedulaMedico">N/A</span></p>
+    <p><strong>Medicamentos:</strong></p>
     <ul id="listaMedicamentos"></ul>
-    <button class="completo" onclick="marcarReceta('completo')">Surtida Completamente</button>
-    <button class="parcial" onclick="marcarReceta('parcial')">Surtida Parcialmente</button>
+    <button id="surtidaBtn" class="btn btn-blue">Surtida Completamente</button>
+    <button id="parcialBtn" class="btn btn-orange">Surtida Parcialmente</button>
+  </div>
+
+  <div id="parcialSection" class="card hidden">
+    <h4>Selecciona los medicamentos surtidos:</h4>
+    <form id="parcialForm"></form>
+    <button id="confirmarParcial" class="btn btn-orange">Confirmar parcial</button>
   </div>
 
   <script>
@@ -86,51 +56,78 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    const reader = new Html5Qrcode("qr-reader");
-    function onScanSuccess(decodedText) {
-      const params = new URLSearchParams(decodedText.split("?")[1]);
-      const recetaID = params.get("id");
-      const uid = params.get("uid");
+    function mostrarReceta(data, recetaId) {
+      window.recetaActual = data;
+      document.getElementById("nombrePaciente").textContent = data.nombre_paciente || "N/A";
+      document.getElementById("edadPaciente").textContent = data.edad_paciente || "N/A";
+      document.getElementById("fechaReceta").textContent = new Date(data.timestamp).toLocaleString();
+      document.getElementById("nombreMedico").textContent = data.nombre_medico || "N/A";
+      document.getElementById("cedulaMedico").textContent = data.cedula_medico || "N/A";
 
-      reader.stop().then(() => {
-        document.getElementById("qr-reader").style.display = "none";
+      const lista = document.getElementById("listaMedicamentos");
+      lista.innerHTML = "";
+      data.medicamentos?.forEach((med, i) => {
+        const li = document.createElement("li");
+        let surtido = (data.surtido_parcial || []).includes(i) ? "✅" : "";
+        li.textContent = `${med.nombre} - ${med.dosis}, ${med.duracion} ${surtido}`;
+        lista.appendChild(li);
+      });
 
-        db.ref("recetas/" + recetaID).once("value").then(snapshot => {
-          const receta = snapshot.val();
-          if (!receta) return alert("Receta no encontrada");
+      document.getElementById("resultado").classList.remove("hidden");
 
-          document.getElementById("resultado").style.display = "block";
-          document.getElementById("nombrePaciente").textContent = receta.nombre_paciente || "N/A";
-          document.getElementById("edadPaciente").textContent = receta.edad_paciente || "N/A";
-          document.getElementById("fechaReceta").textContent = new Date(receta.timestamp).toLocaleString();
-          document.getElementById("nombreMedico").textContent = receta.nombre_medico || "N/A";
-          document.getElementById("cedula").textContent = receta.cedula_medico || "N/A";
+      document.getElementById("surtidaBtn").onclick = () => {
+        db.ref("recetas/" + recetaId + "/surtido").set(true).then(() => alert("Receta marcada como surtida"));
+      };
 
-          const ul = document.getElementById("listaMedicamentos");
-          ul.innerHTML = "";
-          (receta.medicamentos || []).forEach(med => {
-            const li = document.createElement("li");
-            li.textContent = `${med.nombre} - ${med.dosis}, ${med.duracion}`;
-            ul.appendChild(li);
-          });
-
-          window.recetaUID = uid;
-          window.recetaID = recetaID;
+      document.getElementById("parcialBtn").onclick = () => {
+        const form = document.getElementById("parcialForm");
+        form.innerHTML = "";
+        data.medicamentos?.forEach((med, i) => {
+          const label = document.createElement("label");
+          label.innerHTML = `<input type="checkbox" value="${i}"> ${med.nombre} - ${med.dosis}, ${med.duracion}`;
+          label.style.display = "block";
+          form.appendChild(label);
         });
+        document.getElementById("parcialSection").classList.remove("hidden");
+      };
+
+      document.getElementById("confirmarParcial").onclick = () => {
+        const seleccionados = Array.from(document.querySelectorAll("#parcialForm input:checked")).map(cb => parseInt(cb.value));
+        db.ref("recetas/" + recetaId + "/surtido_parcial").set(seleccionados).then(() => {
+          alert("Receta marcada como parcialmente surtida");
+          window.location.reload();
+        });
+      };
+    }
+
+    function procesarQR(qrText) {
+      const url = new URL(qrText);
+      const recetaId = url.searchParams.get("id");
+      const uid = url.searchParams.get("uid");
+
+      db.ref("recetas/" + recetaId).once("value").then(snapshot => {
+        if (snapshot.exists()) {
+          mostrarReceta(snapshot.val(), recetaId);
+        } else {
+          alert("Receta no encontrada");
+        }
       });
     }
 
-    reader.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, onScanSuccess);
-
-    function marcarReceta(tipo) {
-      const campo = (tipo === "completo") ? "surtido" : "surtido_parcial";
-      const updates = {};
-      updates[`recetas/${window.recetaID}/${campo}`] = true;
-      db.ref().update(updates).then(() => {
-        alert("Receta actualizada como " + (tipo === "completo" ? "surtida completamente." : "surtida parcialmente."));
-        location.reload();
-      });
-    }
+    const html5QrCode = new Html5Qrcode("reader");
+    Html5Qrcode.getCameras().then(devices => {
+      if (devices && devices.length) {
+        html5QrCode.start(
+          { facingMode: "environment" },
+          { fps: 10, qrbox: 250 },
+          qrCodeMessage => {
+            html5QrCode.stop();
+            procesarQR(qrCodeMessage);
+          },
+          errorMessage => {}
+        );
+      }
+    }).catch(err => console.error("Error al iniciar cámara", err));
   </script>
 </body>
 </html>
