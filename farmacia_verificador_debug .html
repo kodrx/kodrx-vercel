@@ -1,0 +1,72 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Debug KodRx | Verificador de Recetas</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; background: #f9f9f9; }
+    h1 { color: #012A4A; }
+    pre { background: #eee; padding: 10px; border-radius: 5px; }
+  </style>
+</head>
+<body>
+  <h1>🔍 Debug KodRx | Verificador de Recetas</h1>
+  <div id="infoQR">
+    <h3>Datos del QR escaneado</h3>
+    <p><strong>Texto completo:</strong> <span id="urlTexto"></span></p>
+    <p><strong>UID:</strong> <span id="uid"></span></p>
+    <p><strong>ID de receta:</strong> <span id="recetaId"></span></p>
+  </div>
+
+  <div>
+    <h3>Resultado de la consulta a Firebase</h3>
+    <pre id="resultado"></pre>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+    import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBIjaOe4HcGNDk0xrqen8etBv0RyjyOJHw",
+      authDomain: "kodrx-105b9.firebaseapp.com",
+      databaseURL: "https://kodrx-105b9-default-rtdb.firebaseio.com",
+      projectId: "kodrx-105b9",
+      storageBucket: "kodrx-105b9.appspot.com",
+      messagingSenderId: "239675098141",
+      appId: "1:239675098141:web:152ae3741b0ac79db7f2f4"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const id = urlParams.get("id");
+    const uid = urlParams.get("uid");
+
+    document.getElementById("urlTexto").textContent = window.location.href;
+    document.getElementById("uid").textContent = uid || "N/A";
+    document.getElementById("recetaId").textContent = id || "N/A";
+
+    if (uid && id) {
+      const recetaRef = ref(db, "recetas/" + id);
+      get(recetaRef).then(snapshot => {
+        if (snapshot.exists()) {
+          console.log("Receta encontrada:", snapshot.val());
+          document.getElementById("resultado").textContent = JSON.stringify(snapshot.val(), null, 2);
+        } else {
+          console.warn("❌ Receta no encontrada con ese ID");
+          document.getElementById("resultado").textContent = "❌ Receta no encontrada con ese ID";
+        }
+      }).catch(error => {
+        console.error("Error en la consulta:", error);
+        document.getElementById("resultado").textContent = "⚠️ Error al consultar Firebase: " + error;
+      });
+    } else {
+      console.warn("❌ Parámetros inválidos en la URL");
+      document.getElementById("resultado").textContent = "⚠️ URL inválida, falta id o uid";
+    }
+  </script>
+</body>
+</html>
