@@ -122,3 +122,29 @@ window.actualizarEstado = async () => {
     alert("Error al actualizar estado: " + err.message);
   }
 };
+// Función para escanear QR desde navegador
+window.iniciarEscaneo = () => {
+  const reader = document.getElementById("reader");
+  reader.style.display = "block";
+
+  const html5QrCode = new Html5Qrcode("reader");
+  const config = { fps: 10, qrbox: 250 };
+
+  html5QrCode.start(
+    { facingMode: "environment" },
+    config,
+    (decodedText) => {
+      html5QrCode.stop().then(() => {
+        reader.style.display = "none";
+        document.getElementById("input-id").value = decodedText.split("id=")[1] || decodedText;
+        consultarReceta();
+      });
+    },
+    (errorMessage) => {
+      // Errores ignorados
+    }
+  ).catch((err) => {
+    alert("No se pudo acceder a la cámara: " + err);
+    reader.style.display = "none";
+  });
+};
