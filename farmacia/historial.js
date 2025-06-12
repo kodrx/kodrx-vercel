@@ -11,7 +11,10 @@ onAuthStateChanged(auth, async (user) => {
     return;
   }
 
-  const farmaciaRef = await db.collection("farmacias").doc(user.uid).get();
+const farmaciaRef = doc(db, "farmacias", user.uid);
+const snap = await getDoc(farmaciaRef);
+const nombreFarmacia = snap.exists() ? snap.data().nombreFarmacia : null;
+
   const nombreFarmacia = farmaciaRef.exists() ? farmaciaRef.data().nombreFarmacia : null;
 
   if (!nombreFarmacia) {
