@@ -52,6 +52,13 @@
   </div>
 
   <script src="qrcode.min.js"></script>
+  <script>
+    function mostrarQR(id) {
+      const qrDiv = document.getElementById('qr');
+      qrDiv.innerHTML = "";
+      new QRCode(qrDiv, `${window.location.origin}/verificar.html?id=${id}`);
+    }
+  </script>
   <script type="module" src="firebase-init.js"></script>
   <script type="module" src="panel.js"></script>
 </body>

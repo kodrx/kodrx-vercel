@@ -65,7 +65,7 @@ document.getElementById('form-receta').addEventListener('submit', async (e) => {
     const recetaId = docRef.id;
     const qrDiv = document.getElementById('qr');
     qrDiv.innerHTML = "";
-    new QRCode(qrDiv, `${window.location.origin}/verificar.html?id=${recetaId}`);
+    window.mostrarQR && window.mostrarQR(recetaId);
 
     document.getElementById('form-receta').style.display = 'none';
     document.getElementById('resultado').style.display = 'block';
