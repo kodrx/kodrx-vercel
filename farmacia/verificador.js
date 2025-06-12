@@ -5,7 +5,6 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.2/fi
 
 let datosFarmacia = null;
 
-// Obtener datos de la farmacia autenticada
 onAuthStateChanged(auth, async (user) => {
   if (user) {
     const snap = await getDoc(doc(db, "farmacias", user.uid));
@@ -88,7 +87,8 @@ window.actualizarEstado = async (estado) => {
           dosis: med.dosis,
           duracion: med.duracion,
           surtidoPor: datosFarmacia?.nombreFarmacia || 'Farmacia desconocida',
-          telefono: datosFarmacia?.telefono || 'Sin teléfono'
+          telefono: datosFarmacia?.telefono || 'Sin teléfono',
+          fecha: new Date().toISOString()
         });
       }
     });
@@ -120,30 +120,4 @@ window.actualizarEstado = async (estado) => {
   } catch (err) {
     alert("Error al actualizar estado: " + err.message);
   }
-};
-// Función para escanear QR desde navegador
-window.iniciarEscaneo = () => {
-  const reader = document.getElementById("reader");
-  reader.style.display = "block";
-
-  const html5QrCode = new Html5Qrcode("reader");
-  const config = { fps: 10, qrbox: 250 };
-
-  html5QrCode.start(
-    { facingMode: "environment" },
-    config,
-    (decodedText) => {
-      html5QrCode.stop().then(() => {
-        reader.style.display = "none";
-        document.getElementById("input-id").value = decodedText.split("id=")[1] || decodedText;
-        consultarReceta();
-      });
-    },
-    (errorMessage) => {
-      // Errores ignorados
-    }
-  ).catch((err) => {
-    alert("No se pudo acceder a la cámara: " + err);
-    reader.style.display = "none";
-  });
 };

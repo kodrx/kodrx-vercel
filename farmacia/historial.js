@@ -36,17 +36,20 @@ onAuthStateChanged(auth, async (user) => {
     const surtidos = receta.surtidoParcial || [];
     const recetaId = docSnap.id;
 
-    const medsFarmacia = surtidos.filter(med => med.surtidoPor === nombreFarmacia);
+    // Filtrar medicamentos surtidos por esta farmacia
+    const medsFarmacia = surtidos.filter(m => m.surtidoPor === nombreFarmacia);
 
     if (medsFarmacia.length > 0) {
-      const fecha = medsFarmacia[0].fecha || receta.fecha || "Sin fecha";
-      const dia = fecha.split("T")[0];
+      const fechaRaw = medsFarmacia[0].fecha || receta.fecha || new Date().toISOString();
+      const dia = fechaRaw.split("T")[0];
+      const hora = fechaRaw.split("T")[1]?.split(".")[0] || "--:--";
+
       if (!agrupadas[dia]) agrupadas[dia] = [];
       agrupadas[dia].push({
         id: recetaId,
         nombrePaciente: receta.nombrePaciente,
         estado: receta.estado,
-        fechaHora: fecha,
+        hora: hora,
         medicamentos: medsFarmacia.map(m => `${m.nombre}, ${m.dosis}, ${m.duracion}`)
       });
     }
@@ -62,11 +65,12 @@ onAuthStateChanged(auth, async (user) => {
       html += `
         <div class="receta">
           <div class="cabecera" onclick="toggleDetalle('${idDetalle}')">
-            👤 ${r.nombrePaciente} — 🕒 ${r.fechaHora.split("T")[1] || "—"}
+            👤 ${r.nombrePaciente} — 🕒 ${r.hora}
           </div>
           <div class="detalle" id="${idDetalle}">
             <strong>ID de receta:</strong> ${r.id}<br>
-            <strong>Medicamentos surtidos:</strong><ul>
+            <strong>Medicamentos surtidos:</strong>
+            <ul>
               ${r.medicamentos.map(m => `<li>${m}</li>`).join("")}
             </ul>
             <strong>Estado:</strong> ${r.estado}
