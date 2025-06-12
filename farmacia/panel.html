@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Panel Farmacia - KodRx</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; text-align: center; background: #f5f5f5; }
+    h2 { color: #d14032; }
+    button {
+      display: block;
+      width: 80%;
+      max-width: 300px;
+      margin: 10px auto;
+      padding: 10px;
+      font-size: 16px;
+      border-radius: 8px;
+      border: none;
+      background-color: #000;
+      color: #fff;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #d14032;
+    }
+  </style>
+</head>
+<body>
+  <h2>Bienvenido a KodRx</h2>
+  <p id="nombre-farmacia">Cargando...</p>
+
+  <button onclick="location.href='verificador.html'">🔍 Verificador de Recetas</button>
+  <button onclick="location.href='historial.html'">📋 Mis Recetas Surtidas</button>
+  <button onclick="cerrarSesion()">🚪 Cerrar sesión</button>
+
+  <script type="module" src="../firebase-init.js"></script>
+  <script type="module">
+    import { auth, db } from '../firebase-init.js';
+    import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
+    import { doc, getDoc } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
+
+    const nombreFarmacia = document.getElementById("nombre-farmacia");
+
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        location.href = "login.html";
+        return;
+      }
+
+      const snap = await getDoc(doc(db, "farmacias", user.uid));
+      if (snap.exists()) {
+        nombreFarmacia.innerText = snap.data().nombreFarmacia;
+      } else {
+        nombreFarmacia.innerText = "Farmacia sin nombre";
+      }
+    });
+
+    window.cerrarSesion = () => {
+      signOut(auth).then(() => {
+        location.href = "login.html";
+      });
+    };
+  </script>
+</body>
+</html>
