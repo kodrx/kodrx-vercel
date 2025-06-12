@@ -14,9 +14,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const telefono = form.querySelector('input[placeholder="Teléfono celular"]').value;
     const cedula = form.querySelector('input[placeholder="Cédula profesional"]').value;
     const colonia = form.querySelector('input[placeholder="Colonia de residencia"]').value;
+    const password = form.querySelector('input[placeholder="Contraseña"]').value;
 
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, correo, cedula); // cédula como contraseña
+      const userCredential = await createUserWithEmailAndPassword(auth, correo, password);
       const uid = userCredential.user.uid;
 
       await setDoc(doc(db, "medicos", uid), {

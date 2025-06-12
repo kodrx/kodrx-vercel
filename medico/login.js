@@ -1,6 +1,7 @@
 // login.js
-import { auth } from './firebase-init.js';
+import { auth, db } from './firebase-init.js';
 import { signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
+import { doc, getDoc } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
 
 document.addEventListener('DOMContentLoaded', () => {
   const emailInput = document.querySelector('input[placeholder="Correo electrónico"]');
@@ -12,8 +13,22 @@ document.addEventListener('DOMContentLoaded', () => {
     const password = passwordInput.value;
 
     try {
-      await signInWithEmailAndPassword(auth, email, password);
-      window.location.href = "panel.html"; // redirigir al panel
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const uid = userCredential.user.uid;
+
+      const medicoRef = doc(db, "medicos", uid);
+      const medicoSnap = await getDoc(medicoRef);
+
+      if (medicoSnap.exists()) {
+        const data = medicoSnap.data();
+        if (data.verificado === true) {
+          window.location.href = "panel.html";
+        } else {
+          alert("Tu cuenta aún no ha sido verificada por el equipo de KodRx.");
+        }
+      } else {
+        alert("No se encontró el perfil del médico en la base de datos.");
+      }
     } catch (error) {
       alert("Error al iniciar sesión: " + error.message);
     }
