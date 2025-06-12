@@ -1,6 +1,6 @@
 // historial.js
 import { db, auth } from '../firebase-init.js';
-import { collection, getDocs, query, where } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
+import { collection, getDocs, query, where, doc, getDoc } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
 
 const contenedor = document.getElementById("contenedor");
@@ -11,11 +11,9 @@ onAuthStateChanged(auth, async (user) => {
     return;
   }
 
-const farmaciaRef = doc(db, "farmacias", user.uid);
-const snap = await getDoc(farmaciaRef);
-const nombreFarmacia = snap.exists() ? snap.data().nombreFarmacia : null;
-
-  const nombreFarmacia = farmaciaRef.exists() ? farmaciaRef.data().nombreFarmacia : null;
+  const farmaciaRef = doc(db, "farmacias", user.uid);
+  const snap = await getDoc(farmaciaRef);
+  const nombreFarmacia = snap.exists() ? snap.data().nombreFarmacia : null;
 
   if (!nombreFarmacia) {
     contenedor.innerHTML = "<p>Error: No se pudo obtener el nombre de la farmacia.</p>";
@@ -33,17 +31,17 @@ const nombreFarmacia = snap.exists() ? snap.data().nombreFarmacia : null;
 
   const agrupadas = {};
 
-  snapshot.forEach(doc => {
-    const receta = doc.data();
+  snapshot.forEach(docSnap => {
+    const receta = docSnap.data();
     const surtidos = receta.surtidoParcial || [];
 
     surtidos.forEach(med => {
       if (med.surtidoPor === nombreFarmacia) {
-        const fecha = med.fecha || "Sin fecha";
+        const fecha = med.fecha || receta.fecha || "Sin fecha";
         const dia = fecha.split("T")[0];
         if (!agrupadas[dia]) agrupadas[dia] = [];
         agrupadas[dia].push({
-          id: doc.id,
+          id: docSnap.id,
           nombrePaciente: receta.nombrePaciente,
           estado: receta.estado,
           fechaHora: fecha,
