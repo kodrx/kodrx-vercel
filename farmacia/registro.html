@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Registro Farmacia</title>
+  <style>
+    body { font-family: sans-serif; background-color: #f4f4f4; padding: 30px; }
+    form { max-width: 400px; margin: auto; background: white; padding: 20px; border-radius: 8px; }
+    input {
+      width: 100%; margin: 8px 0; padding: 10px; font-size: 14px;
+    }
+    button {
+      background-color: #00c9a7; color: white; padding: 10px; border: none; width: 100%;
+      border-radius: 5px;
+    }
+  </style>
+</head>
+<body>
+  <form>
+    <h3>Registro de Farmacia</h3>
+    <input type="text" placeholder="Nombre de la farmacia" required>
+    <input type="text" placeholder="Médico responsable" required>
+    <input type="email" placeholder="Correo electrónico" required>
+    <input type="tel" placeholder="Teléfono" required>
+    <input type="text" placeholder="Colonia" required>
+    <input type="text" placeholder="Municipio" required>
+    <input type="text" placeholder="Estado" required>
+    <input type="password" placeholder="Contraseña" required>
+    <button>Enviar registro</button>
+  </form>
+
+  <script type="module" src="../firebase-init.js"></script>
+  <script type="module" src="registroFarmacia.js"></script>
+</body>
+</html>
