@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Verificador de Recetas</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; max-width: 600px; margin: auto; }
+    h2 { color: #003366; }
+    input, button { padding: 10px; margin: 10px 0; width: 100%; }
+    .campo { margin-bottom: 10px; }
+    .campo h4 { margin: 5px 0; }
+    .medicamento { margin-left: 20px; }
+    .acciones button {
+      width: 48%;
+      margin: 5px 1%;
+      background-color: #00c9a7; color: white; border: none; border-radius: 5px;
+    }
+    #reader { width: 100%; margin: 10px 0; display: none; }
+  </style>
+</head>
+<body>
+  <h2>Consulta de Receta</h2>
+  <input type="text" id="input-id" placeholder="Ingresa el ID de la receta">
+  <button onclick="consultarReceta()">Consultar</button>
+  <button onclick="iniciarEscaneo()">📷 Escanear receta con cámara</button>
+  <div id="reader"></div>
+
+  <div id="contenido">Esperando consulta...</div>
+  <div class="acciones" style="display:none;" id="botones-estado">
+    <button onclick="actualizarEstado('surtida')">Surtida completamente</button>
+    <button onclick="actualizarEstado('parcial')">Surtida parcialmente</button>
+  </div>
+
+  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+  <script type="module" src="../firebase-init.js"></script>
+  <script type="module" src="verificador.js"></script>
+</body>
+</html>
