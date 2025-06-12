@@ -10,25 +10,27 @@
     .campo { margin-bottom: 10px; }
     .campo h4 { margin: 5px 0; }
     .medicamento { margin-left: 20px; }
-    .acciones button {
-      width: 48%;
-      margin: 5px 1%;
-      background-color: #00c9a7; color: white; border: none; border-radius: 5px;
-    }
     #reader { width: 100%; margin: 10px 0; display: none; }
+    button.surtir-btn {
+      background-color: #00c9a7;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
   <h2>Consulta de Receta</h2>
+  <button onclick="location.href='historial.html'">📋 Ver historial de recetas surtidas</button>
   <input type="text" id="input-id" placeholder="Ingresa el ID de la receta">
   <button onclick="consultarReceta()">Consultar</button>
   <button onclick="iniciarEscaneo()">📷 Escanear receta con cámara</button>
   <div id="reader"></div>
 
   <div id="contenido">Esperando consulta...</div>
-  <div class="acciones" style="display:none;" id="botones-estado">
-    <button onclick="actualizarEstado('surtida')">Surtida completamente</button>
-    <button onclick="actualizarEstado('parcial')">Surtida parcialmente</button>
+  <div style="display:none;" id="botones-estado">
+    <button class="surtir-btn" onclick="actualizarEstado()">💊 Surtir</button>
   </div>
 
   <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>

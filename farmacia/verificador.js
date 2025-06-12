@@ -69,7 +69,8 @@ window.consultarReceta = async () => {
   }
 };
 
-window.actualizarEstado = async (estado) => {
+window.actualizarEstado = async () => {
+  let estado = 'parcial';
   const botones = document.getElementById("botones-estado");
   const id = botones.getAttribute("data-id");
   const recetaRef = doc(db, "recetas", id);
@@ -93,7 +94,7 @@ window.actualizarEstado = async (estado) => {
       }
     });
 
-    if (estado === "parcial" && medicamentosMarcados.length === 0) {
+    if (medicamentosMarcados.length === 0) {
       alert("Selecciona al menos un medicamento para marcar como surtido parcialmente.");
       return;
     }
@@ -121,30 +122,3 @@ window.actualizarEstado = async (estado) => {
     alert("Error al actualizar estado: " + err.message);
   }
 };
-// Función para escanear QR desde navegador
-window.iniciarEscaneo = () => {
-  const reader = document.getElementById("reader");
-  reader.style.display = "block";
-
-  const html5QrCode = new Html5Qrcode("reader");
-  const config = { fps: 10, qrbox: 250 };
-
-  html5QrCode.start(
-    { facingMode: "environment" },
-    config,
-    (decodedText) => {
-      html5QrCode.stop().then(() => {
-        reader.style.display = "none";
-        document.getElementById("input-id").value = decodedText.split("id=")[1] || decodedText;
-        consultarReceta();
-      });
-    },
-    (errorMessage) => {
-      // Errores ignorados
-    }
-  ).catch((err) => {
-    alert("No se pudo acceder a la cámara: " + err);
-    reader.style.display = "none";
-  });
-};
-
