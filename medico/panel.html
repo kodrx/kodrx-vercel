@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Panel Médico</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; max-width: 800px; margin: auto; }
+    h2 { color: #003366; }
+    .botones-header button {
+      margin-right: 10px;
+      background-color: #00c9a7;
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    .medicamento {
+      border: 1px solid #ccc;
+      padding: 10px;
+      margin-top: 10px;
+      border-radius: 5px;
+    }
+    button { margin-top: 10px; }
+    #qr { margin-top: 20px; }
+  </style>
+</head>
+<body>
+  <h2>Panel del Médico</h2>
+  <div class="botones-header">
+    <button onclick="mostrarFormulario()">Generar receta</button>
+    <button onclick="alert('Historial aún no implementado')">Ver historial</button>
+    <button onclick="cerrarSesion()">Cerrar sesión</button>
+  </div>
+
+  <form id="form-receta" style="display:none;">
+    <h3>Datos del paciente</h3>
+    <input type="text" placeholder="Nombre del paciente" required><br>
+    <input type="number" placeholder="Edad" required><br>
+    <textarea placeholder="Observaciones"></textarea>
+
+    <h3>Medicamentos</h3>
+    <div id="medicamentos"></div>
+    <button type="button" onclick="agregarMedicamento()">+ Agregar medicamento</button><br>
+    <button type="submit">Generar receta</button>
+  </form>
+
+  <div id="resultado" style="display:none;">
+    <h3>Receta generada</h3>
+    <div id="qr"></div>
+    <button onclick="nuevaReceta()">Generar nueva receta</button>
+  </div>
+
+  <script src="qrcode.min.js"></script>
+  <script type="module" src="firebase-init.js"></script>
+  <script type="module" src="panel.js"></script>
+</body>
+</html>
