@@ -34,21 +34,22 @@ onAuthStateChanged(auth, async (user) => {
   snapshot.forEach(docSnap => {
     const receta = docSnap.data();
     const surtidos = receta.surtidoParcial || [];
+    const recetaId = docSnap.id;
 
-    surtidos.forEach(med => {
-      if (med.surtidoPor === nombreFarmacia) {
-        const fecha = med.fecha || receta.fecha || "Sin fecha";
-        const dia = fecha.split("T")[0];
-        if (!agrupadas[dia]) agrupadas[dia] = [];
-        agrupadas[dia].push({
-          id: docSnap.id,
-          nombrePaciente: receta.nombrePaciente,
-          estado: receta.estado,
-          fechaHora: fecha,
-          medicamento: `${med.nombre}, ${med.dosis}, ${med.duracion}`
-        });
-      }
-    });
+    const medsFarmacia = surtidos.filter(med => med.surtidoPor === nombreFarmacia);
+
+    if (medsFarmacia.length > 0) {
+      const fecha = medsFarmacia[0].fecha || receta.fecha || "Sin fecha";
+      const dia = fecha.split("T")[0];
+      if (!agrupadas[dia]) agrupadas[dia] = [];
+      agrupadas[dia].push({
+        id: recetaId,
+        nombrePaciente: receta.nombrePaciente,
+        estado: receta.estado,
+        fechaHora: fecha,
+        medicamentos: medsFarmacia.map(m => `${m.nombre}, ${m.dosis}, ${m.duracion}`)
+      });
+    }
   });
 
   let html = "";
@@ -64,8 +65,10 @@ onAuthStateChanged(auth, async (user) => {
             👤 ${r.nombrePaciente} — 🕒 ${r.fechaHora.split("T")[1] || "—"}
           </div>
           <div class="detalle" id="${idDetalle}">
-            <strong>ID:</strong> ${r.id}<br>
-            <strong>Medicamento:</strong> ${r.medicamento}<br>
+            <strong>ID de receta:</strong> ${r.id}<br>
+            <strong>Medicamentos surtidos:</strong><ul>
+              ${r.medicamentos.map(m => `<li>${m}</li>`).join("")}
+            </ul>
             <strong>Estado:</strong> ${r.estado}
           </div>
         </div>
@@ -76,12 +79,7 @@ onAuthStateChanged(auth, async (user) => {
   contenedor.innerHTML = html;
 });
 
-// Función global para el acordeón
 window.toggleDetalle = (id) => {
   const elem = document.getElementById(id);
-  if (elem.style.display === "block") {
-    elem.style.display = "none";
-  } else {
-    elem.style.display = "block";
-  }
+  elem.style.display = (elem.style.display === "block") ? "none" : "block";
 };
