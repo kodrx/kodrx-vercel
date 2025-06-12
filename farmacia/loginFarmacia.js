@@ -22,7 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (docSnap.exists()) {
         const data = docSnap.data();
         if (data.verificado === true) {
-          window.location.href = "verificador.html";
+          window.location.href = "panel.html";
         } else {
           alert("Tu cuenta aún no ha sido verificada por el equipo de KodRx.");
         }
