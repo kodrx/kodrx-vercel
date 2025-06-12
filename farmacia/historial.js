@@ -55,15 +55,19 @@ onAuthStateChanged(auth, async (user) => {
   const dias = Object.keys(agrupadas).sort().reverse();
 
   dias.forEach(dia => {
-    html += `<div class="fecha">${dia}</div>`;
-    agrupadas[dia].forEach(r => {
+    html += `<div class="dia">${dia}</div>`;
+    agrupadas[dia].forEach((r, index) => {
+      const idDetalle = `detalle-${dia}-${index}`;
       html += `
         <div class="receta">
-          <strong>Paciente:</strong> ${r.nombrePaciente}<br>
-          <strong>ID:</strong> ${r.id}<br>
-          <strong>Medicamento:</strong> ${r.medicamento}<br>
-          <strong>Hora:</strong> ${r.fechaHora.split("T")[1] || "—"}<br>
-          <strong>Estado:</strong> ${r.estado}
+          <div class="cabecera" onclick="toggleDetalle('${idDetalle}')">
+            👤 ${r.nombrePaciente} — 🕒 ${r.fechaHora.split("T")[1] || "—"}
+          </div>
+          <div class="detalle" id="${idDetalle}">
+            <strong>ID:</strong> ${r.id}<br>
+            <strong>Medicamento:</strong> ${r.medicamento}<br>
+            <strong>Estado:</strong> ${r.estado}
+          </div>
         </div>
       `;
     });
@@ -71,3 +75,13 @@ onAuthStateChanged(auth, async (user) => {
 
   contenedor.innerHTML = html;
 });
+
+// Función global para el acordeón
+window.toggleDetalle = (id) => {
+  const elem = document.getElementById(id);
+  if (elem.style.display === "block") {
+    elem.style.display = "none";
+  } else {
+    elem.style.display = "block";
+  }
+};
