@@ -13,10 +13,12 @@ const firebaseConfig = {
   appId: "1:239675098141:web:152ae3741b0ac79db7f2f4"
 };
 
-// Evitar inicialización duplicada
+// Inicializar Firebase si no está iniciado
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
 const db = getFirestore(app);
 const auth = getAuth(app);
+
+let recetasTotales = [];
 
 onAuthStateChanged(auth, async (user) => {
   if (!user) {
@@ -28,15 +30,24 @@ onAuthStateChanged(auth, async (user) => {
   const q = query(collection(db, "recetas"), where("uid", "==", user.uid));
   const querySnapshot = await getDocs(q);
 
-  const contenedor = document.getElementById("recetasContainer");
-
   if (querySnapshot.empty) {
-    contenedor.innerHTML = "<p>No se encontraron recetas</p>";
+    document.getElementById("contenedor").innerHTML = "<p>No se encontraron recetas</p>";
     return;
   }
 
-  querySnapshot.forEach((doc) => {
-    const data = doc.data();
+  recetasTotales = querySnapshot.docs.map(doc => ({
+    id: doc.id,
+    ...doc.data()
+  }));
+
+  mostrarRecetas(recetasTotales);
+});
+
+function mostrarRecetas(lista) {
+  const contenedor = document.getElementById("contenedor");
+  contenedor.innerHTML = "";
+
+  lista.forEach((data) => {
     const card = document.createElement("div");
     card.className = "receta-card";
     card.innerHTML = `
@@ -54,4 +65,13 @@ onAuthStateChanged(auth, async (user) => {
     `;
     contenedor.appendChild(card);
   });
-});
+}
+
+// Función de filtrado por nombre del paciente
+window.filtrarRecetas = function (valor) {
+  const texto = valor.toLowerCase();
+  const filtradas = recetasTotales.filter(receta =>
+    receta.nombrePaciente?.toLowerCase().includes(texto)
+  );
+  mostrarRecetas(filtradas);
+}
