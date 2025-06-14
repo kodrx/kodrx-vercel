@@ -70,7 +70,19 @@
       recetaGlobal = receta;
       recetaIdActual = recetaId;
 
+      let estadoReceta = "";
+      if (receta.estado === "surtida") {
+        estadoReceta = `<p style="color:green;"><strong>Ya fue surtida completamente</strong> por ${receta.surtidoParcial?.[0]?.surtidoPor || "desconocido"} - ${receta.surtidoParcial?.[0]?.telefono || ""}</p>`;
+        btnSurtir.style.display = "none";
+      } else if (receta.estado === "parcial") {
+        estadoReceta = `<p style="color:orange;"><strong>Ya fue surtida parcialmente</strong> por ${receta.surtidoParcial?.[0]?.surtidoPor || "desconocido"} - ${receta.surtidoParcial?.[0]?.telefono || ""}</p>`;
+        btnSurtir.style.display = "inline-block";
+      } else {
+        btnSurtir.style.display = "inline-block";
+      }
+
       contenedor.innerHTML = `
+        ${estadoReceta}
         <p><strong>Médico:</strong> ${receta.medicoNombre || "No disponible"}</p>
         <p><strong>Paciente:</strong> ${receta.nombrePaciente}</p>
         <p><strong>Edad:</strong> ${receta.edad}</p>
@@ -85,7 +97,6 @@
           `).join("")}
         </ul>
       `;
-      btnSurtir.style.display = "inline-block";
     }
 
     function surtirReceta() {
