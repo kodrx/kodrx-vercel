@@ -16,7 +16,8 @@
 </head>
 <body>
   <h2>📋 Historial de Recetas Emitidas</h2>
-  <input type="text" id="busqueda" placeholder="Buscar por nombre del paciente" oninput="filtrarRecetas()">
+<input type="text" id="busqueda" placeholder="Buscar por nombre del paciente" oninput="filtrarRecetas(this.value)">
+
 <div id="recetasContainer"></div>
 
   <script type="module" src="../firebase-init.js"></script>
