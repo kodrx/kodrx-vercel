@@ -5,14 +5,8 @@
   <meta charset="UTF-8">
   <title>Verificador de recetas</title>
   <style>
-    video {
-      width: 100%;
-      max-width: 400px;
-    }
-    #qr-reader {
-      display: none;
-      margin-top: 10px;
-    }
+    video { width: 100%; max-width: 400px; }
+    #qr-reader { display: none; margin-top: 10px; }
   </style>
 </head>
 <body>
@@ -30,6 +24,7 @@
 
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
   <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
 
   <script>
@@ -41,9 +36,20 @@
 
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
+    const auth = firebase.auth();
 
     let recetaGlobal = null;
     let recetaIdActual = null;
+    let datosFarmacia = null;
+
+    auth.onAuthStateChanged(async (user) => {
+      if (!user) return;
+      const ref = db.collection("farmacias").doc(user.uid);
+      const doc = await ref.get();
+      if (doc.exists) {
+        datosFarmacia = doc.data();
+      }
+    });
 
     async function verificarReceta(idManual = null) {
       const recetaId = idManual || document.getElementById("recetaIdInput").value.trim();
@@ -84,6 +90,7 @@
 
     function surtirReceta() {
       if (!recetaGlobal || !recetaIdActual) return alert("No hay receta cargada");
+      if (!datosFarmacia) return alert("Error: no se pudo cargar la información de la farmacia.");
 
       const checkboxes = Array.from(document.querySelectorAll("input[type='checkbox']"));
       const surtidos = [];
@@ -98,15 +105,13 @@
       });
 
       const surtidoTotal = noSurtidos.length === 0;
-      const farmacia = prompt("Nombre de tu farmacia:");
-      const telefono = prompt("Teléfono de contacto:");
 
       const actualizacion = {
         estado: surtidoTotal ? "surtida" : "parcial",
         surtidoParcial: surtidos.map(m => ({
           ...m,
-          surtidoPor: farmacia,
-          telefono: telefono,
+          surtidoPor: datosFarmacia.nombre,
+          telefono: datosFarmacia.telefono,
           fecha: new Date().toISOString()
         }))
       };
