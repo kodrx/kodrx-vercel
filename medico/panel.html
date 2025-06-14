@@ -88,14 +88,21 @@
       }));
 
       try {
-        const docRef = await addDoc(collection(db, "recetas"), {
-          uid: user.uid,
-          nombrePaciente: nombre,
-          edad,
-          observaciones,
-          medicamentos,
-          timestamp: serverTimestamp()
-        });
+       // Obtener nombre del médico desde Firestore
+const medicoRef = doc(db, "medicos", user.uid);
+const medicoSnap = await getDoc(medicoRef);
+const medicoNombre = medicoSnap.exists() ? medicoSnap.data().nombre : "Desconocido";
+
+const docRef = await addDoc(collection(db, "recetas"), {
+  uid: user.uid,
+  medicoNombre: medicoNombre,
+  nombrePaciente: nombre,
+  edad,
+  observaciones,
+  medicamentos,
+  timestamp: serverTimestamp()
+});
+
 
         const recetaID = docRef.id;
         const url = `https://www.kodrx.app/verificar.html?id=${recetaID}`;
