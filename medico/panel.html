@@ -99,7 +99,12 @@
 
         const recetaID = docRef.id;
         const url = `https://www.kodrx.app/verificar.html?id=${recetaID}`;
-        QRCode.toCanvas(document.getElementById("qr"), url, { width: 200 }, function (error) {
+        const qrDiv = document.getElementById("qr");
+qrDiv.innerHTML = ""; // Limpiar si ya había uno
+const canvas = document.createElement("canvas");
+qrDiv.appendChild(canvas);
+QRCode.toCanvas(canvas, url, { width: 200 }, function (error) {
+
           if (error) console.error(error);
           console.log("QR generado");
         });
