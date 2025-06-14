@@ -2,37 +2,19 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <title>Panel Médico KodRx</title>
-  <style>
-    .sugerencias {
-      position: relative;
-      z-index: 999;
-    }
-    .sugerencia {
-      background: white;
-      border: 1px solid #ccc;
-      padding: 5px;
-      cursor: pointer;
-    }
-    .sugerencia:hover {
-      background: #eee;
-    }
-    .medicamento {
-      margin-bottom: 10px;
-    }
-  </style>
+  <meta charset="UTF-8" />
+  <title>Panel Médico</title>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
 </head>
 <body>
-  <h2>Panel del Médico</h2>
-  <button onclick="window.location.href='historial.html'">Ver historial</button>
-  <button onclick="cerrarSesion()">Cerrar sesión</button>
-
-  <form id="form-receta">
-    <h3>Datos del paciente</h3>
-    <input type="text" id="nombre" placeholder="Nombre del paciente" required><br>
-    <input type="number" id="edad" placeholder="Edad" required><br>
-    <input type="text" id="observaciones" placeholder="Observaciones"><br>
+  <h2>Generar nueva receta</h2>
+  <form id="generarRecetaForm">
+    <label>Nombre del paciente:</label><br />
+    <input type="text" id="nombre" required /><br />
+    <label>Edad:</label><br />
+    <input type="number" id="edad" required /><br />
+    <label>Observaciones:</label><br />
+    <textarea id="observaciones"></textarea><br />
 
     <h3>Medicamentos</h3>
     <div id="medicamentos"></div>
@@ -40,14 +22,13 @@
     <button type="submit">Generar receta</button>
   </form>
 
+  <h2>QR generado:</h2>
   <div id="qr"></div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-    import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-    import QRCode from 'https://cdn.jsdelivr.net/npm/qrcode@1.5.3/+esm';
-    import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { getFirestore, collection, addDoc, serverTimestamp, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyBIjaOe4HcGNDk0xrqen8etBv0RyjyOJHw",
@@ -59,140 +40,85 @@
       appId: "1:239675098141:web:152ae3741b0ac79db7f2f4"
     };
 
-    // ✅ Inicializar Firebase
     const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
     const db = getFirestore(app);
+    const auth = getAuth(app);
 
-    let user;
+    onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        document.getElementById("generarRecetaForm").addEventListener("submit", async (e) => {
+          e.preventDefault();
 
-    onAuthStateChanged(auth, (u) => {
-      if (u) {
-        user = u;
-        console.log("Usuario autenticado:", user.uid);
-      } else {
-        window.location.href = "login.html";
+          const nombre = document.getElementById("nombre").value;
+          const edad = document.getElementById("edad").value;
+          const observaciones = document.getElementById("observaciones").value;
+          const medicamentos = obtenerMedicamentos();
+
+          // Obtener nombre del médico
+          const medicoRef = doc(db, "medicos", user.uid);
+          const medicoSnap = await getDoc(medicoRef);
+          const medicoNombre = medicoSnap.exists() ? medicoSnap.data().nombre : "Desconocido";
+
+          try {
+            const docRef = await addDoc(collection(db, "recetas"), {
+              uid: user.uid,
+              medicoNombre: medicoNombre,
+              nombrePaciente: nombre,
+              edad,
+              observaciones,
+              medicamentos,
+              timestamp: serverTimestamp()
+            });
+
+            const recetaId = docRef.id;
+            generarQR(recetaId);
+          } catch (error) {
+            console.error("Error al guardar la receta:", error);
+          }
+        });
       }
     });
 
-    document.getElementById("form-receta").addEventListener("submit", async (e) => {
-      e.preventDefault();
-
-      const nombre = document.getElementById("nombre").value;
-      const edad = document.getElementById("edad").value;
-      const observaciones = document.getElementById("observaciones").value;
-
-      const medicamentos = Array.from(document.querySelectorAll(".medicamento")).map(div => ({
-        nombre: div.querySelector(".autocomplete-nombre").value,
-        dosis: div.querySelector(".dosis").value,
-        duracion: div.querySelector(".duracion").value
-      }));
-
-      try {
-       // Obtener nombre del médico desde Firestore
-const medicoRef = doc(db, "medicos", user.uid);
-const medicoSnap = await getDoc(medicoRef);
-const medicoNombre = medicoSnap.exists() ? medicoSnap.data().nombre : "Desconocido";
-
-const docRef = await addDoc(collection(db, "recetas"), {
-  uid: user.uid,
-  medicoNombre: medicoNombre,
-  nombrePaciente: nombre,
-  edad,
-  observaciones,
-  medicamentos,
-  timestamp: serverTimestamp()
-});
-
-
-        const recetaID = docRef.id;
-        const url = `https://www.kodrx.app/verificar.html?id=${recetaID}`;
-        const qrDiv = document.getElementById("qr");
-qrDiv.innerHTML = ""; // Limpiar si ya había uno
-const canvas = document.createElement("canvas");
-qrDiv.appendChild(canvas);
-QRCode.toCanvas(canvas, url, { width: 200 }, function (error) {
-
-          if (error) console.error(error);
-          console.log("QR generado");
-        });
-      } catch (err) {
-        console.error("Error al guardar la receta:", err);
-      }
-    });
-
-    function cerrarSesion() {
-      signOut(auth).then(() => window.location.href = "login.html");
-    }
-
-    let medicamentosDisponibles = [];
-
-    function iniciarAutocompletado(input) {
-      const contenedorSugerencias = document.createElement("div");
-      contenedorSugerencias.classList.add("sugerencias");
-      input.parentNode.appendChild(contenedorSugerencias);
-
-      input.addEventListener("input", () => {
-        const valor = input.value.toLowerCase();
-        contenedorSugerencias.innerHTML = "";
-
-        if (!valor) return;
-
-        const coincidencias = medicamentosDisponibles.filter(med =>
-          med.nombre.toLowerCase().includes(valor)
-        );
-
-        if (coincidencias.length === 0) return;
-
-        coincidencias.forEach(med => {
-          const item = document.createElement("div");
-          item.textContent = med.nombre;
-          item.classList.add("sugerencia");
-          item.onclick = () => {
-            input.value = med.nombre;
-            contenedorSugerencias.innerHTML = "";
-          };
-          contenedorSugerencias.appendChild(item);
-        });
-      });
-
-      document.addEventListener("click", (e) => {
-        if (!contenedorSugerencias.contains(e.target) && e.target !== input) {
-          contenedorSugerencias.innerHTML = "";
-        }
+    function generarQR(id) {
+      const url = `https://www.kodrx.app/verificar.html?id=${id}`;
+      const qrDiv = document.getElementById("qr");
+      qrDiv.innerHTML = "";
+      const canvas = document.createElement("canvas");
+      qrDiv.appendChild(canvas);
+      QRCode.toCanvas(canvas, url, { width: 200 }, function (error) {
+        if (error) console.error(error);
+        console.log("QR generado");
       });
     }
 
-    function agregarMedicamento() {
-      if (!medicamentosDisponibles || medicamentosDisponibles.length === 0) {
-        console.warn("Los medicamentos aún no están cargados.");
-        return;
-      }
+    function obtenerMedicamentos() {
+      const medicamentos = [];
+      const contenedores = document.querySelectorAll(".medicamento");
+      contenedores.forEach((container) => {
+        const nombre = container.querySelector(".nombre").value;
+        const dosis = container.querySelector(".dosis").value;
+        const duracion = container.querySelector(".duracion").value;
+        medicamentos.push({ nombre, dosis, duracion });
+      });
+      return medicamentos;
+    }
 
+    window.agregarMedicamento = function () {
       const div = document.createElement("div");
-      div.classList.add("medicamento");
+      div.className = "medicamento";
       div.innerHTML = `
-        <input type="text" class="autocomplete-nombre" placeholder="Nombre del medicamento" required>
-        <input type="text" class="dosis" placeholder="Dosis" required>
-        <input type="text" class="duracion" placeholder="Duración" required>
+        <input class="nombre" placeholder="Nombre" list="listaMedicamentos" />
+        <input class="dosis" placeholder="Dosis" />
+        <input class="duracion" placeholder="Duración" />
       `;
       document.getElementById("medicamentos").appendChild(div);
-      const nuevoInput = div.querySelector(".autocomplete-nombre");
-      iniciarAutocompletado(nuevoInput);
-    }
+    };
 
-    fetch('medicamentos_ext.json')
-      .then(response => response.json())
-      .then(data => {
-        medicamentosDisponibles = data.sort((a, b) => {
-          if (a.destacado === b.destacado) {
-            return a.nombre.localeCompare(b.nombre);
-          }
-          return b.destacado - a.destacado;
-        });
-        agregarMedicamento(); // Primer campo al cargar
-      })
-      .catch(err => console.error("Error al cargar medicamentos:", err));
+    // Inicial
+    agregarMedicamento();
   </script>
+
+  <datalist id="listaMedicamentos"></datalist>
+  <script src="autocomplete.js"></script>
 </body>
 </html>
