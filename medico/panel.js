@@ -54,7 +54,7 @@ document.getElementById('form-receta').addEventListener('submit', async (e) => {
 
   try {
     const docRef = await addDoc(collection(db, "recetas"), {
-      medico: user.uid,
+      uid: user.uid,
       nombrePaciente: nombre,
       edad,
       observaciones,
