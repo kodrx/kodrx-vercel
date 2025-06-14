@@ -1,0 +1,186 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Verificador de recetas</title>
+  <style>
+    video { width: 100%; max-width: 400px; }
+    #qr-reader { display: none; margin-top: 10px; }
+  </style>
+</head>
+<body>
+  <h2>Verificador de recetas</h2>
+
+  <button onclick="mostrarEscaner()">📷 Escanear receta con cámara</button>
+  <div id="qr-reader"></div>
+
+  <p>O ingresar ID manual:</p>
+  <input type="text" id="recetaIdInput" placeholder="ID de receta">
+  <button onclick="verificarReceta()">Verificar</button>
+
+  <div id="receta" style="margin-top: 20px;">Esperando receta...</div>
+  <button id="btnSurtir" style="display:none;" onclick="surtirReceta()">Surtir</button>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyBIjaOe4HcGNDk0xrqen8etBv0RyjyOJHw",
+      authDomain: "kodrx-105b9.firebaseapp.com",
+      projectId: "kodrx-105b9",
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    const auth = firebase.auth();
+
+    let recetaGlobal = null;
+    let recetaIdActual = null;
+    let datosFarmacia = null;
+
+    auth.onAuthStateChanged(async (user) => {
+      if (!user) return console.warn("No hay sesión activa");
+
+      console.log("UID autenticado:", user.uid);
+      const ref = db.collection("farmacias").doc(user.uid);
+      const doc = await ref.get();
+      if (doc.exists) {
+        datosFarmacia = doc.data();
+        console.log("Farmacia cargada:", datosFarmacia);
+      } else {
+        console.warn("No se encontraron datos de la farmacia");
+      }
+    });
+
+    async function verificarReceta(idManual = null) {
+      const recetaId = idManual || document.getElementById("recetaIdInput").value.trim();
+      if (!recetaId) return alert("Ingresa un ID");
+
+      const docRef = db.collection("recetas").doc(recetaId);
+      const docSnap = await docRef.get();
+      const contenedor = document.getElementById("receta");
+      const btnSurtir = document.getElementById("btnSurtir");
+
+      if (!docSnap.exists) {
+        contenedor.innerText = "Receta no encontrada.";
+        btnSurtir.style.display = "none";
+        return;
+      }
+
+      const receta = docSnap.data();
+      recetaGlobal = receta;
+      recetaIdActual = recetaId;
+
+      let estadoReceta = "";
+      if (receta.estado === "surtida") {
+        estadoReceta = `<p style="color:green;"><strong>Ya fue surtida completamente</strong> por ${receta.surtidoParcial?.[0]?.surtidoPor || "desconocido"} - ${receta.surtidoParcial?.[0]?.telefono || ""}</p>`;
+        btnSurtir.style.display = "none";
+      } else if (receta.estado === "parcial") {
+        estadoReceta = `<p style="color:orange;"><strong>Ya fue surtida parcialmente</strong> por ${receta.surtidoParcial?.[0]?.surtidoPor || "desconocido"} - ${receta.surtidoParcial?.[0]?.telefono || ""}</p>`;
+        btnSurtir.style.display = "inline-block";
+      } else {
+        btnSurtir.style.display = "inline-block";
+      }
+
+      contenedor.innerHTML = `
+        ${estadoReceta}
+        <p><strong>Médico:</strong> ${receta.medicoNombre || "No disponible"}</p>
+        <p><strong>Paciente:</strong> ${receta.nombrePaciente}</p>
+        <p><strong>Edad:</strong> ${receta.edad}</p>
+        <p><strong>Observaciones:</strong> ${receta.observaciones}</p>
+        <h4>Medicamentos:</h4>
+        <ul>
+          ${receta.medicamentos.map((med, index) => `
+            <li>
+              <input type="checkbox" id="med-${index}" checked>
+              ${med.nombre} - ${med.dosis} - ${med.duracion}
+            </li>
+          `).join("")}
+        </ul>
+      `;
+    }
+
+    async function surtirReceta() {
+      console.log("Click en botón Surtir");
+
+      if (!recetaGlobal || !recetaIdActual) {
+        alert("No hay receta cargada");
+        return;
+      }
+
+      if (!datosFarmacia || !datosFarmacia.nombre || !datosFarmacia.telefono) {
+        console.error("Datos de farmacia no disponibles:", datosFarmacia);
+        alert("Error: no se pudo cargar la información de la farmacia.");
+        return;
+      }
+
+      const checkboxes = Array.from(document.querySelectorAll("input[type='checkbox']"));
+      const surtidos = [];
+      const noSurtidos = [];
+
+      recetaGlobal.medicamentos.forEach((med, index) => {
+        if (checkboxes[index]?.checked) {
+          surtidos.push(med);
+        } else {
+          noSurtidos.push(med);
+        }
+      });
+
+      const surtidoTotal = noSurtidos.length === 0;
+      console.log("Medicamentos surtidos:", surtidos.length, "Parciales:", noSurtidos.length);
+
+      const actualizacion = {
+        estado: surtidoTotal ? "surtida" : "parcial",
+        surtidoParcial: surtidos.map(m => ({
+          ...m,
+          surtidoPor: datosFarmacia.nombre,
+          telefono: datosFarmacia.telefono,
+          fecha: new Date().toISOString()
+        }))
+      };
+
+      try {
+        await db.collection("recetas").doc(recetaIdActual).update(actualizacion);
+        alert("Receta actualizada correctamente.");
+        document.getElementById("btnSurtir").style.display = "none";
+      } catch (error) {
+        console.error("Error al actualizar receta:", error);
+        alert("Error al guardar el estado de la receta.");
+      }
+    }
+
+    function mostrarEscaner() {
+      const readerDiv = document.getElementById("qr-reader");
+      readerDiv.style.display = "block";
+
+      const html5QrCode = new Html5Qrcode("qr-reader");
+      html5QrCode.start(
+        { facingMode: "environment" },
+        { fps: 10, qrbox: 250 },
+        (decodedText) => {
+          html5QrCode.stop();
+          readerDiv.innerHTML = "";
+          const id = extraerID(decodedText);
+          if (id) verificarReceta(id);
+        },
+        () => {}
+      ).catch((err) => {
+        console.error("No se pudo iniciar escáner:", err);
+      });
+    }
+
+    function extraerID(url) {
+      try {
+        const u = new URL(url);
+        return u.searchParams.get("id");
+      } catch {
+        return null;
+      }
+    }
+  </script>
+</body>
+</html>
