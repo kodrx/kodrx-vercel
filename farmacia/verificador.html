@@ -1,40 +1,56 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <title>Verificador de Recetas</title>
-  <style>
-    body { font-family: sans-serif; padding: 20px; max-width: 600px; margin: auto; }
-    h2 { color: #003366; }
-    input, button { padding: 10px; margin: 10px 0; width: 100%; }
-    .campo { margin-bottom: 10px; }
-    .campo h4 { margin: 5px 0; }
-    .medicamento { margin-left: 20px; }
-    #reader { width: 100%; margin: 10px 0; display: none; }
-    button.surtir-btn {
-      background-color: #00c9a7;
-      color: white;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-    }
-  </style>
+  <meta charset="UTF-8" />
+  <title>Verificar receta</title>
 </head>
 <body>
-  <h2>Consulta de Receta</h2>
-  <button onclick="location.href='historial.html'">📋 Ver historial de recetas surtidas</button>
-  <input type="text" id="input-id" placeholder="Ingresa el ID de la receta">
-  <button onclick="consultarReceta()">Consultar</button>
-  <button onclick="iniciarEscaneo()">📷 Escanear receta con cámara</button>
-  <div id="reader"></div>
+  <h2>Verificar receta</h2>
+  <div id="receta">Cargando receta...</div>
 
-  <div id="contenido">Esperando consulta...</div>
-  <div style="display:none;" id="botones-estado">
-    <button class="surtir-btn" onclick="actualizarEstado()">💊 Surtir</button>
-  </div>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
-  <script type="module" src="../firebase-init.js"></script>
-  <script type="module" src="verificador.js"></script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyBIjaOe4HcGNDk0xrqen8etBv0RyjyOJHw",
+      authDomain: "kodrx-105b9.firebaseapp.com",
+      projectId: "kodrx-105b9",
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    const params = new URLSearchParams(window.location.search);
+    const recetaId = params.get("id");
+
+    async function cargarReceta() {
+      const recetaRef = doc(db, "recetas", recetaId);
+      const recetaSnap = await getDoc(recetaRef);
+
+      if (!recetaSnap.exists()) {
+        document.getElementById("receta").innerText = "Receta no encontrada.";
+        return;
+      }
+
+      const receta = recetaSnap.data();
+      const contenedor = document.getElementById("receta");
+
+      contenedor.innerHTML = `
+        <p><strong>Médico:</strong> ${receta.medicoNombre || "No disponible"}</p>
+        <p><strong>Paciente:</strong> ${receta.nombrePaciente}</p>
+        <p><strong>Edad:</strong> ${receta.edad}</p>
+        <p><strong>Observaciones:</strong> ${receta.observaciones}</p>
+        <h4>Medicamentos:</h4>
+        <ul>
+          ${receta.medicamentos.map(med =>
+            `<li>${med.nombre} - ${med.dosis} - ${med.duracion}</li>`
+          ).join("")}
+        </ul>
+      `;
+    }
+
+    cargarReceta();
+  </script>
 </body>
 </html>
