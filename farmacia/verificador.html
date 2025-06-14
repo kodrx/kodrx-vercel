@@ -2,165 +2,114 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <title>Verificador de recetas</title>
-  <style>
-    video { width: 100%; max-width: 400px; }
-    #qr-reader { display: none; margin-top: 10px; }
-  </style>
+  <meta charset="UTF-8" />
+  <title>Verificador de receta</title>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
 </head>
 <body>
-  <h2>Verificador de recetas</h2>
+  <h1>Verificador de receta</h1>
+  <input type="text" id="idReceta" placeholder="Ingresa ID o escanea QR" />
+  <button onclick="cargarReceta()">Buscar</button>
+  <div id="resultado"></div>
 
-  <button onclick="mostrarEscaner()">📷 Escanear receta con cámara</button>
-  <div id="qr-reader"></div>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
+    import { getFirestore, doc, getDoc, updateDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
 
-  <p>O ingresar ID manual:</p>
-  <input type="text" id="recetaIdInput" placeholder="ID de receta">
-  <button onclick="verificarReceta()">Verificar</button>
-
-  <div id="receta" style="margin-top: 20px;">Esperando receta...</div>
-  <button id="btnSurtir" style="display:none;" onclick="surtirReceta()">Surtir</button>
-
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
-
-  <script>
     const firebaseConfig = {
       apiKey: "AIzaSyBIjaOe4HcGNDk0xrqen8etBv0RyjyOJHw",
       authDomain: "kodrx-105b9.firebaseapp.com",
       projectId: "kodrx-105b9",
+      storageBucket: "kodrx-105b9.appspot.com",
+      messagingSenderId: "239675098141",
+      appId: "1:239675098141:web:152ae3741b0ac79db7f2f4"
     };
 
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
-    const auth = firebase.auth();
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
 
-    let recetaGlobal = null;
-    let recetaIdActual = null;
     let datosFarmacia = null;
 
-    auth.onAuthStateChanged(async (user) => {
-      if (!user) return;
-      const ref = db.collection("farmacias").doc(user.uid);
-      const doc = await ref.get();
-      if (doc.exists) {
-        datosFarmacia = doc.data();
+    onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        const uid = user.uid;
+        const docRef = doc(db, "farmacias", uid);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          datosFarmacia = docSnap.data();
+        } else {
+          console.error("No se encontraron datos de la farmacia");
+        }
       }
     });
 
-    async function verificarReceta(idManual = null) {
-      const recetaId = idManual || document.getElementById("recetaIdInput").value.trim();
-      if (!recetaId) return alert("Ingresa un ID");
+    window.cargarReceta = async function () {
+      const id = document.getElementById("idReceta").value;
+      const docRef = doc(db, "recetas", id);
+      const docSnap = await getDoc(docRef);
 
-      const docRef = db.collection("recetas").doc(recetaId);
-      const docSnap = await docRef.get();
-      const contenedor = document.getElementById("receta");
-      const btnSurtir = document.getElementById("btnSurtir");
+      if (docSnap.exists()) {
+        const receta = docSnap.data();
+        const resultado = document.getElementById("resultado");
 
-      if (!docSnap.exists) {
-        contenedor.innerText = "Receta no encontrada.";
-        btnSurtir.style.display = "none";
-        return;
-      }
+        resultado.innerHTML = `
+          <p><strong>Paciente:</strong> ${receta.nombrePaciente}</p>
+          <p><strong>Edad:</strong> ${receta.edad}</p>
+          <p><strong>Observaciones:</strong> ${receta.observaciones}</p>
+          <p><strong>Médico:</strong> ${receta.medicoNombre || "Desconocido"}</p>
+          <p><strong>Estado:</strong> ${receta.estado || "No surtida"}</p>
+          <h3>Medicamentos:</h3>
+          <ul id="listaMedicamentos"></ul>
+          <button onclick="surtirReceta('${id}')">Surtir</button>
+        `;
 
-      const receta = docSnap.data();
-      recetaGlobal = receta;
-      recetaIdActual = recetaId;
-
-      let estadoReceta = "";
-      if (receta.estado === "surtida") {
-        estadoReceta = `<p style="color:green;"><strong>Ya fue surtida completamente</strong> por ${receta.surtidoParcial?.[0]?.surtidoPor || "desconocido"} - ${receta.surtidoParcial?.[0]?.telefono || ""}</p>`;
-        btnSurtir.style.display = "none";
-      } else if (receta.estado === "parcial") {
-        estadoReceta = `<p style="color:orange;"><strong>Ya fue surtida parcialmente</strong> por ${receta.surtidoParcial?.[0]?.surtidoPor || "desconocido"} - ${receta.surtidoParcial?.[0]?.telefono || ""}</p>`;
-        btnSurtir.style.display = "inline-block";
-      } else {
-        btnSurtir.style.display = "inline-block";
-      }
-
-      contenedor.innerHTML = `
-        ${estadoReceta}
-        <p><strong>Médico:</strong> ${receta.medicoNombre || "No disponible"}</p>
-        <p><strong>Paciente:</strong> ${receta.nombrePaciente}</p>
-        <p><strong>Edad:</strong> ${receta.edad}</p>
-        <p><strong>Observaciones:</strong> ${receta.observaciones}</p>
-        <h4>Medicamentos:</h4>
-        <ul>
-          ${receta.medicamentos.map((med, index) => `
-            <li>
-              <input type="checkbox" id="med-${index}" checked>
+        const lista = document.getElementById("listaMedicamentos");
+        receta.medicamentos.forEach((med, index) => {
+          const li = document.createElement("li");
+          li.innerHTML = `
+            <label>
+              <input type="checkbox" id="med-${index}" />
               ${med.nombre} - ${med.dosis} - ${med.duracion}
-            </li>
-          `).join("")}
-        </ul>
-      `;
-    }
+            </label>
+          `;
+          lista.appendChild(li);
+        });
+      }
+    };
 
-    function surtirReceta() {
-      if (!recetaGlobal || !recetaIdActual) return alert("No hay receta cargada");
-      if (!datosFarmacia) return alert("Error: no se pudo cargar la información de la farmacia.");
+    window.surtirReceta = async function (id) {
+      const recetaRef = doc(db, "recetas", id);
+      const recetaSnap = await getDoc(recetaRef);
+      const receta = recetaSnap.data();
 
-      const checkboxes = Array.from(document.querySelectorAll("input[type='checkbox']"));
-      const surtidos = [];
-      const noSurtidos = [];
+      const medicamentos = receta.medicamentos;
+      const seleccionados = [];
 
-      recetaGlobal.medicamentos.forEach((med, index) => {
-        if (checkboxes[index].checked) {
-          surtidos.push(med);
-        } else {
-          noSurtidos.push(med);
+      medicamentos.forEach((med, index) => {
+        const check = document.getElementById(`med-${index}`);
+        if (check && check.checked) {
+          seleccionados.push({
+            ...med,
+            fecha: new Date().toISOString(),
+            surtidoPor: datosFarmacia?.nombreFarmacia || "Farmacia no registrada",
+            telefono: datosFarmacia?.telefono || "Teléfono no registrado"
+          });
         }
       });
 
-      const surtidoTotal = noSurtidos.length === 0;
+      const estado = seleccionados.length === medicamentos.length ? "total" : "parcial";
 
-      const actualizacion = {
-        estado: surtidoTotal ? "surtida" : "parcial",
-        surtidoParcial: surtidos.map(m => ({
-          ...m,
-          surtidoPor: datosFarmacia.nombre,
-          telefono: datosFarmacia.telefono,
-          fecha: new Date().toISOString()
-        }))
-      };
-
-      db.collection("recetas").doc(recetaIdActual).update(actualizacion).then(() => {
-        alert("Receta actualizada correctamente.");
-        document.getElementById("btnSurtir").style.display = "none";
+      await updateDoc(recetaRef, {
+        estado: estado,
+        surtidoParcial: seleccionados
       });
-    }
 
-    function mostrarEscaner() {
-      const readerDiv = document.getElementById("qr-reader");
-      readerDiv.style.display = "block";
-
-      const html5QrCode = new Html5Qrcode("qr-reader");
-      html5QrCode.start(
-        { facingMode: "environment" },
-        { fps: 10, qrbox: 250 },
-        (decodedText) => {
-          html5QrCode.stop();
-          readerDiv.innerHTML = "";
-          const id = extraerID(decodedText);
-          if (id) verificarReceta(id);
-        },
-        () => {}
-      ).catch((err) => {
-        console.error("No se pudo iniciar escáner:", err);
-      });
-    }
-
-    function extraerID(url) {
-      try {
-        const u = new URL(url);
-        return u.searchParams.get("id");
-      } catch {
-        return null;
-      }
-    }
+      alert(`Receta surtida ${estado === "total" ? "totalmente" : "parcialmente"}.`);
+    };
   </script>
 </body>
 </html>
