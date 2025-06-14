@@ -18,12 +18,14 @@
 
     <h3>Medicamentos</h3>
     <div id="medicamentos"></div>
-    <button type="button" onclick="agregarMedicamento()">+ Agregar medicamento</button><br><br>
+    <button type="button" id="btnAgregar">+ Agregar medicamento</button><br><br>
     <button type="submit">Generar receta</button>
   </form>
 
   <h2>QR generado:</h2>
   <div id="qr"></div>
+
+  <datalist id="listaMedicamentos"></datalist>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -54,7 +56,6 @@
           const observaciones = document.getElementById("observaciones").value;
           const medicamentos = obtenerMedicamentos();
 
-          // Obtener nombre del médico
           const medicoRef = doc(db, "medicos", user.uid);
           const medicoSnap = await getDoc(medicoRef);
           const medicoNombre = medicoSnap.exists() ? medicoSnap.data().nombre : "Desconocido";
@@ -112,13 +113,30 @@
         <input class="duracion" placeholder="Duración" />
       `;
       document.getElementById("medicamentos").appendChild(div);
+      cargarMedicamentos(); // Reaplica autocompletado al nuevo campo
     };
 
-    // Inicial
-    agregarMedicamento();
-  </script>
+    async function cargarMedicamentos() {
+      try {
+        const response = await fetch("medicamentos_ext.json");
+        const medicamentos = await response.json();
+        const datalist = document.getElementById("listaMedicamentos");
+        datalist.innerHTML = "";
+        medicamentos.forEach((med) => {
+          const option = document.createElement("option");
+          option.value = med;
+          datalist.appendChild(option);
+        });
+      } catch (error) {
+        console.error("Error al cargar medicamentos:", error);
+      }
+    }
 
-  <datalist id="listaMedicamentos"></datalist>
-  <script src="autocomplete.js"></script>
+    document.getElementById("btnAgregar").addEventListener("click", agregarMedicamento);
+
+    // Carga inicial
+    agregarMedicamento();
+    cargarMedicamentos();
+  </script>
 </body>
 </html>
