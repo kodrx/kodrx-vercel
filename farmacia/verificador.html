@@ -1,19 +1,36 @@
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
   <title>Verificador de recetas</title>
+  <style>
+    video {
+      width: 100%;
+      max-width: 400px;
+    }
+    #qr-reader {
+      display: none;
+      margin-top: 10px;
+    }
+  </style>
 </head>
 <body>
   <h2>Verificador de recetas</h2>
-  <button onclick="iniciarEscaneo()">📷 Escanear receta con cámara</button>
-  <input type="text" id="recetaIdInput" placeholder="O ingresar ID manual">
+
+  <button onclick="mostrarEscaner()">📷 Escanear receta con cámara</button>
+  <div id="qr-reader"></div>
+
+  <p>O ingresar ID manual:</p>
+  <input type="text" id="recetaIdInput" placeholder="ID de receta">
   <button onclick="verificarReceta()">Verificar</button>
 
   <div id="receta" style="margin-top: 20px;">Esperando receta...</div>
 
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+
   <script>
     const firebaseConfig = {
       apiKey: "AIzaSyBIjaOe4HcGNDk0xrqen8etBv0RyjyOJHw",
@@ -24,13 +41,12 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
-    async function verificarReceta() {
-      const recetaId = document.getElementById("recetaIdInput").value.trim();
+    async function verificarReceta(idManual = null) {
+      const recetaId = idManual || document.getElementById("recetaIdInput").value.trim();
       if (!recetaId) return alert("Ingresa un ID");
 
       const docRef = db.collection("recetas").doc(recetaId);
       const docSnap = await docRef.get();
-
       const contenedor = document.getElementById("receta");
 
       if (!docSnap.exists) {
@@ -39,7 +55,6 @@
       }
 
       const receta = docSnap.data();
-
       contenedor.innerHTML = `
         <p><strong>Médico:</strong> ${receta.medicoNombre || "No disponible"}</p>
         <p><strong>Paciente:</strong> ${receta.nombrePaciente}</p>
@@ -54,9 +69,38 @@
       `;
     }
 
-    function iniciarEscaneo() {
-      alert("Funcionalidad de escaneo QR activa — este bloque se conecta al lector implementado en otra parte.");
-      // Tu código de lector QR insertado previamente aquí
+    function mostrarEscaner() {
+      const readerDiv = document.getElementById("qr-reader");
+      readerDiv.style.display = "block";
+
+      const html5QrCode = new Html5Qrcode("qr-reader");
+      html5QrCode.start(
+        { facingMode: "environment" },
+        {
+          fps: 10,
+          qrbox: 250
+        },
+        (decodedText, decodedResult) => {
+          html5QrCode.stop();
+          readerDiv.innerHTML = "";
+          const id = extraerID(decodedText);
+          if (id) verificarReceta(id);
+        },
+        (errorMessage) => {
+          // Ignorar errores de escaneo
+        }
+      ).catch((err) => {
+        console.error("No se pudo iniciar escáner:", err);
+      });
+    }
+
+    function extraerID(url) {
+      try {
+        const u = new URL(url);
+        return u.searchParams.get("id");
+      } catch {
+        return null;
+      }
     }
   </script>
 </body>
