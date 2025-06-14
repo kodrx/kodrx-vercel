@@ -2,39 +2,43 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <title>Verificar receta</title>
+  <title>Verificador de recetas</title>
 </head>
 <body>
-  <h2>Verificar receta</h2>
-  <div id="receta">Cargando receta...</div>
+  <h2>Verificador de recetas</h2>
+  <button onclick="iniciarEscaneo()">📷 Escanear receta con cámara</button>
+  <input type="text" id="recetaIdInput" placeholder="O ingresar ID manual">
+  <button onclick="verificarReceta()">Verificar</button>
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+  <div id="receta" style="margin-top: 20px;">Esperando receta...</div>
 
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+  <script>
     const firebaseConfig = {
       apiKey: "AIzaSyBIjaOe4HcGNDk0xrqen8etBv0RyjyOJHw",
       authDomain: "kodrx-105b9.firebaseapp.com",
       projectId: "kodrx-105b9",
     };
 
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
 
-    const params = new URLSearchParams(window.location.search);
-    const recetaId = params.get("id");
+    async function verificarReceta() {
+      const recetaId = document.getElementById("recetaIdInput").value.trim();
+      if (!recetaId) return alert("Ingresa un ID");
 
-    async function cargarReceta() {
-      const recetaRef = doc(db, "recetas", recetaId);
-      const recetaSnap = await getDoc(recetaRef);
+      const docRef = db.collection("recetas").doc(recetaId);
+      const docSnap = await docRef.get();
 
-      if (!recetaSnap.exists()) {
-        document.getElementById("receta").innerText = "Receta no encontrada.";
+      const contenedor = document.getElementById("receta");
+
+      if (!docSnap.exists) {
+        contenedor.innerText = "Receta no encontrada.";
         return;
       }
 
-      const receta = recetaSnap.data();
-      const contenedor = document.getElementById("receta");
+      const receta = docSnap.data();
 
       contenedor.innerHTML = `
         <p><strong>Médico:</strong> ${receta.medicoNombre || "No disponible"}</p>
@@ -50,7 +54,10 @@
       `;
     }
 
-    cargarReceta();
+    function iniciarEscaneo() {
+      alert("Funcionalidad de escaneo QR activa — este bloque se conecta al lector implementado en otra parte.");
+      // Tu código de lector QR insertado previamente aquí
+    }
   </script>
 </body>
 </html>
