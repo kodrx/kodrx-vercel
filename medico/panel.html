@@ -41,10 +41,10 @@
     <textarea placeholder="Observaciones"></textarea>
 
     <h3>Medicamentos</h3>
-    <div id="medicamentos"></div>
-    <button type="button" onclick="agregarMedicamento()">+ Agregar medicamento</button><br>
-    <button type="submit">Generar receta</button>
-  </form>
+<div id="medicamentos"></div>
+<button type="button" onclick="agregarMedicamento()">+ Agregar medicamento</button><br><br>
+<button type="submit">Generar receta</button>
+
 
   <div id="resultado" style="display:none;">
     <h3>Receta generada</h3>
@@ -62,5 +62,29 @@
   </script>
   <script type="module" src="firebase-init.js"></script>
   <script type="module" src="panel.js"></script>
+    <!-- Script para agregar medicamentos y aplicar autocompletado -->
+<script src="autocomplete.js"></script>
+<script>
+function agregarMedicamento() {
+  const div = document.createElement("div");
+  div.classList.add("medicamento");
+  div.innerHTML = `
+    <input type="text" class="autocomplete-nombre" placeholder="Nombre del medicamento" required>
+    <input type="text" class="dosis" placeholder="Dosis" required>
+    <input type="text" class="duracion" placeholder="Duración" required>
+  `;
+  document.getElementById("medicamentos").appendChild(div);
+
+  // Activar autocompletado en el nuevo campo
+  const nuevoInput = div.querySelector(".autocomplete-nombre");
+  iniciarAutocompletado(nuevoInput);
+}
+
+// Si ya hay un campo por defecto al cargar la página
+window.addEventListener("DOMContentLoaded", () => {
+  agregarMedicamento();
+});
+</script>
+
 </body>
 </html>
