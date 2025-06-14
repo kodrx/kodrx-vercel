@@ -30,7 +30,7 @@ onAuthStateChanged(auth, async (user) => {
   const querySnapshot = await getDocs(q);
 
   if (querySnapshot.empty) {
-    const contenedor = document.getElementById("contenedor");
+    const contenedor = document.getElementById("recetasContainer");
     if (contenedor) {
       contenedor.innerHTML = "<p>No se encontraron recetas</p>";
     }
@@ -46,7 +46,7 @@ onAuthStateChanged(auth, async (user) => {
 });
 
 function mostrarRecetas(lista) {
-  const contenedor = document.getElementById("contenedor");
+  const contenedor = document.getElementById("recetasContainer");
   if (!contenedor) return;
 
   contenedor.innerHTML = "";
