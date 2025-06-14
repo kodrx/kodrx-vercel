@@ -1,5 +1,5 @@
 import { db, auth } from '../firebase-init.js';
-import { collection, getDocs, query, where, doc, getDoc } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
+import { collection, getDocs, query, where } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
 
 const contenedor = document.getElementById("contenedor");
@@ -8,11 +8,16 @@ let recetasFiltradas = [];
 onAuthStateChanged(auth, async (user) => {
   if (!user) {
     contenedor.innerHTML = "<p>Debes iniciar sesión para ver el historial.</p>";
+    console.warn("No hay sesión activa");
     return;
   }
 
+  console.log("Usuario autenticado:", user.uid);
+
   const q = query(collection(db, "recetas"), where("uid", "==", user.uid));
   const snapshot = await getDocs(q);
+
+  console.log("Recetas encontradas:", snapshot.size);
 
   if (snapshot.empty) {
     contenedor.innerHTML = "<p>No se encontraron recetas.</p>";
@@ -27,6 +32,8 @@ onAuthStateChanged(auth, async (user) => {
     const fechaRaw = receta.timestamp || receta.fecha || new Date().toISOString();
     const dia = fechaRaw.split("T")[0];
     const hora = fechaRaw.split("T")[1]?.split(".")[0] || "--:--";
+
+    console.log("Receta procesada:", recetaId, receta);
 
     if (!agrupadas[dia]) agrupadas[dia] = [];
     agrupadas[dia].push({
