@@ -9,6 +9,7 @@
     .campo { margin-bottom: 15px; }
     .campo h4 { margin: 5px 0 2px; }
     .medicamento { margin-left: 20px; }
+    .surtido-info { font-size: 0.9em; color: #555; margin-top: 5px; }
   </style>
 </head>
 <body>
@@ -16,6 +17,72 @@
   <div id="contenido">Cargando receta...</div>
 
   <script type="module" src="firebase-init.js"></script>
-  <script type="module" src="verificar.js"></script>
+  <script type="module">
+    import { db } from './firebase-init.js';
+    import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const recetaId = urlParams.get('id');
+    const contenedor = document.getElementById('contenido');
+
+    async function cargarReceta() {
+      try {
+        const docRef = doc(db, "recetas", recetaId);
+        const docSnap = await getDoc(docRef);
+
+        if (!docSnap.exists()) {
+          contenedor.innerHTML = "<p>Receta no encontrada.</p>";
+          return;
+        }
+
+        const receta = docSnap.data();
+
+        let html = `
+          <div class="campo"><h4>Nombre del paciente:</h4> ${receta.nombrePaciente || ''}</div>
+          <div class="campo"><h4>Edad:</h4> ${receta.edad || ''}</div>
+          <div class="campo"><h4>Observaciones:</h4> ${receta.observaciones || ''}</div>
+          <div class="campo"><h4>Médico responsable:</h4> ${receta.medicoNombre || 'Sin registrar'}</div>
+          <div class="campo"><h4>Medicamentos:</h4></div>
+        `;
+
+        receta.medicamentos.forEach((med, index) => {
+          let surtidoInfo = '';
+          let yaSurtido = false;
+
+          if (receta.surtidoParcial) {
+            const match = receta.surtidoParcial.find(item =>
+              item.nombre === med.nombre && item.dosis === med.dosis && item.duracion === med.duracion
+            );
+            if (match) {
+              yaSurtido = true;
+              surtidoInfo = `
+                <div class="surtido-info">
+                  ✅ Surtido por: <strong>${match.surtidoPor}</strong><br>
+                  📞 Tel: ${match.telefono}
+                </div>
+              `;
+            }
+          }
+
+          html += `
+            <div class="medicamento">
+              <strong>${index + 1}. ${med.nombre}</strong><br>
+              Dosis: ${med.dosis}<br>
+              Duración: ${med.duracion}
+              ${surtidoInfo}
+            </div>
+          `;
+        });
+
+        contenedor.innerHTML = html;
+      } catch (error) {
+        console.error("Error al cargar receta:", error);
+        contenedor.innerHTML = "<p>Error al cargar la receta.</p>";
+      }
+    }
+
+    cargarReceta();
+  </script>
 </body>
 </html>
+
