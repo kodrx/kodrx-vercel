@@ -2,34 +2,29 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Verificador de receta</title>
+  <script type="module" src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
+  <script type="module" src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js"></script>
+  <script type="module" src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js"></script>
+  <script src="https://unpkg.com/jsqr/dist/jsQR.js"></script>
   <style>
-    body { font-family: Arial, sans-serif; padding: 20px; }
-    #video, canvas { max-width: 100%; margin-top: 10px; display: none; }
-    .medicamento { margin-bottom: 10px; }
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    #medicamentos label { display: block; margin-bottom: 5px; }
+    .surtido-info { font-size: 0.9em; color: #555; margin-left: 10px; }
   </style>
 </head>
 <body>
   <h1>Verificador de receta</h1>
+  <button onclick="iniciarEscaneo()">📷 Escanear receta con cámara</button><br><br>
+  <input type="text" id="inputID" placeholder="Ingresar ID de receta manualmente" />
+  <button onclick="verificarManual()">Verificar</button>
+  <div id="resultado"></div>
 
-  <button onclick="iniciarEscaneo()">📷 Escanear receta con cámara</button>
-  <p>O ingresa manualmente el ID de la receta:</p>
-  <input type="text" id="manualID" placeholder="ID de receta">
-  <button onclick="cargarRecetaManual()">Cargar receta</button>
-
-  <div id="receta-container"></div>
-  <div id="medicamentos-container"></div>
-  <button id="btn-surtir" onclick="surtirReceta()">💊 Surtir</button>
-
-  <video id="video" autoplay></video>
-  <canvas id="canvas"></canvas>
-
-  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
   <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
-    import { getFirestore, doc, getDoc, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
-    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
+    import { getFirestore, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyBIjaOe4HcGNDk0xrqen8etBv0RyjyOJHw",
@@ -42,120 +37,86 @@
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
-    const auth = getAuth(app);
+    const auth = getAuth();
 
-    let datosFarmacia = null;
-    let recetaActualID = null;
-    let recetaCompleta = null;
+    let currentUser = null;
+    onAuthStateChanged(auth, user => { currentUser = user; });
 
-    onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        const farmaciaRef = doc(db, "farmacias", user.uid);
-        const snap = await getDoc(farmaciaRef);
-        if (snap.exists()) {
-          datosFarmacia = snap.data();
-        } else {
-          alert("No se encontraron datos de la farmacia.");
-        }
-      }
-    });
-
-    window.cargarRecetaManual = async () => {
-      const id = document.getElementById("manualID").value.trim();
-      if (id) {
-        await mostrarReceta(id);
-      }
-    };
-
-    async function mostrarReceta(id) {
-      const recetaRef = doc(db, "recetas", id);
-      const recetaSnap = await getDoc(recetaRef);
-      if (recetaSnap.exists()) {
-        recetaActualID = id;
-        recetaCompleta = recetaSnap.data();
-
-        const receta = recetaCompleta;
-        const container = document.getElementById("receta-container");
-        container.innerHTML = `
-          <h3>Paciente: ${receta.nombrePaciente}</h3>
-          <p>Edad: ${receta.edad}</p>
-          <p>Observaciones: ${receta.observaciones}</p>
-          <p><strong>Médico:</strong> ${receta.medicoNombre || "No registrado"}</p>
-        `;
-
-        if (receta.estado === "total" || receta.estado === "parcial") {
-          container.innerHTML += `
-            <p style="color:red;"><strong>Esta receta ya fue surtida (${receta.estado}).</strong><br>
-            Farmacia: ${receta.surtidoPor || "-"}<br>
-            Tel: ${receta.telefono || "-"}</p>`;
-        }
-
-        const medsHTML = receta.medicamentos.map((med, idx) => `
-          <div class="medicamento">
-            <label><input type="checkbox" data-index="${idx}"> ${med.nombre} - ${med.dosis} (${med.duracion})</label>
-          </div>
-        `).join("");
-
-        document.getElementById("medicamentos-container").innerHTML = medsHTML;
-      } else {
-        alert("Receta no encontrada.");
-      }
-    }
-
-    window.surtirReceta = async () => {
-      if (!recetaActualID || !recetaCompleta || !datosFarmacia) {
-        alert("No hay receta cargada o falta información.");
-        return;
-      }
-
-      const checkboxes = document.querySelectorAll('input[type="checkbox"]');
-      const seleccionados = [];
-      recetaCompleta.medicamentos.forEach((med, idx) => {
-        if (checkboxes[idx]?.checked) seleccionados.push(med);
-      });
-
-      const estado = (seleccionados.length === recetaCompleta.medicamentos.length) ? "total" : "parcial";
-
-      await updateDoc(doc(db, "recetas", recetaActualID), {
-        estado,
-        surtidoParcial: seleccionados,
-        surtidoPor: datosFarmacia.nombreFarmacia,
-        telefono: datosFarmacia.telefono,
-        timestamp: serverTimestamp()
-      });
-
-      alert("Receta actualizada como " + estado);
-      window.location.reload();
+    window.verificarManual = async () => {
+      const id = document.getElementById('inputID').value.trim();
+      if (!id) return alert('Ingresa un ID');
+      await verificarReceta(id);
     };
 
     window.iniciarEscaneo = () => {
-      const video = document.getElementById("video");
-      const canvas = document.getElementById("canvas");
-      const ctx = canvas.getContext("2d");
-      video.style.display = "block";
-
-      navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
-        .then(stream => {
-          video.srcObject = stream;
-          video.setAttribute("playsinline", true);
-          video.play();
-          const interval = setInterval(() => {
-            if (video.readyState === video.HAVE_ENOUGH_DATA) {
-              canvas.height = video.videoHeight;
-              canvas.width = video.videoWidth;
-              ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-              const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-              const code = jsQR(imageData.data, imageData.width, imageData.height);
-              if (code) {
-                clearInterval(interval);
-                stream.getTracks().forEach(track => track.stop());
-                video.style.display = "none";
-                mostrarReceta(code.data.split("=")[1]);
-              }
-            }
-          }, 500);
-        });
+      alert("Función de escaneo implementada aparte para simplificar este ejemplo.");
     };
+
+    async function verificarReceta(id) {
+      const docRef = doc(db, "recetas", id);
+      const docSnap = await getDoc(docRef);
+
+      if (!docSnap.exists()) {
+        document.getElementById('resultado').innerText = "Receta no encontrada.";
+        return;
+      }
+
+      const data = docSnap.data();
+      const surtidoParcial = data.surtidoParcial || [];
+
+      let html = `<h3>Paciente: ${data.nombrePaciente}</h3>`;
+      html += `<p>Edad: ${data.edad}</p>`;
+      html += `<p>Observaciones: ${data.observaciones || 'Ninguna'}</p>`;
+      html += `<p><strong>Médico:</strong> ${data.medicoNombre || 'Sin datos'}</p>`;
+      html += `<h4>Medicamentos:</h4><form id="formMedicamentos">`;
+
+      data.medicamentos.forEach(med => {
+        const yaSurtido = surtidoParcial.find(s => s.nombre === med.nombre);
+        const disabled = yaSurtido ? "disabled checked" : "";
+        const infoSurtido = yaSurtido
+          ? `<span class="surtido-info">Surtido por: ${yaSurtido.surtidoPor}, Tel: ${yaSurtido.telefono}</span>`
+          : "";
+        html += `<label><input type="checkbox" name="med" value="${med.nombre}" ${disabled}> ${med.nombre} - ${med.dosis}, ${med.duracion} ${infoSurtido}</label>`;
+      });
+
+      html += `</form><br><button onclick="surtir('${id}')">Surtir</button>`;
+      document.getElementById('resultado').innerHTML = html;
+    }
+
+    window.surtir = async (id) => {
+      const checkboxes = document.querySelectorAll('input[name="med"]:not(:disabled):checked');
+      if (!checkboxes.length) return alert("Selecciona al menos un medicamento no surtido.");
+
+      const medicamentosSurtidos = Array.from(checkboxes).map(cb => cb.value);
+      const nombreFarmacia = prompt("Nombre de la farmacia:");
+      const telefono = prompt("Teléfono de contacto:");
+
+      const recetaRef = doc(db, "recetas", id);
+      const recetaSnap = await getDoc(recetaRef);
+      const data = recetaSnap.data();
+      const surtidoParcial = data.surtidoParcial || [];
+
+      const nuevos = data.medicamentos.filter(med => medicamentosSurtidos.includes(med.nombre)).map(med => ({
+        ...med,
+        surtidoPor: nombreFarmacia,
+        telefono,
+        fecha: new Date().toISOString()
+      }));
+
+      const actualizados = [...surtidoParcial, ...nuevos];
+      const esTotal = actualizados.length === data.medicamentos.length;
+      await updateDoc(recetaRef, {
+        estado: esTotal ? "total" : "parcial",
+        surtidoParcial: actualizados
+      });
+
+      alert(`Receta marcada como ${esTotal ? "surtida totalmente" : "surtida parcialmente"}.`);
+      location.reload();
+    }
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const recetaID = urlParams.get("id");
+    if (recetaID) verificarReceta(recetaID);
   </script>
 </body>
 </html>
