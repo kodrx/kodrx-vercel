@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Panel de Administración - KodRx</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      max-width: 600px;
+      margin: auto;
+      padding: 40px;
+      text-align: center;
+    }
+    h1 {
+      color: #003366;
+    }
+    button {
+      display: block;
+      width: 100%;
+      margin: 15px 0;
+      padding: 15px;
+      font-size: 16px;
+      background-color: #003366;
+      color: white;
+      border: none;
+      cursor: pointer;
+      border-radius: 5px;
+    }
+    button:hover {
+      background-color: #005599;
+    }
+  </style>
+</head>
+<body>
+  <script>
+    if (sessionStorage.getItem("adminLoggedIn") !== "true") {
+      window.location.href = "login.html";
+    }
+  </script>
+
+  <h1>Panel de Administración KodRx</h1>
+
+  <button onclick="window.location.href='/admin/medicos.html'">Gestión de Médicos</button>
+  <button onclick="window.location.href='/admin/farmacias.html'">Gestión de Farmacias</button>
+  <button onclick="window.location.href='/admin/laboratorios.html'">Gestión de Laboratorios</button>
+</body>
+</html>
