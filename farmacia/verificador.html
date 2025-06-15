@@ -4,13 +4,13 @@
 <head>
   <meta charset="UTF-8" />
   <title>Verificador de receta</title>
-  <script type="module" src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
-  <script type="module" src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js"></script>
-  <script type="module" src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js"></script>
-  <script src="https://unpkg.com/jsqr/dist/jsQR.js"></script>
+  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+  <script type="module" src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js"></script>
+  <script type="module" src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js"></script>
+  <script type="module" src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js"></script>
   <style>
     body { font-family: Arial, sans-serif; margin: 20px; }
-    #medicamentos label { display: block; margin-bottom: 5px; }
+    .medicamento { margin-bottom: 10px; }
     .surtido-info { font-size: 0.9em; color: #555; margin-left: 10px; }
   </style>
 </head>
@@ -19,12 +19,14 @@
   <button onclick="iniciarEscaneo()">📷 Escanear receta con cámara</button><br><br>
   <input type="text" id="inputID" placeholder="Ingresar ID de receta manualmente" />
   <button onclick="verificarManual()">Verificar</button>
-  <div id="resultado"></div>
+
+  <div id="qr-reader" style="width: 300px; margin-top: 20px;"></div>
+  <div id="resultado" style="margin-top: 20px;"></div>
 
   <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
-    import { getFirestore, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
-    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+    import { getFirestore, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyBIjaOe4HcGNDk0xrqen8etBv0RyjyOJHw",
@@ -39,84 +41,93 @@
     const db = getFirestore(app);
     const auth = getAuth();
 
-    let currentUser = null;
-    onAuthStateChanged(auth, user => { currentUser = user; });
+    let datosFarmacia = null;
+    let recetaGlobal = null;
+    let recetaIdActual = null;
 
-    window.verificarManual = async () => {
-      const id = document.getElementById('inputID').value.trim();
-      if (!id) return alert('Ingresa un ID');
-      await verificarReceta(id);
+    onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        const docRef = doc(db, "farmacias", user.uid);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          datosFarmacia = docSnap.data();
+        }
+      }
+    });
+
+    window.verificarManual = () => {
+      const id = document.getElementById("inputID").value.trim();
+      if (id) verificarReceta(id);
     };
 
     window.iniciarEscaneo = () => {
-      alert("Función de escaneo implementada aparte para simplificar este ejemplo.");
+      const qrReader = new Html5Qrcode("qr-reader");
+      qrReader.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 },
+        (decodedText) => {
+          qrReader.stop();
+          const id = new URL(decodedText).searchParams.get("id");
+          if (id) verificarReceta(id);
+        },
+        () => {}
+      );
     };
 
     async function verificarReceta(id) {
-      const docRef = doc(db, "recetas", id);
-      const docSnap = await getDoc(docRef);
-
-      if (!docSnap.exists()) {
-        document.getElementById('resultado').innerText = "Receta no encontrada.";
+      const ref = doc(db, "recetas", id);
+      const snap = await getDoc(ref);
+      if (!snap.exists()) {
+        document.getElementById("resultado").innerText = "Receta no encontrada.";
         return;
       }
 
-      const data = docSnap.data();
-      const surtidoParcial = data.surtidoParcial || [];
+      recetaIdActual = id;
+      recetaGlobal = snap.data();
+      const surtido = recetaGlobal.surtidoParcial || [];
 
-      let html = `<h3>Paciente: ${data.nombrePaciente}</h3>`;
-      html += `<p>Edad: ${data.edad}</p>`;
-      html += `<p>Observaciones: ${data.observaciones || 'Ninguna'}</p>`;
-      html += `<p><strong>Médico:</strong> ${data.medicoNombre || 'Sin datos'}</p>`;
-      html += `<h4>Medicamentos:</h4><form id="formMedicamentos">`;
+      let html = `<h3>Paciente: ${recetaGlobal.nombrePaciente}</h3>`;
+      html += `<p>Edad: ${recetaGlobal.edad}</p>`;
+      html += `<p>Observaciones: ${recetaGlobal.observaciones || 'Ninguna'}</p>`;
+      html += `<p>Médico: ${recetaGlobal.medicoNombre || 'Desconocido'}</p>`;
+      html += `<h4>Medicamentos:</h4>`;
 
-      data.medicamentos.forEach(med => {
-        const yaSurtido = surtidoParcial.find(s => s.nombre === med.nombre);
-        const disabled = yaSurtido ? "disabled checked" : "";
-        const infoSurtido = yaSurtido
-          ? `<span class="surtido-info">Surtido por: ${yaSurtido.surtidoPor}, Tel: ${yaSurtido.telefono}</span>`
-          : "";
-        html += `<label><input type="checkbox" name="med" value="${med.nombre}" ${disabled}> ${med.nombre} - ${med.dosis}, ${med.duracion} ${infoSurtido}</label>`;
+      recetaGlobal.medicamentos.forEach((med, idx) => {
+        const ya = surtido.find(s => s.nombre === med.nombre);
+        const disable = ya ? "checked disabled" : "";
+        const extra = ya ? `<span class="surtido-info">Surtido por: ${ya.surtidoPor}, Tel: ${ya.telefono}</span>` : "";
+        html += `<div class="medicamento"><label><input type="checkbox" data-index="${idx}" ${disable}> ${med.nombre} - ${med.dosis}, ${med.duracion}</label> ${extra}</div>`;
       });
 
-      html += `</form><br><button onclick="surtir('${id}')">Surtir</button>`;
-      document.getElementById('resultado').innerHTML = html;
+      html += `<br><button onclick="surtirReceta()">Surtir</button>`;
+      document.getElementById("resultado").innerHTML = html;
     }
 
-    window.surtir = async (id) => {
-      const checkboxes = document.querySelectorAll('input[name="med"]:not(:disabled):checked');
-      if (!checkboxes.length) return alert("Selecciona al menos un medicamento no surtido.");
+    window.surtirReceta = async () => {
+      if (!recetaGlobal || !recetaIdActual || !datosFarmacia) return alert("Faltan datos para surtir.");
 
-      const medicamentosSurtidos = Array.from(checkboxes).map(cb => cb.value);
-      const nombreFarmacia = prompt("Nombre de la farmacia:");
-      const telefono = prompt("Teléfono de contacto:");
+      const checks = document.querySelectorAll('input[type="checkbox"]:not(:disabled):checked');
+      const seleccionados = Array.from(checks).map(c => recetaGlobal.medicamentos[c.dataset.index]);
 
-      const recetaRef = doc(db, "recetas", id);
-      const recetaSnap = await getDoc(recetaRef);
-      const data = recetaSnap.data();
-      const surtidoParcial = data.surtidoParcial || [];
+      if (seleccionados.length === 0) return alert("Selecciona al menos un medicamento.");
 
-      const nuevos = data.medicamentos.filter(med => medicamentosSurtidos.includes(med.nombre)).map(med => ({
-        ...med,
-        surtidoPor: nombreFarmacia,
-        telefono,
+      const nuevos = seleccionados.map(m => ({
+        ...m,
+        surtidoPor: datosFarmacia.nombreFarmacia,
+        telefono: datosFarmacia.telefono,
         fecha: new Date().toISOString()
       }));
 
-      const actualizados = [...surtidoParcial, ...nuevos];
-      const esTotal = actualizados.length === data.medicamentos.length;
-      await updateDoc(recetaRef, {
-        estado: esTotal ? "total" : "parcial",
-        surtidoParcial: actualizados
+      const previos = recetaGlobal.surtidoParcial || [];
+      const actualizados = [...previos, ...nuevos];
+      const esTotal = actualizados.length === recetaGlobal.medicamentos.length;
+
+      await updateDoc(doc(db, "recetas", recetaIdActual), {
+        surtidoParcial: actualizados,
+        estado: esTotal ? "total" : "parcial"
       });
 
-      alert(`Receta marcada como ${esTotal ? "surtida totalmente" : "surtida parcialmente"}.`);
+      alert("Receta actualizada.");
       location.reload();
-    }
-
-    const urlParams = new URLSearchParams(window.location.search);
-    const recetaID = urlParams.get("id");
-    if (recetaID) verificarReceta(recetaID);
+    };
   </script>
 </body>
 </html>
