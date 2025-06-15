@@ -1,45 +1,64 @@
-// verificar.js
+
 import { db } from './firebase-init.js';
-import {
-  doc,
-  getDoc
-} from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
+import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
 
-// Obtener el ID desde la URL
 const urlParams = new URLSearchParams(window.location.search);
-const recetaId = urlParams.get("id");
+const recetaId = urlParams.get('id');
+const contenedor = document.getElementById('contenido');
 
-const contenido = document.getElementById("contenido");
+async function cargarReceta() {
+  try {
+    const docRef = doc(db, "recetas", recetaId);
+    const docSnap = await getDoc(docRef);
 
-if (!recetaId) {
-  contenido.innerHTML = "<p>Error: No se proporcionó ID de receta.</p>";
-} else {
-  const recetaRef = doc(db, "recetas", recetaId);
-  getDoc(recetaRef).then((docSnap) => {
     if (!docSnap.exists()) {
-      contenido.innerHTML = "<p>No se encontró la receta.</p>";
+      contenedor.innerHTML = "<p>Receta no encontrada.</p>";
       return;
     }
 
-    const data = docSnap.data();
-
+    const receta = docSnap.data();
     let html = `
-      <div class="campo"><h4>Paciente:</h4> ${data.nombrePaciente}</div>
-      <div class="campo"><h4>Edad:</h4> ${data.edad}</div>
-      <div class="campo"><h4>Observaciones:</h4> ${data.observaciones || 'Ninguna'}</div>
-      <div class="campo"><h4>Médico:</h4> ${data.medicoNombre || 'No disponible'}</div>
+      <div class="campo"><h4>Nombre del paciente:</h4> ${receta.nombrePaciente || ''}</div>
+      <div class="campo"><h4>Edad:</h4> ${receta.edad || ''}</div>
+      <div class="campo"><h4>Observaciones:</h4> ${receta.observaciones || 'Ninguna'}</div>
+      <div class="campo"><h4>Médico responsable:</h4> ${receta.medicoNombre || 'Sin registrar'}</div>
       <div class="campo"><h4>Medicamentos:</h4>
     `;
 
-    data.medicamentos?.forEach((med) => {
-      html += `<div class="medicamento">• ${med.nombre}, ${med.dosis}, ${med.duracion}</div>`;
+    receta.medicamentos.forEach((med, index) => {
+      let surtidoInfo = '';
+      if (receta.surtidoParcial) {
+        const match = receta.surtidoParcial.find(item =>
+          item.nombre === med.nombre &&
+          item.dosis === med.dosis &&
+          item.duracion === med.duracion
+        );
+        if (match) {
+          surtidoInfo = `
+            <div class="medicamento">
+              ✅ Surtido por: ${match.surtidoPor}<br>
+              📞 Tel: ${match.telefono}
+            </div>
+          `;
+        }
+      }
+
+      html += `
+        <div class="medicamento">
+          ${index + 1}. ${med.nombre}<br>
+          Dosis: ${med.dosis}<br>
+          Duración: ${med.duracion}
+          ${surtidoInfo}
+        </div>
+      `;
     });
 
     html += "</div>";
-    contenido.innerHTML = html;
-
-  }).catch((error) => {
+    contenedor.innerHTML = html;
+  } catch (error) {
     console.error("Error al cargar receta:", error);
-    contenido.innerHTML = `<p>Error al consultar la receta: ${error.message}</p>`;
-  });
+    contenedor.innerHTML = "<p>Error al cargar la receta.</p>";
+  }
 }
+
+cargarReceta();
