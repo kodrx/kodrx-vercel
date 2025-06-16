@@ -3,124 +3,79 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Administración de Médicos - KodRx</title>
+  <title>Gestión de Médicos</title>
   <style>
-    body { font-family: Arial, sans-serif; padding: 20px; background: #f0f4f8; color: #333; }
-    h1 { color: #003366; }
-    .grupo { margin-bottom: 30px; }
-    .medico-btn {
-      background-color: #ffffff;
-      color: #003366;
-      padding: 10px;
-      border: 1px solid #ccc;
-      width: 100%;
-      text-align: left;
-      cursor: pointer;
-      margin-bottom: 5px;
-      font-weight: bold;
-    }
-    .medico-info {
-      display: none;
-      padding: 10px;
-      border-left: 3px solid #003366;
-      background: #f9f9f9;
-      margin-bottom: 10px;
-    }
-    .verificar-btn {
-      margin-top: 10px;
-      padding: 5px 10px;
-      background: #28a745;
-      color: white;
-      border: none;
-      cursor: pointer;
-    }
+    body { font-family: sans-serif; padding: 20px; background-color: #f4f4f4; }
+    h2 { color: #003366; }
+    .seccion { margin-bottom: 30px; }
+    .medico { background: #fff; border-radius: 8px; padding: 10px; margin-bottom: 10px; cursor: pointer; }
+    .detalles { display: none; margin-top: 10px; font-size: 14px; }
+    .medico:hover { background-color: #e6f7ff; }
   </style>
 </head>
 <body>
-  <h1>Administración de Médicos</h1>
+  <h2>Médicos Registrados</h2>
 
-  <div class="grupo">
-    <h2>Médicos Verificados</h2>
+  <div class="seccion">
+    <h3>✅ Verificados</h3>
     <div id="verificados"></div>
   </div>
 
-  <div class="grupo">
-    <h2>Solicitudes Pendientes</h2>
+  <div class="seccion">
+    <h3>⏳ Pendientes de Verificación</h3>
     <div id="pendientes"></div>
   </div>
 
   <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
-    import { getFirestore, collection, getDocs, doc, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
-    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
+    import { db } from '../firebase-init.js';
+    import { collection, getDocs, doc, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyBIjaOe4HcGNDk0xrqen8etBv0RyjyOJHw",
-      authDomain: "kodrx-105b9.firebaseapp.com",
-      projectId: "kodrx-105b9",
-      storageBucket: "kodrx-105b9.appspot.com",
-      messagingSenderId: "239675098141",
-      appId: "1:239675098141:web:152ae3741b0ac79db7f2f4"
-    };
+    const verificadosDiv = document.getElementById("verificados");
+    const pendientesDiv = document.getElementById("pendientes");
 
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-    const auth = getAuth(app);
-
-    function crearAcordeon(medico, id, contenedor, esPendiente) {
-      const btn = document.createElement("button");
-      btn.className = "medico-btn";
-      btn.textContent = medico.nombre || "(Sin nombre)";
-      const info = document.createElement("div");
-      info.className = "medico-info";
-      info.innerHTML = `
-        <p><strong>Correo:</strong> ${medico.correo}</p>
-        <p><strong>Teléfono:</strong> ${medico.telefono}</p>
-        <p><strong>Colonia:</strong> ${medico.colonia}</p>
-        <p><strong>Estado:</strong> ${medico.estado}</p>
-        <p><strong>Registrado el:</strong> ${medico.timestamp?.toDate?.().toLocaleString() || 'Desconocido'}</p>
-      `;
-      if (esPendiente) {
-        const verificarBtn = document.createElement("button");
-        verificarBtn.className = "verificar-btn";
-        verificarBtn.textContent = "Verificar";
-        verificarBtn.onclick = async () => {
-          await updateDoc(doc(db, "medicos", id), {
-            verificado: true,
-            verificadoEn: serverTimestamp()
-          });
-          alert("Médico verificado.");
-          location.reload();
-        };
-        info.appendChild(verificarBtn);
-      }
-      btn.onclick = () => {
-        info.style.display = info.style.display === "none" ? "block" : "none";
-      };
-      contenedor.appendChild(btn);
-      contenedor.appendChild(info);
-    }
-
-    onAuthStateChanged(auth, async (user) => {
-      if (!user) {
-        window.location.href = "/login.html";
-        return;
-      }
-
+    async function cargarMedicos() {
       const querySnapshot = await getDocs(collection(db, "medicos"));
-      const verificadosDiv = document.getElementById("verificados");
-      const pendientesDiv = document.getElementById("pendientes");
-
-      querySnapshot.forEach(docSnap => {
-        const data = docSnap.data();
+      querySnapshot.forEach((docSnap) => {
+        const medico = docSnap.data();
         const id = docSnap.id;
-        if (data.verificado) {
-          crearAcordeon(data, id, verificadosDiv, false);
+        const contenedor = document.createElement("div");
+        contenedor.classList.add("medico");
+        contenedor.innerHTML = `
+          <strong>${medico.nombre}</strong>
+          <div class="detalles">
+            <div>📧 ${medico.correo}</div>
+            <div>📱 ${medico.telefono}</div>
+            <div>🏠 Colonia: ${medico.colonia}</div>
+            <div>🌎 Estado: ${medico.estado}</div>
+            <div>📅 Fecha de registro: ${medico.fechaRegistro?.toDate().toLocaleString() || 'Sin fecha'}</div>
+            ${medico.verificado ? `<div>✅ Fecha de verificación: ${medico.fechaVerificacion?.toDate().toLocaleString() || 'Sin fecha'}</div>` : `<button onclick="verificarMedico('${id}', this)">Verificar</button>`}
+          </div>
+        `;
+        contenedor.addEventListener("click", () => {
+          const detalles = contenedor.querySelector(".detalles");
+          detalles.style.display = detalles.style.display === "block" ? "none" : "block";
+        });
+
+        if (medico.verificado) {
+          verificadosDiv.appendChild(contenedor);
         } else {
-          crearAcordeon(data, id, pendientesDiv, true);
+          pendientesDiv.appendChild(contenedor);
         }
       });
-    });
+    }
+
+    window.verificarMedico = async function(id, btn) {
+      const ref = doc(db, "medicos", id);
+      await updateDoc(ref, {
+        verificado: true,
+        fechaVerificacion: serverTimestamp()
+      });
+      btn.disabled = true;
+      btn.innerText = "Verificado";
+      location.reload();
+    };
+
+    cargarMedicos();
   </script>
 </body>
 </html>
