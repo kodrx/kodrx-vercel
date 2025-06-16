@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -18,15 +19,15 @@
 <body>
   <form>
     <h3>Registro de Médico</h3>
-    <input type="text" placeholder="Nombre completo">
-    <input type="text" placeholder="Especialidad (opcional)">
-    <input type="email" placeholder="Correo electrónico">
-    <input type="tel" placeholder="Teléfono celular">
-    <input type="text" placeholder="Cédula profesional">
-    <input type="text" placeholder="Colonia de residencia">
+    <input type="text" id="nombre" placeholder="Nombre completo" required>
+    <input type="text" id="especialidad" placeholder="Especialidad (opcional)">
+    <input type="email" id="correo" placeholder="Correo electrónico" required>
+    <input type="tel" id="telefono" placeholder="Teléfono celular" required>
+    <input type="text" id="cedula" placeholder="Cédula profesional" required>
+    <input type="text" id="colonia" placeholder="Colonia de residencia" required>
     <input type="text" id="estado" placeholder="Estado de residencia" required>
-    <input type="password" placeholder="Contraseña">
-    <button>Enviar registro</button>
+    <input type="password" id="password" placeholder="Contraseña" required>
+    <button id="btnRegistro">Enviar registro</button>
   </form>
 
   <script type="module" src="firebase-init.js"></script>
