@@ -33,7 +33,14 @@ document.addEventListener('DOMContentLoaded', () => {
         fechaRegistro: serverTimestamp()
 
       });
-
+try {
+  await setDoc(doc(db, "medicos", user.uid), {
+    // ...datos
+  });
+  console.log("Médico registrado correctamente");
+} catch (error) {
+  console.error("Error al registrar médico:", error);
+}
       window.location.href = "espera_verificacion.html";
     } catch (error) {
       alert("Error al registrar: " + error.message);
