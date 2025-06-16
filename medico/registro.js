@@ -14,6 +14,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const telefono = form.querySelector('input[placeholder="Teléfono celular"]').value;
     const cedula = form.querySelector('input[placeholder="Cédula profesional"]').value;
     const colonia = form.querySelector('input[placeholder="Colonia de residencia"]').value;
+    const estado = document.getElementById("estado").value;
     const password = form.querySelector('input[placeholder="Contraseña"]').value;
 
     try {
