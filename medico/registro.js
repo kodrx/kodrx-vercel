@@ -29,7 +29,7 @@ document.addEventListener('DOMContentLoaded', () => {
         cedula,
         colonia,
         estado,
-        verificado: false
+        verificado: false,
         fechaRegistro: serverTimestamp()
 
       });
