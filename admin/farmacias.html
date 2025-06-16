@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Panel de Farmacias - Admin KodRx</title>
+  <style>
+    body {{ font-family: sans-serif; padding: 20px; background-color: #f9f9f9; }}
+    h2 {{ color: #003366; }}
+    .grupo {{ margin-bottom: 30px; }}
+    .farmacia {{ background: white; padding: 10px; border-radius: 8px; margin-bottom: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }}
+    .farmacia h4 {{ margin: 0; cursor: pointer; color: #007bff; }}
+    .detalles {{ display: none; padding: 10px; border-top: 1px solid #ddd; }}
+    button.verificar {{ background-color: #28a745; color: white; border: none; padding: 5px 10px; margin-top: 10px; cursor: pointer; }}
+    button.volver {{ background-color: #003366; color: white; padding: 10px; margin-bottom: 20px; border: none; border-radius: 4px; }}
+  </style>
+</head>
+<body>
+  <button class="volver" onclick="window.location.href='admin.html'">⬅ Volver al panel principal</button>
+  <h2>Farmacias verificadas</h2>
+  <div id="verificadas" class="grupo"></div>
+
+  <h2>Solicitudes pendientes</h2>
+  <div id="pendientes" class="grupo"></div>
+
+  <script type="module">
+    import {{ db }} from '../firebase-init.js';
+    import {{ getDocs, collection, updateDoc, doc, serverTimestamp }} from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
+
+    const contenedorVerificadas = document.getElementById('verificadas');
+    const contenedorPendientes = document.getElementById('pendientes');
+
+    function crearElemento(farmacia, id, esVerificada) {{
+      const div = document.createElement('div');
+      div.className = 'farmacia';
+      div.innerHTML = `
+        <h4 onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'block' ? 'none' : 'block';">
+          ${{farmacia.nombreFarmacia}} (${{farmacia.medicoResponsable}})
+        </h4>
+        <div class="detalles">
+          <p><strong>Correo:</strong> ${{farmacia.correo}}</p>
+          <p><strong>Teléfono:</strong> ${{farmacia.telefono}}</p>
+          <p><strong>Colonia:</strong> ${{farmacia.colonia}}</p>
+          <p><strong>Municipio:</strong> ${{farmacia.municipio}}</p>
+          <p><strong>Estado:</strong> ${{farmacia.estado}}</p>
+          <p><strong>Registrada:</strong> ${{farmacia.fechaRegistro?.toDate?.().toLocaleString?.() || 'Sin fecha'}}</p>
+          ${{esVerificada ? `<p><strong>Verificada:</strong> ${{farmacia.fechaVerificacion?.toDate?.().toLocaleString?.() || 'Sin fecha'}}</p>` : 
+          `<button class="verificar" onclick="verificarFarmacia('${{id}}', this)">Verificar</button>`}}
+        </div>
+      `;
+      return div;
+    }}
+
+    async function cargarFarmacias() {{
+      const querySnapshot = await getDocs(collection(db, "farmacias"));
+      querySnapshot.forEach(docSnap => {{
+        const data = docSnap.data();
+        const id = docSnap.id;
+        const elemento = crearElemento(data, id, data.verificado);
+        (data.verificado ? contenedorVerificadas : contenedorPendientes).appendChild(elemento);
+      }});
+    }}
+
+    window.verificarFarmacia = async function(id, btn) {{
+      const ref = doc(db, "farmacias", id);
+      await updateDoc(ref, {{
+        verificado: true,
+        fechaVerificacion: serverTimestamp()
+      }});
+      alert("Farmacia verificada. Recarga la página para ver los cambios.");
+    }}
+
+    cargarFarmacias();
+  </script>
+</body>
+</html>
