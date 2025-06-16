@@ -28,7 +28,10 @@ document.addEventListener('DOMContentLoaded', () => {
         telefono,
         cedula,
         colonia,
+        estado,
         verificado: false
+        fechaRegistro: serverTimestamp()
+
       });
 
       window.location.href = "espera_verificacion.html";
