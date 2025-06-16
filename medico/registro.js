@@ -44,7 +44,7 @@ document.addEventListener("DOMContentLoaded", () => {
       });
 
       alert("Registro enviado correctamente.");
-      window.location.href = "/public/registro_exito.html";
+      window.location.href = "/medico/espera_verificacion.html";
     } catch (error) {
       console.error("Error al registrar:", error);
       alert("Ocurrió un error al registrar el médico.");
