@@ -1,10 +1,9 @@
-// registroFarmacia.js
 import { auth, db } from '../firebase-init.js';
 import { createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
-import { doc, setDoc } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
+import { doc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
 
 document.addEventListener('DOMContentLoaded', () => {
-  const form = document.querySelector('form');
+  const form = document.querySelector('#registroFarmaciaForm');
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
 
@@ -29,7 +28,8 @@ document.addEventListener('DOMContentLoaded', () => {
         colonia,
         municipio,
         estado,
-        verificado: false
+        verificado: false,
+        fechaRegistro: serverTimestamp()
       });
 
       window.location.href = "espera_verificacion.html";
