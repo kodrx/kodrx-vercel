@@ -46,8 +46,17 @@ if (!token) {
         // Marcar como activo o eliminar documento temporal
         await deleteDoc(docRef); // o updateDoc(docRef, { estado: "activo" })
 
-        alert("Contraseña creada con éxito. Ahora puedes iniciar sesión.");
-        window.location.href = "/laboratorio/login.html";
+        estadoDiv.style.display = "block";
+estadoDiv.style.backgroundColor = "#d4edda";
+estadoDiv.style.color = "#155724";
+estadoDiv.style.border = "1px solid #c3e6cb";
+estadoDiv.innerText = "¡Contraseña creada exitosamente! Redirigiendo al login...";
+form.style.display = "none";
+
+setTimeout(() => {
+  window.location.href = "/laboratorio/login.html";
+}, 3000);
+
       } catch (error) {
         console.error(error);
         alert("Ocurrió un error al crear la cuenta: " + error.message);
