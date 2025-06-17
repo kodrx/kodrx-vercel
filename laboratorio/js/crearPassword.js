@@ -2,7 +2,7 @@ import { auth, db } from "/firebase-init.js";
 import {
   doc,
   getDoc,
-  deleteDoc
+  updateDoc
 } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
 import {
   createUserWithEmailAndPassword
@@ -44,9 +44,13 @@ if (!token) {
       try {
         await createUserWithEmailAndPassword(auth, data.correo, password);
 
-        await deleteDoc(docRef); // O marcar como "activo" si deseas mantenerlo
+        // ✅ Aquí marcamos el token como USADO
+        await updateDoc(docRef, {
+          estado: "usado",
+          usadoEn: new Date().toISOString()
+        });
 
-        // Mensaje visual de éxito
+        // Mensaje visual
         form.style.display = "none";
         estadoDiv.style.display = "block";
         estadoDiv.style.backgroundColor = "#d4edda";
