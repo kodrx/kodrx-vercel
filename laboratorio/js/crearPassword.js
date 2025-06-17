@@ -1,11 +1,12 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
-import { getFirestore, doc, getDoc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
-import { getAuth, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
-import { firebaseConfig } from "/firebase-init.js"; // Asegúrate de tener este archivo
-
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-const auth = getAuth(app);
+import { auth, db } from "/firebase-init.js";
+import {
+  doc,
+  getDoc,
+  deleteDoc
+} from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
+import {
+  createUserWithEmailAndPassword
+} from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
 
 const urlParams = new URLSearchParams(window.location.search);
 const token = urlParams.get("token");
@@ -13,18 +14,18 @@ const estadoDiv = document.getElementById("estado");
 const form = document.getElementById("form-password");
 
 if (!token) {
-  estadoDiv.innerText = "Token inválido o no proporcionado.";
+  mostrarError("Token inválido o no proporcionado.");
 } else {
   const docRef = doc(db, "laboratoriosPendientes", token);
   getDoc(docRef).then(async (docSnap) => {
     if (!docSnap.exists()) {
-      estadoDiv.innerText = "Este enlace ha expirado o ya fue usado.";
+      window.location.href = "/laboratorio/error-token.html";
       return;
     }
 
     const data = docSnap.data();
     if (data.estado !== "pendiente") {
-      estadoDiv.innerText = "Este enlace ya fue utilizado.";
+      window.location.href = "/laboratorio/error-token.html";
       return;
     }
 
@@ -41,26 +42,33 @@ if (!token) {
       }
 
       try {
-        const userCred = await createUserWithEmailAndPassword(auth, data.correo, password);
+        await createUserWithEmailAndPassword(auth, data.correo, password);
 
-        // Marcar como activo o eliminar documento temporal
-        await deleteDoc(docRef); // o updateDoc(docRef, { estado: "activo" })
+        await deleteDoc(docRef); // O marcar como "activo" si deseas mantenerlo
 
+        // Mensaje visual de éxito
+        form.style.display = "none";
         estadoDiv.style.display = "block";
-estadoDiv.style.backgroundColor = "#d4edda";
-estadoDiv.style.color = "#155724";
-estadoDiv.style.border = "1px solid #c3e6cb";
-estadoDiv.innerText = "¡Contraseña creada exitosamente! Redirigiendo al login...";
-form.style.display = "none";
+        estadoDiv.style.backgroundColor = "#d4edda";
+        estadoDiv.style.color = "#155724";
+        estadoDiv.style.border = "1px solid #c3e6cb";
+        estadoDiv.innerText = "¡Contraseña creada exitosamente! Redirigiendo al login...";
 
-setTimeout(() => {
-  window.location.href = "/laboratorio/login.html";
-}, 3000);
-
+        setTimeout(() => {
+          window.location.href = "/laboratorio/login.html";
+        }, 3000);
       } catch (error) {
         console.error(error);
-        alert("Ocurrió un error al crear la cuenta: " + error.message);
+        alert("Error al crear la cuenta: " + error.message);
       }
     });
   });
+}
+
+function mostrarError(mensaje) {
+  estadoDiv.style.display = "block";
+  estadoDiv.style.backgroundColor = "#f8d7da";
+  estadoDiv.style.color = "#721c24";
+  estadoDiv.style.border = "1px solid #f5c6cb";
+  estadoDiv.innerText = mensaje;
 }
