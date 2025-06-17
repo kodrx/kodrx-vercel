@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Administrar Laboratorios - KodRx</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      background-color: #f4f4f4;
+      padding: 20px;
+    }
+    h2 {
+      color: #003366;
+    }
+    form, .laboratorios {
+      background: white;
+      padding: 20px;
+      margin-top: 20px;
+      border-radius: 8px;
+      max-width: 600px;
+    }
+    input {
+      display: block;
+      margin-bottom: 10px;
+      width: 100%;
+      padding: 8px;
+      font-size: 14px;
+    }
+    button {
+      padding: 10px;
+      background-color: #003366;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    .lab-card {
+      border: 1px solid #ccc;
+      padding: 10px;
+      margin-top: 10px;
+      border-radius: 6px;
+      background-color: #fafafa;
+    }
+    .volver {
+      margin-top: 20px;
+      display: inline-block;
+      text-decoration: none;
+      color: #003366;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <h2>Administración de Laboratorios</h2>
+
+  <form id="formLab">
+    <h3>Registrar nuevo laboratorio</h3>
+    <input type="text" placeholder="Nombre del laboratorio" id="nombre" required>
+    <input type="text" placeholder="Persona de contacto" id="contacto" required>
+    <input type="email" placeholder="Correo electrónico" id="correo" required>
+    <input type="tel" placeholder="Teléfono" id="telefono" required>
+    <input type="text" placeholder="Ubicación / Ciudad" id="ubicacion">
+    <button type="submit">Registrar laboratorio</button>
+  </form>
+
+  <div class="laboratorios">
+    <h3>Laboratorios registrados</h3>
+    <div id="listaLabs">Cargando laboratorios...</div>
+  </div>
+
+  <a class="volver" href="/admin/admin.html">← Volver al panel principal</a>
+
+  <script type="module" src="../firebase-init.js"></script>
+  <script type="module" src="adminLaboratorios.js"></script>
+</body>
+</html>
