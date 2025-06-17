@@ -111,8 +111,40 @@ async function cargarLaboratorios() {
       const pendientes = await getDocs(q);
 
       if (!pendientes.empty) {
-        const docPendiente = pendientes.docs[0];
-        const data = docPendiente.data();
+  const tokens = pendientes.docs.map(doc => ({
+    id: doc.id,
+    ...doc.data()
+  }));
+
+  const tokenActivo = tokens.find(t => t.estado === "pendiente");
+  const tokenUsado = tokens.find(t => t.estado === "usado");
+
+  if (tokenActivo) {
+    const creado = new Date(tokenActivo.creado);
+    const ahora = new Date();
+    const diferenciaHoras = (ahora - creado) / 1000 / 60 / 60;
+
+    if (diferenciaHoras > 48) {
+      // Token expirado: eliminar
+      await deleteDoc(doc(db, "laboratoriosPendientes", tokenActivo.id));
+      const etiqueta = crearEtiquetaEstado("expirado");
+      labDiv.appendChild(etiqueta);
+      labDiv.appendChild(btnGenerar);
+    } else {
+      const etiqueta = crearEtiquetaEstado("pendiente");
+      labDiv.appendChild(etiqueta);
+      mostrarLink(tokenActivo.link, labDiv);
+    }
+  } else if (tokenUsado) {
+    const etiqueta = crearEtiquetaEstado("usado");
+    labDiv.appendChild(etiqueta);
+  } else {
+    labDiv.appendChild(btnGenerar);
+  }
+} else {
+  labDiv.appendChild(btnGenerar);
+}
+
 
         const creado = new Date(data.creado);
         const ahora = new Date();
