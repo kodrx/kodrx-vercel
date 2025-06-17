@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Panel de Laboratorio - KodRx</title>
+  <style>
+    body { font-family: sans-serif; padding: 30px; background: #f0f0f0; }
+    #contenido { background: white; padding: 20px; border-radius: 8px; max-width: 600px; margin: auto; }
+    button {
+      background-color: #003366; color: white; border: none;
+      padding: 10px 20px; border-radius: 4px; margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div id="contenido">
+    <h2>Bienvenido al Panel del Laboratorio</h2>
+    <p>Este será el espacio donde podrás visualizar tus estadísticas, campañas y recetas asociadas.</p>
+    <button id="cerrarSesion">Cerrar sesión</button>
+  </div>
+
+  <script type="module">
+    import { auth } from '../firebase-init.js';
+    import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
+
+    const cerrarSesion = document.getElementById("cerrarSesion");
+
+    onAuthStateChanged(auth, user => {
+      if (!user) {
+        window.location.href = "login.html";
+      }
+    });
+
+    cerrarSesion.addEventListener("click", async () => {
+      await signOut(auth);
+      window.location.href = "login.html";
+    });
+  </script>
+</body>
+</html>
