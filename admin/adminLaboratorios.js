@@ -9,6 +9,7 @@ import {
   getDoc,
   doc,
   setDoc,
+  updateDoc,
   serverTimestamp,
   query,
   where
@@ -97,20 +98,38 @@ async function cargarLaboratorios() {
           link: link
         });
 
+        const etiqueta = crearEtiquetaEstado("pendiente");
+        labDiv.appendChild(etiqueta);
         mostrarLink(link, labDiv);
       };
 
       // Verificar si ya tiene link activo
       const q = query(
         collection(db, "laboratoriosPendientes"),
-        where("correo", "==", lab.correo),
-        where("estado", "==", "pendiente")
+        where("correo", "==", lab.correo)
       );
       const pendientes = await getDocs(q);
 
       if (!pendientes.empty) {
-        const docPendiente = pendientes.docs[0].data();
-        mostrarLink(docPendiente.link, labDiv);
+        const docPendiente = pendientes.docs[0];
+        const data = docPendiente.data();
+
+        const creado = new Date(data.creado);
+        const ahora = new Date();
+        const diferenciaHoras = (ahora - creado) / 1000 / 60 / 60;
+
+        if (diferenciaHoras > 48) {
+          // Token expirado: eliminar documento
+          await docPendiente.ref.delete();
+
+          const etiqueta = crearEtiquetaEstado("expirado");
+          labDiv.appendChild(etiqueta);
+          labDiv.appendChild(btnGenerar);
+        } else {
+          const etiqueta = crearEtiquetaEstado(data.estado || "pendiente");
+          labDiv.appendChild(etiqueta);
+          mostrarLink(data.link, labDiv);
+        }
       } else {
         labDiv.appendChild(btnGenerar);
       }
@@ -150,4 +169,35 @@ function mostrarLink(link, contenedor) {
   resultadoDiv.appendChild(input);
   resultadoDiv.appendChild(btnCopiar);
   contenedor.appendChild(resultadoDiv);
+}
+
+function crearEtiquetaEstado(estado) {
+  const span = document.createElement("span");
+  span.innerText = `Estado del link: ${estado}`;
+  span.style.display = "inline-block";
+  span.style.marginTop = "6px";
+  span.style.padding = "4px 8px";
+  span.style.borderRadius = "4px";
+  span.style.fontSize = "12px";
+  span.style.fontWeight = "bold";
+
+  switch (estado) {
+    case "pendiente":
+      span.style.backgroundColor = "#fff3cd";
+      span.style.color = "#856404";
+      break;
+    case "usado":
+      span.style.backgroundColor = "#d4edda";
+      span.style.color = "#155724";
+      break;
+    case "expirado":
+      span.style.backgroundColor = "#f8d7da";
+      span.style.color = "#721c24";
+      break;
+    default:
+      span.style.backgroundColor = "#e2e3e5";
+      span.style.color = "#6c757d";
+  }
+
+  return span;
 }
