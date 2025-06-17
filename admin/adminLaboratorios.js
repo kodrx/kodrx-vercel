@@ -1,4 +1,3 @@
-// adminLaboratorios.js
 import { auth, db } from "../firebase-init.js";
 import {
   onAuthStateChanged
@@ -7,7 +6,12 @@ import {
   collection,
   addDoc,
   getDocs,
-  serverTimestamp
+  getDoc,
+  doc,
+  setDoc,
+  serverTimestamp,
+  query,
+  where
 } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
 
 // Protección de acceso
@@ -61,23 +65,89 @@ async function cargarLaboratorios() {
       return;
     }
 
-    let html = "";
-    querySnapshot.forEach((doc) => {
-      const lab = doc.data();
-      html += `
-        <div class="lab-card">
-          <strong>${lab.nombre}</strong><br>
-          Contacto: ${lab.contacto}<br>
-          Correo: ${lab.correo}<br>
-          Teléfono: ${lab.telefono}<br>
-          Ubicación: ${lab.ubicacion || "No especificada"}<br>
-          Registrado: ${lab.fechaRegistro?.toDate().toLocaleString() || "N/D"}
-        </div>
-      `;
-    });
+    lista.innerHTML = "";
 
-    lista.innerHTML = html;
+    for (const docSnap of querySnapshot.docs) {
+      const lab = docSnap.data();
+      const labDiv = document.createElement("div");
+      labDiv.className = "lab-card";
+
+      labDiv.innerHTML = `
+        <strong>${lab.nombre}</strong><br>
+        Contacto: ${lab.contacto}<br>
+        Correo: ${lab.correo}<br>
+        Teléfono: ${lab.telefono}<br>
+        Ubicación: ${lab.ubicacion || "No especificada"}<br>
+        Registrado: ${lab.fechaRegistro?.toDate().toLocaleString() || "N/D"}
+      `;
+
+      const btnGenerar = document.createElement("button");
+      btnGenerar.innerText = "Generar link de invitación";
+      btnGenerar.style.marginTop = "10px";
+
+      btnGenerar.onclick = async () => {
+        const tokenId = crypto.randomUUID();
+        const link = `https://kodrx.app/laboratorio/crear-password.html?token=${tokenId}`;
+        const docRef = doc(db, "laboratoriosPendientes", tokenId);
+
+        await setDoc(docRef, {
+          correo: lab.correo,
+          estado: "pendiente",
+          creado: new Date().toISOString(),
+          link: link
+        });
+
+        mostrarLink(link, labDiv);
+      };
+
+      // Verificar si ya tiene link activo
+      const q = query(
+        collection(db, "laboratoriosPendientes"),
+        where("correo", "==", lab.correo),
+        where("estado", "==", "pendiente")
+      );
+      const pendientes = await getDocs(q);
+
+      if (!pendientes.empty) {
+        const docPendiente = pendientes.docs[0].data();
+        mostrarLink(docPendiente.link, labDiv);
+      } else {
+        labDiv.appendChild(btnGenerar);
+      }
+
+      lista.appendChild(labDiv);
+    }
   } catch (error) {
     lista.innerHTML = `<p>Error al cargar laboratorios: ${error.message}</p>`;
   }
+}
+
+function mostrarLink(link, contenedor) {
+  const resultadoDiv = document.createElement("div");
+  resultadoDiv.style.marginTop = "10px";
+  resultadoDiv.style.padding = "10px";
+  resultadoDiv.style.border = "1px solid #ccc";
+  resultadoDiv.style.borderRadius = "6px";
+  resultadoDiv.style.backgroundColor = "#f9f9f9";
+
+  const input = document.createElement("input");
+  input.type = "text";
+  input.value = link;
+  input.readOnly = true;
+  input.style.width = "100%";
+  input.style.marginBottom = "5px";
+  input.style.padding = "8px";
+
+  const btnCopiar = document.createElement("button");
+  btnCopiar.innerText = "Copiar enlace";
+  btnCopiar.onclick = () => {
+    navigator.clipboard.writeText(link).then(() => {
+      btnCopiar.innerText = "¡Copiado!";
+      setTimeout(() => (btnCopiar.innerText = "Copiar enlace"), 2000);
+    });
+  };
+
+  resultadoDiv.appendChild(input);
+  resultadoDiv.appendChild(btnCopiar);
+  contenedor.appendChild(resultadoDiv);
 }
