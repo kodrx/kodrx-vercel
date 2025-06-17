@@ -104,13 +104,13 @@ async function cargarLaboratorios() {
       };
 
       // Verificar si ya tiene link activo
-      const q = query(
-        collection(db, "laboratoriosPendientes"),
-        where("correo", "==", lab.correo)
-      );
-      const pendientes = await getDocs(q);
+    const q = query(
+  collection(db, "laboratoriosPendientes"),
+  where("correo", "==", lab.correo)
+);
+const pendientes = await getDocs(q);
 
-      if (!pendientes.empty) {
+if (!pendientes.empty) {
   const tokens = pendientes.docs.map(doc => ({
     id: doc.id,
     ...doc.data()
@@ -125,7 +125,6 @@ async function cargarLaboratorios() {
     const diferenciaHoras = (ahora - creado) / 1000 / 60 / 60;
 
     if (diferenciaHoras > 48) {
-      // Token expirado: eliminar
       await deleteDoc(doc(db, "laboratoriosPendientes", tokenActivo.id));
       const etiqueta = crearEtiquetaEstado("expirado");
       labDiv.appendChild(etiqueta);
@@ -141,32 +140,26 @@ async function cargarLaboratorios() {
   } else {
     labDiv.appendChild(btnGenerar);
   }
+
+  const historialDiv = document.createElement("div");
+  historialDiv.style.marginTop = "8px";
+  historialDiv.innerHTML = "<strong>Historial de accesos generados:</strong><br>";
+
+  tokens.forEach(t => {
+    const item = document.createElement("div");
+    item.style.fontSize = "12px";
+    item.style.marginBottom = "4px";
+    item.innerHTML = `📎 <code>${t.link}</code> <br><small>Estado: ${t.estado} | Creado: ${new Date(t.creado).toLocaleString()}</small>`;
+    historialDiv.appendChild(item);
+  });
+
+  labDiv.appendChild(historialDiv);
 } else {
   labDiv.appendChild(btnGenerar);
 }
 
+lista.appendChild(labDiv);
 
-        const creado = new Date(data.creado);
-        const ahora = new Date();
-        const diferenciaHoras = (ahora - creado) / 1000 / 60 / 60;
-
-        if (diferenciaHoras > 48) {
-          // Token expirado: eliminar documento
-          await docPendiente.ref.delete();
-
-          const etiqueta = crearEtiquetaEstado("expirado");
-          labDiv.appendChild(etiqueta);
-          labDiv.appendChild(btnGenerar);
-        } else {
-          const etiqueta = crearEtiquetaEstado(data.estado || "pendiente");
-          labDiv.appendChild(etiqueta);
-          mostrarLink(data.link, labDiv);
-        }
-      } else {
-        labDiv.appendChild(btnGenerar);
-      }
-
-      lista.appendChild(labDiv);
     }
   } catch (error) {
     lista.innerHTML = `<p>Error al cargar laboratorios: ${error.message}</p>`;
