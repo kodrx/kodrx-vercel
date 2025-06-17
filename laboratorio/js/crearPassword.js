@@ -1,7 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
 import { getFirestore, doc, getDoc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
 import { getAuth, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
-import { firebaseConfig } from "/firebase-config.js"; // Asegúrate de tener este archivo
+import { firebaseConfig } from "/firebase-init.js"; // Asegúrate de tener este archivo
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
