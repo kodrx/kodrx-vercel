@@ -1,22 +1,28 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Login Médico</title>
-    <link rel="stylesheet" href="/estilos/global.css" />
+  <link rel="stylesheet" href="/estilos/global.css" />
   <script src="/componentes/header.js" defer></script>
-  
 </head>
 <body>
   <main>
     <h2>Acceso para Médicos</h2>
     <form class="form-login">
-      <input type="email" placeholder="Correo electrónico" />
-      <input type="password" placeholder="Contraseña" />
+      <input type="email" placeholder="Correo electrónico" required />
+      <input type="password" placeholder="Contraseña" required />
       <button type="submit">Iniciar sesión</button>
     </form>
-    <p>¿No tienes cuenta? <a href="#">Regístrate aquí</a></p>
+    <p>¿No tienes cuenta? <a href="registro.html">Regístrate aquí</a></p>
   </main>
-</body>
 
+  <script>
+    document.querySelector(".form-login").addEventListener("submit", (e) => {
+      e.preventDefault();
+      alert("Iniciando sesión...");
+    });
+  </script>
+</body>
 </html>
+
