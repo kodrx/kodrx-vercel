@@ -1,40 +1,77 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <title>Panel de Laboratorio - KodRx</title>
+  <meta charset="UTF-8" />
+  <title>Panel del Laboratorio - KodRx</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
-    body { font-family: sans-serif; padding: 30px; background: #f0f0f0; }
-    #contenido { background: white; padding: 20px; border-radius: 8px; max-width: 600px; margin: auto; }
-    button {
-      background-color: #003366; color: white; border: none;
-      padding: 10px 20px; border-radius: 4px; margin-top: 20px;
+    body {
+      margin: 0;
+      font-family: sans-serif;
+      background-color: #f5f5f5;
+    }
+
+    .panel {
+      display: flex;
+      min-height: 100vh;
+    }
+
+    aside {
+      width: 220px;
+      background: #003366;
+      color: white;
+      padding: 20px;
+    }
+
+    aside h2 {
+      font-size: 20px;
+      margin-bottom: 30px;
+    }
+
+    aside button {
+      display: block;
+      width: 100%;
+      margin-bottom: 10px;
+      padding: 10px;
+      background: white;
+      color: #003366;
+      border: none;
+      border-radius: 4px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    main {
+      flex: 1;
+      padding: 20px;
+    }
+
+    #contenido {
+      background: white;
+      border-radius: 8px;
+      padding: 20px;
+      min-height: 300px;
     }
   </style>
+  <script type="module" defer src="/laboratorio/js/panel.js"></script>
 </head>
 <body>
-  <div id="contenido">
-    <h2>Bienvenido al Panel del Laboratorio</h2>
-    <p>Este será el espacio donde podrás visualizar tus estadísticas, campañas y recetas asociadas.</p>
-    <button id="cerrarSesion">Cerrar sesión</button>
+  <div class="panel">
+    <aside>
+      <h2>⚗️ KodRx Lab</h2>
+      <button id="btn-verificador">📥 Recetas Recibidas</button>
+      <button id="btn-historial">📊 Historial</button>
+      <button id="btn-configuracion">⚙️ Configuración</button>
+      <button id="btn-salir">🔓 Cerrar sesión</button>
+    </aside>
+
+    <main>
+      <div id="contenido">
+        <h3>Bienvenido al panel del laboratorio</h3>
+        <p>Selecciona una opción del menú para comenzar.</p>
+      </div>
+    </main>
   </div>
-
-  <script type="module">
-    import { auth } from '../firebase-init.js';
-    import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
-
-    const cerrarSesion = document.getElementById("cerrarSesion");
-
-    onAuthStateChanged(auth, user => {
-      if (!user) {
-        window.location.href = "login.html";
-      }
-    });
-
-    cerrarSesion.addEventListener("click", async () => {
-      await signOut(auth);
-      window.location.href = "login.html";
-    });
-  </script>
 </body>
 </html>
+
