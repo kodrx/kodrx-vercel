@@ -1,5 +1,8 @@
+
 import { signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
 import { auth } from "../firebase-init.js";
+
+const adminEmail = "admin@kodrx.app";
 
 window.loginAdmin = function () {
   const email = document.getElementById("email").value.trim();
@@ -7,9 +10,14 @@ window.loginAdmin = function () {
   const error = document.getElementById("error");
 
   signInWithEmailAndPassword(auth, email, password)
-    .then(() => {
-      sessionStorage.setItem("adminLoggedIn", "true");
-      window.location.href = "admin.html";
+    .then((userCredential) => {
+      const user = userCredential.user;
+      if (user.email === adminEmail) {
+        sessionStorage.setItem("adminLoggedIn", "true");
+        window.location.href = "/admin/admin.html";
+      } else {
+        error.textContent = "No tienes permisos de administrador.";
+      }
     })
     .catch((err) => {
       error.textContent = "Correo o contraseña incorrectos.";
