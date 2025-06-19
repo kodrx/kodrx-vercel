@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Cargando KodRx...</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="/estilos/global.css" />
+  <style>
+    body {
+      background-color: var(--color-fondo);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      flex-direction: column;
+      animation: fadeIn 1s ease-in-out;
+    }
+
+    .logo-big {
+      animation: zoomIn 1.5s ease forwards;
+    }
+
+    .loading-text {
+      margin-top: 20px;
+      font-size: 18px;
+      color: var(--color-primario);
+      font-weight: bold;
+      opacity: 0;
+      animation: appear 2s ease forwards;
+      animation-delay: 1.3s;
+    }
+
+    @keyframes zoomIn {
+      from {
+        transform: scale(0.7);
+        opacity: 0;
+      }
+      to {
+        transform: scale(1);
+        opacity: 1;
+      }
+    }
+
+    @keyframes appear {
+      to {
+        opacity: 1;
+      }
+    }
+
+    @keyframes fadeIn {
+      from {
+        background-color: #ffffff;
+      }
+      to {
+        background-color: var(--color-fondo);
+      }
+    }
+  </style>
+</head>
+<body>
+  <img src="/img/logo-kodrx-color.png" alt="KodRx Logo" class="logo-big" />
+  <div class="loading-text">Cargando plataforma KodRx...</div>
+
+  <script>
+    // Opcional: redirige después de unos segundos
+    setTimeout(() => {
+      window.location.href = "/index.html";
+    }, 3000);
+  </script>
+</body>
+</html>
