@@ -1,39 +1,49 @@
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Login Administrador - KodRx</title>
-  <style>
-    body {
-      font-family: sans-serif;
-      max-width: 400px;
-      margin: auto;
-      padding-top: 50px;
-    }
-    input {
-      display: block;
-      width: 100%;
-      margin-bottom: 10px;
-      padding: 8px;
-    }
-    button {
-      padding: 10px;
-      background-color: #003366;
-      color: white;
-      border: none;
-      cursor: pointer;
-    }
-  </style>
+  <title>Login Administrador</title>
+  <link rel="stylesheet" href="/estilos/global.css" />
+  <script type="module" src="/componentes/header.js" defer></script>
 </head>
 <body>
-  <h2>Acceso Administrador</h2>
-  <input type="email" id="email" placeholder="Correo administrador">
-  <input type="password" id="password" placeholder="Contraseña">
-  <button onclick="loginAdmin()">Ingresar</button>
+  <main>
+    <h2>Acceso Administrador KodRx</h2>
+    <form class="form-login" id="adminLoginForm">
+      <input type="email" id="email" placeholder="Correo electrónico" required />
+      <input type="password" id="password" placeholder="Contraseña" required />
+      <button type="submit">Iniciar sesión</button>
+      <p id="error" style="color: red; font-weight: bold;"></p>
+    </form>
+  </main>
 
-  <p id="error" style="color: red;"></p>
+  <script type="module">
+    import { signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
+    import { auth } from "../firebase-init.js";
 
-  <script type="module" src="admin.js"></script>
+    const adminEmail = "admin@kodrx.app";
+
+    document.getElementById("adminLoginForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const email = document.getElementById("email").value.trim();
+      const password = document.getElementById("password").value;
+      const error = document.getElementById("error");
+
+      try {
+        const userCredential = await signInWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
+
+        if (user.email === adminEmail) {
+          sessionStorage.setItem("adminLoggedIn", "true");
+          window.location.href = "/admin/admin.html";
+        } else {
+          error.textContent = "No tienes permisos de administrador.";
+        }
+      } catch (err) {
+        error.textContent = "Correo o contraseña incorrectos.";
+      }
+    });
+  </script>
 </body>
 </html>
-
