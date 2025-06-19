@@ -1,12 +1,14 @@
+
 import { auth, db } from "../firebase-init.js";
-import {
-  onAuthStateChanged
-} from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
+
+if (sessionStorage.getItem("adminLoggedIn") !== "true") {
+  window.location.href = "/admin/login.html";
+}
+
 import {
   collection,
   addDoc,
   getDocs,
-  getDoc,
   deleteDoc,
   doc,
   setDoc,
@@ -15,14 +17,6 @@ import {
   query,
   where
 } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
-
-// Protección de acceso
-if (sessionStorage.getItem("adminLoggedIn") !== "true") {
-  window.location.href = "/admin/login.html";
-} else {
-  cargarLaboratorios();
-}
-
 
 // Registro de nuevo laboratorio
 const form = document.getElementById("formLab");
@@ -103,63 +97,61 @@ async function cargarLaboratorios() {
         mostrarLink(link, labDiv);
       };
 
-      // Verificar si ya tiene link activo
-    const q = query(
-  collection(db, "laboratoriosPendientes"),
-  where("correo", "==", lab.correo)
-);
-const pendientes = await getDocs(q);
+      const q = query(
+        collection(db, "laboratoriosPendientes"),
+        where("correo", "==", lab.correo)
+      );
+      const pendientes = await getDocs(q);
 
-if (!pendientes.empty) {
-  const tokens = pendientes.docs.map(doc => ({
-    id: doc.id,
-    ...doc.data()
-  }));
+      if (!pendientes.empty) {
+        const tokens = pendientes.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
 
-  const tokenActivo = tokens.find(t => t.estado === "pendiente");
-  const tokenUsado = tokens.find(t => t.estado === "usado");
+        const tokenActivo = tokens.find(t => t.estado === "pendiente");
+        const tokenUsado = tokens.find(t => t.estado === "usado");
 
-  if (tokenActivo) {
-    const creado = new Date(tokenActivo.creado);
-    const ahora = new Date();
-    const diferenciaHoras = (ahora - creado) / 1000 / 60 / 60;
+        if (tokenActivo) {
+          const creado = new Date(tokenActivo.creado);
+          const ahora = new Date();
+          const diferenciaHoras = (ahora - creado) / 1000 / 60 / 60;
 
-    if (diferenciaHoras > 48) {
-      await deleteDoc(doc(db, "laboratoriosPendientes", tokenActivo.id));
-      const etiqueta = crearEtiquetaEstado("expirado");
-      labDiv.appendChild(etiqueta);
-      labDiv.appendChild(btnGenerar);
-    } else {
-      const etiqueta = crearEtiquetaEstado("pendiente");
-      labDiv.appendChild(etiqueta);
-      mostrarLink(tokenActivo.link, labDiv);
-    }
-  } else if (tokenUsado) {
-    const etiqueta = crearEtiquetaEstado("usado");
-    labDiv.appendChild(etiqueta);
-  } else {
-    labDiv.appendChild(btnGenerar);
-  }
+          if (diferenciaHoras > 48) {
+            await deleteDoc(doc(db, "laboratoriosPendientes", tokenActivo.id));
+            const etiqueta = crearEtiquetaEstado("expirado");
+            labDiv.appendChild(etiqueta);
+            labDiv.appendChild(btnGenerar);
+          } else {
+            const etiqueta = crearEtiquetaEstado("pendiente");
+            labDiv.appendChild(etiqueta);
+            mostrarLink(tokenActivo.link, labDiv);
+          }
+        } else if (tokenUsado) {
+          const etiqueta = crearEtiquetaEstado("usado");
+          labDiv.appendChild(etiqueta);
+        } else {
+          labDiv.appendChild(btnGenerar);
+        }
 
-  const historialDiv = document.createElement("div");
-  historialDiv.style.marginTop = "8px";
-  historialDiv.innerHTML = "<strong>Historial de accesos generados:</strong><br>";
+        const historialDiv = document.createElement("div");
+        historialDiv.style.marginTop = "8px";
+        historialDiv.innerHTML = "<strong>Historial de accesos generados:</strong><br>";
 
-  tokens.forEach(t => {
-    const item = document.createElement("div");
-    item.style.fontSize = "12px";
-    item.style.marginBottom = "4px";
-    item.innerHTML = `📎 <code>${t.link}</code> <br><small>Estado: ${t.estado} | Creado: ${new Date(t.creado).toLocaleString()}</small>`;
-    historialDiv.appendChild(item);
-  });
+        tokens.forEach(t => {
+          const item = document.createElement("div");
+          item.style.fontSize = "12px";
+          item.style.marginBottom = "4px";
+          item.innerHTML = `📎 <code>${t.link}</code> <br><small>Estado: ${t.estado} | Creado: ${new Date(t.creado).toLocaleString()}</small>`;
+          historialDiv.appendChild(item);
+        });
 
-  labDiv.appendChild(historialDiv);
-} else {
-  labDiv.appendChild(btnGenerar);
-}
+        labDiv.appendChild(historialDiv);
+      } else {
+        labDiv.appendChild(btnGenerar);
+      }
 
-lista.appendChild(labDiv);
-
+      lista.appendChild(labDiv);
     }
   } catch (error) {
     lista.innerHTML = `<p>Error al cargar laboratorios: ${error.message}</p>`;
@@ -216,7 +208,7 @@ function crearEtiquetaEstado(estado) {
       span.style.color = "#155724";
       break;
     case "expirado":
-      span.style.backgroundColor = "#f8d7da";
+      span.style.backgroundColor: "#f8d7da";
       span.style.color = "#721c24";
       break;
     default:
