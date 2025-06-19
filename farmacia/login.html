@@ -1,28 +1,25 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <title>Login Farmacia</title>
-  <style>
-    body { font-family: sans-serif; background-color: #003366; color: white; padding: 50px; text-align: center; }
-    input, button {
-      display: block; margin: 10px auto; padding: 10px;
-      font-size: 16px; width: 80%; max-width: 300px;
-    }
-    button {
-      background-color: #00c9a7; color: white; border: none; border-radius: 5px;
-    }
-    a { color: #00c9a7; }
-  </style>
+  <meta charset="UTF-8" />
+  <title>Login Farmacias</title>
+  <link rel="stylesheet" href="/estilos/global.css" />
+  <script src="/componentes/header.js" defer></script>
+  <script type="module" src="/js/login-generico.js"></script>
+
 </head>
 <body>
-  <h2>Acceso para Farmacias</h2>
-  <input type="email" placeholder="Correo electrónico">
-  <input type="password" placeholder="Contraseña">
-  <button>Iniciar sesión</button>
-  <p>¿No tienes cuenta? <a href="registro.html">Regístrate aquí</a></p>
+  <main>
+    <h2>Acceso para Farmacias</h2>
+    <form class="form-login">
+  <input type="email" placeholder="Correo electrónico" required />
+  <input type="password" placeholder="Contraseña" required />
+  <button type="submit">Iniciar sesión</button>
+</form>
 
-  <script type="module" src="../firebase-init.js"></script>
-  <script type="module" src="loginFarmacia.js"></script>
+    <p>¿No tienes cuenta? <a href="registro.html">Regístrate aquí</a></p>
+  </main>
+
+  
 </body>
 </html>
