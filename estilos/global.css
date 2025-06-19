@@ -161,3 +161,48 @@ main {
     padding: 10px;
   }
 }
+
+details.lab-card {
+  border: 1px solid #ccc;
+  border-radius: var(--borde-radio);
+  margin: 12px 0;
+  background-color: var(--color-blanco);
+  padding: 0;
+  overflow: hidden;
+  box-shadow: var(--sombra-card);
+  transition: all 0.3s ease;
+}
+
+details.lab-card summary {
+  background-color: #f0f0f0;
+  padding: 12px 20px;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 16px;
+  list-style: none;
+  position: relative;
+}
+
+details.lab-card summary::marker,
+details.lab-card summary::-webkit-details-marker {
+  display: none;
+}
+
+details.lab-card summary::after {
+  content: "▶";
+  position: absolute;
+  right: 20px;
+  transition: transform 0.2s ease;
+}
+
+details.lab-card[open] summary::after {
+  transform: rotate(90deg);
+}
+
+details.lab-card div {
+  padding: 15px 20px;
+  border-top: 1px solid #ddd;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
