@@ -20,8 +20,9 @@ try {
   onAuthStateChanged(auth, (user) => {
     if (user && user.email === "admin@kodrx.app") {
       console.log("[AUTH] Usuario autenticado como admin:", user.email);
-      window.addEventListener("DOMContentLoaded", () => {
-        console.log("[DOM] DOM cargado. Iniciando cargarLaboratorios()");
+
+      const iniciar = () => {
+        console.log("[DOM] DOM listo. Iniciando cargarLaboratorios()");
         cargarLaboratorios();
         const form = document.getElementById("formLab");
         if (form) {
@@ -33,7 +34,14 @@ try {
         } else {
           console.error("[FORM] formLab NO encontrado");
         }
-      });
+      };
+
+      if (document.readyState === "loading") {
+        window.addEventListener("DOMContentLoaded", iniciar);
+      } else {
+        iniciar();
+      }
+
     } else {
       console.warn("[AUTH] Usuario no autorizado. Redirigiendo...");
       window.location.href = "/admin/login.html";
