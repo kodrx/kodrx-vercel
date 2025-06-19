@@ -208,7 +208,7 @@ function crearEtiquetaEstado(estado) {
       span.style.color = "#155724";
       break;
     case "expirado":
-      span.style.backgroundColor: "#f8d7da";
+      span.style.backgroundColor = "#f8d7da";
       span.style.color = "#721c24";
       break;
     default:
