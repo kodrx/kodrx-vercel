@@ -48,12 +48,12 @@ function renderizarLista(farmacias) {
     card.className = "lab-card";
 
     const summary = document.createElement("summary");
-    summary.innerHTML = `<strong>${farm.nombre}</strong>`;
+    summary.innerHTML = `<strong>${farm.nombreFarmacia}</strong>`;
     card.appendChild(summary);
 
     const contenido = document.createElement("div");
     contenido.innerHTML = `
-      <p><strong>Responsable:</strong> ${farm.responsable || "No registrado"}</p>
+      <p><strong>Responsable:</strong> ${farm.medicoResponsable || "No registrado"}</p>
       <p><strong>Correo:</strong> ${farm.correo}</p>
       <p><strong>Teléfono:</strong> ${farm.telefono}</p>
       <p><strong>Colonia:</strong> ${farm.colonia || "N/D"}</p>
