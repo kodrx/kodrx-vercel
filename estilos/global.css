@@ -44,12 +44,30 @@ header {
   display: flex;
   align-items: center;
   padding: 10px 20px;
+  min-height: 56px;
+}
+
+header .logo-link {
+  display: flex;
+  align-items: center;
 }
 
 header img.logo {
-  height: 32px;
-  margin-right: 10px;
+  height: 42px;
+  max-height: 48px;
 }
+
+@media (max-width: 768px) {
+  header img.logo {
+    height: 38px;
+  }
+
+  header {
+    justify-content: center;
+    padding: 12px;
+  }
+}
+
 
 aside {
   background-color: var(--color-primario);
