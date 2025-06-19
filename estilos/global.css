@@ -1,3 +1,4 @@
+
 :root {
   --color-primario: #003366;
   --color-acento: #00d4b2;
@@ -43,7 +44,8 @@ header {
   color: var(--color-blanco);
   display: flex;
   align-items: center;
-  padding: 10px 20px;
+  justify-content: center;
+  padding: 12px;
   min-height: 56px;
 }
 
@@ -56,21 +58,15 @@ header img.logo {
   height: auto;
   max-height: none;
   width: auto;
-  max-width: 160px; /* aumenta el límite visual */
+  max-width: 180px;
+  margin-right: 10px;
 }
 
 @media (min-width: 1024px) {
   header img.logo {
-    max-width: 220px; /* aún más visible en escritorio */
+    max-width: 240px;
   }
 }
-
-  header {
-    justify-content: center;
-    padding: 12px;
-  }
-}
-
 
 aside {
   background-color: var(--color-primario);
@@ -89,6 +85,31 @@ aside button {
   border-radius: 4px;
   font-weight: bold;
   cursor: pointer;
+}
+
+main {
+  padding: 20px;
+}
+
+/* LOGIN FORM */
+.form-login {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 320px;
+  margin: 20px auto;
+  text-align: left;
+}
+
+.form-login input {
+  padding: 10px;
+  font-size: 16px;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+}
+
+.form-login button {
+  margin-top: 10px;
 }
 
 /* RESPONSIVE DESIGN */
@@ -128,10 +149,6 @@ aside button {
     font-size: 16px;
   }
 
-  .logo {
-    height: 24px;
-  }
-
   aside {
     padding: 10px;
   }
@@ -144,36 +161,3 @@ aside button {
     padding: 10px;
   }
 }
-main {
-  padding: 20px;
-}
-
-header h1 {
-  font-size: 20px;
-  margin: 0;
-}
-
-header img.logo {
-  height: 32px;
-  margin-right: 10px;
-}
-.form-login {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  max-width: 320px;
-  margin: 20px auto;
-  text-align: left;
-}
-
-.form-login input {
-  padding: 10px;
-  font-size: 16px;
-  border-radius: 4px;
-  border: 1px solid #ccc;
-}
-
-.form-login button {
-  margin-top: 10px;
-}
-
