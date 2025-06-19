@@ -16,13 +16,12 @@ import {
 } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
 
 // Protección de acceso
-onAuthStateChanged(auth, async (user) => {
-  if (!user) {
-    window.location.href = "/admin/login.html";
-  } else {
-    cargarLaboratorios();
-  }
-});
+if (sessionStorage.getItem("adminLoggedIn") !== "true") {
+  window.location.href = "/admin/login.html";
+} else {
+  cargarLaboratorios();
+}
+
 
 // Registro de nuevo laboratorio
 const form = document.getElementById("formLab");
