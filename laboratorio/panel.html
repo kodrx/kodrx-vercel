@@ -1,77 +1,41 @@
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Panel del Laboratorio - KodRx</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <style>
-    body {
-      margin: 0;
-      font-family: sans-serif;
-      background-color: #f5f5f5;
-    }
-
-    .panel {
-      display: flex;
-      min-height: 100vh;
-    }
-
-    aside {
-      width: 220px;
-      background: #003366;
-      color: white;
-      padding: 20px;
-    }
-
-    aside h2 {
-      font-size: 20px;
-      margin-bottom: 30px;
-    }
-
-    aside button {
-      display: block;
-      width: 100%;
-      margin-bottom: 10px;
-      padding: 10px;
-      background: white;
-      color: #003366;
-      border: none;
-      border-radius: 4px;
-      font-weight: bold;
-      cursor: pointer;
-    }
-
-    main {
-      flex: 1;
-      padding: 20px;
-    }
-
-    #contenido {
-      background: white;
-      border-radius: 8px;
-      padding: 20px;
-      min-height: 300px;
-    }
-  </style>
-  <script type="module" defer src="/laboratorio/js/panel.js"></script>
+  <link rel="stylesheet" href="/estilos/global.css" />
+  <script src="/componentes/header.js" defer></script>
 </head>
 <body>
-  <div class="panel">
-    <aside>
-      <h2>⚗️ KodRx Lab</h2>
-      <button id="btn-verificador">📥 Recetas Recibidas</button>
-      <button id="btn-historial">📊 Historial</button>
-      <button id="btn-configuracion">⚙️ Configuración</button>
-      <button id="btn-salir">🔓 Cerrar sesión</button>
-    </aside>
+  <main class="seccion">
+    <h2>Bienvenido al Panel del Laboratorio</h2>
+    <p id="nombreLab">Cargando nombre del laboratorio...</p>
 
-    <main>
-      <div id="contenido">
-        <h3>Bienvenido al panel del laboratorio</h3>
-        <p>Selecciona una opción del menú para comenzar.</p>
-      </div>
-    </main>
-  </div>
+    <div class="card">
+      <h3>Resumen de actividad</h3>
+      <ul>
+        <li><strong>Total de medicamentos registrados:</strong> <span id="totalMedicamentos">...</span></li>
+        <li><strong>Medicamento más recetado:</strong> <span id="topMedicamento">...</span></li>
+        <li><strong>Médico con más recetas:</strong> <span id="topMedico">...</span></li>
+        <li><strong>Estado con más recetas:</strong> <span id="topEstado">...</span></li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h3>Comparativa receta vs surtido</h3>
+      <p>Recetas emitidas: <span id="totalRecetas">...</span></p>
+      <p>Recetas surtidas: <span id="totalSurtidas">...</span></p>
+    </div>
+
+    <div class="card">
+      <h3>Medicamentos más recetados</h3>
+      <ul id="rankingMedicamentos">Cargando ranking...</ul>
+    </div>
+  </main>
+
+  <script type="module" src="/firebase-init.js"></script>
+  <script type="module" src="panelLaboratorio-debug.js"></script>
 </body>
 </html>
-
