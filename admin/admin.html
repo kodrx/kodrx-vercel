@@ -1,47 +1,38 @@
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <title>Panel de Administración - KodRx</title>
-  <style>
-    body {
-      font-family: sans-serif;
-      max-width: 600px;
-      margin: auto;
-      padding: 40px;
-      text-align: center;
-    }
-    h1 {
-      color: #003366;
-    }
-    button {
-      display: block;
-      width: 100%;
-      margin: 15px 0;
-      padding: 15px;
-      font-size: 16px;
-      background-color: #003366;
-      color: white;
-      border: none;
-      cursor: pointer;
-      border-radius: 5px;
-    }
-    button:hover {
-      background-color: #005599;
-    }
-  </style>
-</head>
-<body>
-  <script>
+  <meta charset="UTF-8" />
+  <title>Panel Administrador - KodRx</title>
+  <link rel="stylesheet" href="/estilos/global.css" />
+  <script src="/componentes/header.js" defer></script>
+  <script type="module">
     if (sessionStorage.getItem("adminLoggedIn") !== "true") {
-      window.location.href = "login.html";
+      window.location.href = "/admin/login.html";
     }
   </script>
+</head>
+<body>
+  <main class="seccion">
+    <h2>Panel Principal del Administrador</h2>
+    <p>Bienvenido al panel de administración. Elige una sección para gestionar:</p>
 
-  <h1>Panel de Administración KodRx</h1>
+    <div style="margin-top: 20px;">
+      <a href="/admin/medicos.html"><button>Ver Médicos</button></a>
+      <a href="/admin/farmacias.html"><button>Ver Farmacias</button></a>
+      <a href="/admin/laboratorios.html"><button>Ver Laboratorios</button></a>
+    </div>
 
-  <button onclick="window.location.href='/admin/medicos.html'">Gestión de Médicos</button>
-  <button onclick="window.location.href='/admin/farmacias.html'">Gestión de Farmacias</button>
-  <button onclick="window.location.href='/admin/laboratorios.html'">Gestión de Laboratorios</button>
+    <div style="margin-top: 30px;">
+      <button onclick="logout()">Cerrar sesión</button>
+    </div>
+  </main>
+
+  <script>
+    function logout() {
+      sessionStorage.removeItem("adminLoggedIn");
+      window.location.href = "/admin/login.html";
+    }
+  </script>
 </body>
 </html>
