@@ -53,9 +53,11 @@ header .logo-link {
 }
 
 header img.logo {
-  height: 42px;
-  max-height: 48px;
+  height: 56px !important;
+  max-height: 64px !important;
+  width: auto;
 }
+
 
 @media (max-width: 768px) {
   header img.logo {
