@@ -53,16 +53,17 @@ header .logo-link {
 }
 
 header img.logo {
-  height: 56px !important;
-  max-height: 64px !important;
+  height: auto;
+  max-height: none;
   width: auto;
+  max-width: 160px; /* aumenta el límite visual */
 }
 
-
-@media (max-width: 768px) {
+@media (min-width: 1024px) {
   header img.logo {
-    height: 38px;
+    max-width: 220px; /* aún más visible en escritorio */
   }
+}
 
   header {
     justify-content: center;
