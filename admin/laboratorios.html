@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -6,36 +7,35 @@
   <link rel="stylesheet" href="/estilos/global.css" />
   <script src="/componentes/header.js" defer></script>
   <script>
-  window.addEventListener("error", function (e) {
-    console.error("[GLOBAL ERROR]", e.message, "en", e.filename);
-  });
-</script>
-
-
-
+    // Captura errores globales (incluso en módulos)
+    window.addEventListener("error", function (e) {
+      console.error("[GLOBAL ERROR]", e.message, "en", e.filename);
+    });
+  </script>
 </head>
 <body>
-  <h2>Administración de Laboratorios</h2>
+  <main class="seccion">
+    <h2>Administración de Laboratorios</h2>
 
-  <form id="formLab">
-    <h3>Registrar nuevo laboratorio</h3>
-    <input type="text" placeholder="Nombre del laboratorio" id="nombre" required>
-    <input type="text" placeholder="Persona de contacto" id="contacto" required>
-    <input type="email" placeholder="Correo electrónico" id="correo" required>
-    <input type="tel" placeholder="Teléfono" id="telefono" required>
-    <input type="text" placeholder="Ubicación / Ciudad" id="ubicacion">
-    <button type="submit">Registrar laboratorio</button>
-  </form>
+    <form id="formLab" class="card">
+      <h3>Registrar nuevo laboratorio</h3>
+      <input type="text" placeholder="Nombre del laboratorio" id="nombre" required />
+      <input type="text" placeholder="Persona de contacto" id="contacto" required />
+      <input type="email" placeholder="Correo electrónico" id="correo" required />
+      <input type="tel" placeholder="Teléfono" id="telefono" required />
+      <input type="text" placeholder="Ubicación / Ciudad" id="ubicacion" />
+      <button type="submit">Registrar laboratorio</button>
+    </form>
 
-  <div class="laboratorios">
-    <h3>Laboratorios registrados</h3>
-    <div id="listaLabs">Cargando laboratorios...</div>
-  </div>
+    <div class="laboratorios card">
+      <h3>Laboratorios registrados</h3>
+      <div id="listaLabs">Cargando laboratorios...</div>
+    </div>
 
-  <a class="volver" href="/admin/admin.html">← Volver al panel principal</a>
+    <a class="volver" href="/admin/admin.html">← Volver al panel principal</a>
+  </main>
 
   <script type="module" src="../firebase-init.js"></script>
-<script type="module" src="adminLaboratorios-debug.js"></script>
-
+  <script type="module" src="adminLaboratorios-debug.js"></script>
 </body>
 </html>
