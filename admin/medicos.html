@@ -2,75 +2,26 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <title>Gestión de Médicos</title>
-<link rel="stylesheet" href="/estilos/global.css" />
-<script src="/componentes/header.js" defer></script>
-
+  <meta charset="UTF-8" />
+  <title>Administrar Médicos - KodRx</title>
+  <link rel="stylesheet" href="/estilos/global.css" />
+  <script src="/componentes/header.js" defer></script>
 </head>
 <body>
-  <h2>Médicos Registrados</h2>
+  <main class="seccion">
+    <h2>Administración de Médicos</h2>
 
-  <div class="seccion">
-    <h3>✅ Verificados</h3>
-    <div id="verificados"></div>
-  </div>
+    <input type="text" id="buscador" placeholder="Buscar por nombre o especialidad..." style="width: 100%; padding: 10px; margin-bottom: 20px; border-radius: 6px; border: 1px solid #ccc;" />
 
-  <div class="seccion">
-    <h3>⏳ Pendientes de Verificación</h3>
-    <div id="pendientes"></div>
-  </div>
+    <div class="laboratorios card">
+      <h3>Médicos registrados</h3>
+      <div id="listaMedicos">Cargando médicos...</div>
+    </div>
 
-  <script type="module">
-    import { db } from '../firebase-init.js';
-    import { collection, getDocs, doc, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
+    <a class="volver" href="/admin/admin.html">← Volver al panel principal</a>
+  </main>
 
-    const verificadosDiv = document.getElementById("verificados");
-    const pendientesDiv = document.getElementById("pendientes");
-
-    async function cargarMedicos() {
-      const querySnapshot = await getDocs(collection(db, "medicos"));
-      querySnapshot.forEach((docSnap) => {
-        const medico = docSnap.data();
-        const id = docSnap.id;
-        const contenedor = document.createElement("div");
-        contenedor.classList.add("medico");
-        contenedor.innerHTML = `
-          <strong>${medico.nombre}</strong>
-          <div class="detalles">
-            <div>📧 ${medico.correo}</div>
-            <div>📱 ${medico.telefono}</div>
-            <div>🏠 Colonia: ${medico.colonia}</div>
-            <div>🌎 Estado: ${medico.estado}</div>
-            <div>📅 Fecha de registro: ${medico.fechaRegistro?.toDate().toLocaleString() || 'Sin fecha'}</div>
-            ${medico.verificado ? `<div>✅ Fecha de verificación: ${medico.fechaVerificacion?.toDate().toLocaleString() || 'Sin fecha'}</div>` : `<button onclick="verificarMedico('${id}', this)">Verificar</button>`}
-          </div>
-        `;
-        contenedor.addEventListener("click", () => {
-          const detalles = contenedor.querySelector(".detalles");
-          detalles.style.display = detalles.style.display === "block" ? "none" : "block";
-        });
-
-        if (medico.verificado) {
-          verificadosDiv.appendChild(contenedor);
-        } else {
-          pendientesDiv.appendChild(contenedor);
-        }
-      });
-    }
-
-    window.verificarMedico = async function(id, btn) {
-      const ref = doc(db, "medicos", id);
-      await updateDoc(ref, {
-        verificado: true,
-        fechaVerificacion: serverTimestamp()
-      });
-      btn.disabled = true;
-      btn.innerText = "Verificado";
-      location.reload();
-    };
-
-    cargarMedicos();
-  </script>
+  <script type="module" src="/firebase-init.js"></script>
+  <script type="module" src="adminMedicos-debug.js"></script>
 </body>
 </html>
