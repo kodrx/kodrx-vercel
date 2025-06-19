@@ -93,16 +93,20 @@ async function cargarLaboratorios() {
 
     for (const docSnap of querySnapshot.docs) {
       const lab = docSnap.data();
-      const labDiv = document.createElement("div");
-      labDiv.className = "lab-card";
+      const labCard = document.createElement("details");
+      labCard.className = "lab-card";
 
-      labDiv.innerHTML = `
-        <strong>${lab.nombre}</strong><br>
-        Contacto: ${lab.contacto}<br>
-        Correo: ${lab.correo}<br>
-        Teléfono: ${lab.telefono}<br>
-        Ubicación: ${lab.ubicacion || "No especificada"}<br>
-        Registrado: ${lab.fechaRegistro?.toDate().toLocaleString() || "N/D"}
+      const summary = document.createElement("summary");
+      summary.innerHTML = `<strong>${lab.nombre}</strong>`;
+      labCard.appendChild(summary);
+
+      const contenido = document.createElement("div");
+      contenido.innerHTML = `
+        <p><strong>Contacto:</strong> ${lab.contacto}</p>
+        <p><strong>Correo:</strong> ${lab.correo}</p>
+        <p><strong>Teléfono:</strong> ${lab.telefono}</p>
+        <p><strong>Ubicación:</strong> ${lab.ubicacion || "No especificada"}</p>
+        <p><strong>Registrado:</strong> ${lab.fechaRegistro?.toDate().toLocaleString() || "N/D"}</p>
       `;
 
       const btnGenerar = document.createElement("button");
@@ -122,8 +126,8 @@ async function cargarLaboratorios() {
         });
 
         const etiqueta = crearEtiquetaEstado("pendiente");
-        labDiv.appendChild(etiqueta);
-        mostrarLink(link, labDiv);
+        contenido.appendChild(etiqueta);
+        mostrarLink(link, contenido);
       };
 
       const q = query(
@@ -149,18 +153,18 @@ async function cargarLaboratorios() {
           if (diferenciaHoras > 48) {
             await deleteDoc(doc(db, "laboratoriosPendientes", tokenActivo.id));
             const etiqueta = crearEtiquetaEstado("expirado");
-            labDiv.appendChild(etiqueta);
-            labDiv.appendChild(btnGenerar);
+            contenido.appendChild(etiqueta);
+            contenido.appendChild(btnGenerar);
           } else {
             const etiqueta = crearEtiquetaEstado("pendiente");
-            labDiv.appendChild(etiqueta);
-            mostrarLink(tokenActivo.link, labDiv);
+            contenido.appendChild(etiqueta);
+            mostrarLink(tokenActivo.link, contenido);
           }
         } else if (tokenUsado) {
           const etiqueta = crearEtiquetaEstado("usado");
-          labDiv.appendChild(etiqueta);
+          contenido.appendChild(etiqueta);
         } else {
-          labDiv.appendChild(btnGenerar);
+          contenido.appendChild(btnGenerar);
         }
 
         const historialDiv = document.createElement("div");
@@ -175,12 +179,13 @@ async function cargarLaboratorios() {
           historialDiv.appendChild(item);
         });
 
-        labDiv.appendChild(historialDiv);
+        contenido.appendChild(historialDiv);
       } else {
-        labDiv.appendChild(btnGenerar);
+        contenido.appendChild(btnGenerar);
       }
 
-      lista.appendChild(labDiv);
+      labCard.appendChild(contenido);
+      lista.appendChild(labCard);
     }
   } catch (error) {
     lista.innerHTML = `<p>Error al cargar laboratorios: ${error.message}</p>`;
