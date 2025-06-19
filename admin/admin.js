@@ -1,15 +1,17 @@
-const adminEmail = "admin@kodrx.com";
-const adminPassword = "adminKodRx2025";
+import { signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
+import { auth } from "../firebase-init.js";
 
 window.loginAdmin = function () {
-  const email = document.getElementById("email").value;
+  const email = document.getElementById("email").value.trim();
   const password = document.getElementById("password").value;
   const error = document.getElementById("error");
 
-  if (email === adminEmail && password === adminPassword) {
-    sessionStorage.setItem("adminLoggedIn", "true");
-    window.location.href = "admin.html";
-  } else {
-    error.textContent = "Correo o contraseña incorrectos.";
-  }
+  signInWithEmailAndPassword(auth, email, password)
+    .then(() => {
+      sessionStorage.setItem("adminLoggedIn", "true");
+      window.location.href = "admin.html";
+    })
+    .catch((err) => {
+      error.textContent = "Correo o contraseña incorrectos.";
+    });
 };
