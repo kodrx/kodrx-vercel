@@ -1,10 +1,6 @@
 
 import { auth, db } from "../firebase-init.js";
-
-if (sessionStorage.getItem("adminLoggedIn") !== "true") {
-  window.location.href = "/admin/login.html";
-}
-
+import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
 import {
   collection,
   addDoc,
@@ -17,6 +13,17 @@ import {
   query,
   where
 } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
+
+// Aseguramos que la autenticación esté lista y el DOM cargado
+onAuthStateChanged(auth, (user) => {
+  if (user && user.email === "admin@kodrx.app") {
+    window.addEventListener("DOMContentLoaded", () => {
+      cargarLaboratorios();
+    });
+  } else {
+    window.location.href = "/admin/login.html";
+  }
+});
 
 // Registro de nuevo laboratorio
 const form = document.getElementById("formLab");
@@ -208,10 +215,9 @@ function crearEtiquetaEstado(estado) {
       span.style.color = "#155724";
       break;
     case "expirado":
-  span.style.backgroundColor = "#f8d7da";
-  span.style.color = "#721c24";
-  break;
-
+      span.style.backgroundColor = "#f8d7da";
+      span.style.color = "#721c24";
+      break;
     default:
       span.style.backgroundColor = "#e2e3e5";
       span.style.color = "#6c757d";
