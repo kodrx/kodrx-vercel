@@ -1,47 +1,25 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <title>Login Laboratorio - KodRx</title>
-  <style>
-    body { font-family: sans-serif; background: #f4f4f4; padding: 30px; }
-    form { max-width: 400px; margin: auto; background: white; padding: 20px; border-radius: 8px; }
-    input, button {
-      width: 100%; margin: 10px 0; padding: 10px; font-size: 14px;
-    }
-    button {
-      background-color: #003366; color: white; border: none; border-radius: 4px;
-    }
-  </style>
+  <meta charset="UTF-8" />
+  <title>Login Laboratorios</title>
+  <link rel="stylesheet" href="/estilos/global.css" />
+  <script src="/componentes/header.js" defer></script>
+  <script type="module" src="/js/login-generico.js"></script>
+
 </head>
 <body>
-  <form>
-    <h3>Acceso para Laboratorios</h3>
-    <input type="email" id="correo" placeholder="Correo electrónico" required>
-    <input type="password" id="password" placeholder="Contraseña" required>
-    <button type="submit">Ingresar</button>
-    <p id="error" style="color: red;"></p>
-  </form>
+  <main>
+    <h2>Acceso Laboratorios</h2>
+    <form class="form-login">
+  <input type="email" placeholder="Correo electrónico" required />
+  <input type="password" placeholder="Contraseña" required />
+  <button type="submit">Iniciar sesión</button>
+</form>
 
-  <script type="module">
-    import { auth } from '../firebase-init.js';
-    import { signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
+    <p>¿No tienes cuenta? <a href="registro.html">Regístrate aquí</a></p>
+  </main>
 
-    const form = document.querySelector('form');
-    const errorEl = document.getElementById('error');
-
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const correo = document.getElementById('correo').value;
-      const password = document.getElementById('password').value;
-
-      try {
-        await signInWithEmailAndPassword(auth, correo, password);
-        window.location.href = "panel.html";
-      } catch (error) {
-        errorEl.textContent = "Credenciales inválidas o acceso denegado.";
-      }
-    });
-  </script>
+  
 </body>
 </html>
