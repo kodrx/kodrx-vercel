@@ -1,92 +1,28 @@
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <title>Administrar Farmacias</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Administrar Farmacias - KodRx</title>
   <link rel="stylesheet" href="/estilos/global.css" />
-<script src="/componentes/header.js" defer></script>
-
+  <script src="/componentes/header.js" defer></script>
 </head>
 <body>
-  <h2>Farmacias Registradas</h2>
+  <main class="seccion">
+    <h2>Administración de Farmacias</h2>
 
-  <div class="seccion">
-    <h3>✅ Farmacias Verificadas</h3>
-    <div id="verificadas"></div>
-  </div>
+    <input type="text" id="buscador" placeholder="Buscar por nombre o colonia..." style="width: 100%; padding: 10px; margin-bottom: 20px; border-radius: 6px; border: 1px solid #ccc;" />
 
-  <div class="seccion">
-    <h3>⏳ Pendientes de Verificación</h3>
-    <div id="pendientes"></div>
-  </div>
+    <div class="laboratorios card">
+      <h3>Farmacias registradas</h3>
+      <div id="listaFarmacias">Cargando farmacias...</div>
+    </div>
 
-  <button class="volver" onclick="window.location.href='admin.html'">← Volver al Panel</button>
+    <a class="volver" href="/admin/admin.html">← Volver al panel principal</a>
+  </main>
 
-  <script type="module">
-    import { db } from "../firebase-init.js";
-    import { collection, getDocs, updateDoc, doc, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
-
-    const verificadasContainer = document.getElementById("verificadas");
-    const pendientesContainer = document.getElementById("pendientes");
-
-    function crearElementoFarmacia(data, id, mostrarBoton) {
-      const div = document.createElement("div");
-      div.className = "farmacia";
-
-      const titulo = document.createElement("h4");
-      titulo.textContent = data.nombreFarmacia;
-      div.appendChild(titulo);
-
-      const detalles = document.createElement("div");
-      detalles.className = "detalles";
-      detalles.innerHTML = `
-        <p><strong>Médico responsable:</strong> ${data.medicoResponsable}</p>
-        <p><strong>Correo:</strong> ${data.correo}</p>
-        <p><strong>Teléfono:</strong> ${data.telefono}</p>
-        <p><strong>Colonia:</strong> ${data.colonia}</p>
-        <p><strong>Municipio:</strong> ${data.municipio}</p>
-        <p><strong>Estado:</strong> ${data.estado}</p>
-        <p><strong>Registrado:</strong> ${data.fechaRegistro?.toDate().toLocaleString() || 'Sin fecha'}</p>
-        ${data.fechaVerificacion ? `<p><strong>Verificado:</strong> ${data.fechaVerificacion.toDate().toLocaleString()}</p>` : ''}
-      `;
-
-      if (mostrarBoton) {
-        const btn = document.createElement("button");
-        btn.textContent = "Verificar";
-        btn.className = "verificar";
-        btn.onclick = async () => {
-          await updateDoc(doc(db, "farmacias", id), {
-            verificado: true,
-            fechaVerificacion: serverTimestamp()
-          });
-          location.reload();
-        };
-        detalles.appendChild(btn);
-      }
-
-      titulo.onclick = () => {
-        detalles.style.display = detalles.style.display === "none" ? "block" : "none";
-      };
-
-      div.appendChild(detalles);
-      return div;
-    }
-
-    async function cargarFarmacias() {
-      const snapshot = await getDocs(collection(db, "farmacias"));
-      snapshot.forEach(docSnap => {
-        const data = docSnap.data();
-        const card = crearElementoFarmacia(data, docSnap.id, !data.verificado);
-        if (data.verificado) {
-          verificadasContainer.appendChild(card);
-        } else {
-          pendientesContainer.appendChild(card);
-        }
-      });
-    }
-
-    cargarFarmacias();
-  </script>
+  <script type="module" src="/firebase-init.js"></script>
+  <script type="module" src="adminFarmacias-debug.js"></script>
 </body>
 </html>
-
