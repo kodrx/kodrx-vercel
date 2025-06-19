@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Test Laboratorios</title>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+    import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBIjaOe4HcGNDk0xrqen8etBv0RyjyOJHw",
+      authDomain: "kodrx-105b9.firebaseapp.com",
+      projectId: "kodrx-105b9",
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    const cargar = async () => {
+      const querySnapshot = await getDocs(collection(db, "laboratorios"));
+      if (querySnapshot.empty) {
+        document.body.innerHTML = "<p>No hay laboratorios encontrados.</p>";
+      } else {
+        document.body.innerHTML = "<h2>Laboratorios encontrados:</h2>";
+        querySnapshot.forEach(doc => {
+          const data = doc.data();
+          document.body.innerHTML += `<p>${doc.id}: ${data.nombre || "Sin nombre"}</p>`;
+        });
+      }
+    };
+
+    cargar();
+  </script>
+</head>
+<body>
+  <p>Cargando...</p>
+</body>
+</html>
