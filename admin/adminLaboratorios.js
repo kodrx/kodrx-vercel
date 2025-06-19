@@ -7,6 +7,7 @@ import {
   addDoc,
   getDocs,
   getDoc,
+  deleteDoc,
   doc,
   setDoc,
   updateDoc,
