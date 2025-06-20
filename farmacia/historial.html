@@ -1,23 +1,22 @@
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <title>Mis Recetas Surtidas</title>
-  <style>
-    body { font-family: sans-serif; padding: 20px; max-width: 800px; margin: auto; background-color: #f9f9f9; }
-    h2 { color: #d14032; }
-    .dia { margin-top: 30px; font-size: 1.2em; font-weight: bold; color: #000; border-bottom: 1px solid #ccc; padding-bottom: 5px; }
-    .receta { margin: 10px 0; border-radius: 6px; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-    .cabecera { padding: 12px; cursor: pointer; border-bottom: 1px solid #eee; background-color: #fafafa; }
-    .cabecera:hover { background-color: #f0f0f0; }
-    .detalle { display: none; padding: 12px; }
-  </style>
+  <meta charset="UTF-8" />
+  <title>Mis Recetas Surtidas - KodRx</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="/estilos/global.css" />
+  <script src="/componentes/header.js" defer></script>
 </head>
 <body>
-  <h2>Mis Recetas Surtidas</h2>
-  <div id="contenedor">Cargando historial...</div>
+  <main class="seccion">
+    <h2>📦 Recetas Surtidas</h2>
+    <input type="text" id="busqueda" placeholder="Buscar por nombre del paciente" oninput="filtrarHistorial(this.value)" style="padding: 10px; width: 100%; max-width: 500px; margin: 20px auto; display: block;" />
 
-  <script type="module" src="../firebase-init.js"></script>
-  <script type="module" src="historial.js"></script>
+    <div id="contenedor">Cargando historial...</div>
+  </main>
+
+  <script type="module" src="/firebase-init.js"></script>
+  <script type="module" src="/farmacia/historial.js"></script>
 </body>
 </html>
