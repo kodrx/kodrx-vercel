@@ -82,7 +82,7 @@ function renderizarRecetas(recetas) {
           <summary>${receta.nombrePaciente} - ${receta.edad} años</summary>
           <div class="detalle">
             <p><strong>Observaciones:</strong> ${receta.observaciones || "Ninguna"}</p>
-            <p><strong>Médico:</strong> ${receta.medicoNombre || "N/D"}</p>
+            <p><strong>Médico:</strong> ${receta.medico || "N/D"}</p>
             <ul>
               ${receta.medicamentos
                 .map(
