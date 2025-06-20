@@ -26,8 +26,10 @@ onAuthStateChanged(auth, async (user) => {
     return;
   }
 
-  const q = query(collection(db, "recetas"), where("uid", "==", user.uid));
-  const querySnapshot = await getDocs(q);
+const recetasRef = collection(db, "recetas");
+const q = query(recetasRef, where("uid", "==", user.uid), orderBy("timestamp", "desc"));
+const querySnapshot = await getDocs(q);
+
 
   if (querySnapshot.empty) {
     const contenedor = document.getElementById("recetasContainer");
