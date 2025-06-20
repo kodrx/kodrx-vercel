@@ -78,9 +78,9 @@ function renderizarRecetas(recetas) {
     html += `<div class="dia">${dia}</div>`;
     agrupadas[dia].forEach((receta) => {
       html += `
-        <details class="receta">
-          <summary>${receta.nombrePaciente} - ${receta.edad} años</summary>
-          <div class="detalle">
+        <details class="lab-card">
+          <summary><strong>${receta.nombrePaciente}</strong> — ${receta.edad} años</summary>
+          <div>
             <p><strong>Observaciones:</strong> ${receta.observaciones || "Ninguna"}</p>
             <p><strong>Médico:</strong> ${receta.medico || "N/D"}</p>
             <ul>
