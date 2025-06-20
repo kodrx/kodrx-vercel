@@ -1,9 +1,11 @@
-// verificador.js
+
 import { db, auth } from '../firebase-init.js';
 import { doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
 
 let datosFarmacia = null;
+let recetaGlobal = null;
+let recetaIdActual = null;
 
 onAuthStateChanged(auth, async (user) => {
   if (user) {
@@ -14,137 +16,76 @@ onAuthStateChanged(auth, async (user) => {
   }
 });
 
-window.consultarReceta = async () => {
-  const id = document.getElementById("input-id").value.trim();
-  const contenido = document.getElementById("contenido");
-  const botones = document.getElementById("botones-estado");
+window.verificarManual = () => {
+  const id = document.getElementById("inputID").value.trim();
+  if (id) verificarReceta(id);
+};
 
-  if (!id) {
-    alert("Por favor ingresa un ID de receta.");
+window.iniciarEscaneo = () => {
+  const qrReader = new Html5Qrcode("qr-reader");
+  qrReader.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 },
+    (decodedText) => {
+      qrReader.stop();
+      const id = new URL(decodedText).searchParams.get("id");
+      if (id) verificarReceta(id);
+    },
+    () => {}
+  );
+};
+
+async function verificarReceta(id) {
+  const ref = doc(db, "recetas", id);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) {
+    document.getElementById("resultado").innerText = "Receta no encontrada.";
     return;
   }
 
-  try {
-    const recetaRef = doc(db, "recetas", id);
-    const docSnap = await getDoc(recetaRef);
+  recetaIdActual = id;
+  recetaGlobal = snap.data();
+  const surtido = recetaGlobal.surtidoParcial || [];
 
-    if (!docSnap.exists()) {
-      contenido.innerHTML = "<p>No se encontró la receta.</p>";
-      botones.style.display = "none";
-      return;
-    }
+  let html = `<h3>Paciente: ${recetaGlobal.nombrePaciente}</h3>`;
+  html += `<p>Edad: ${recetaGlobal.edad}</p>`;
+  html += `<p>Observaciones: ${recetaGlobal.observaciones || 'Ninguna'}</p>`;
+  html += `<p>Médico: ${recetaGlobal.medicoNombre || 'Desconocido'}</p>`;
+  html += `<h4>Medicamentos:</h4>`;
 
-    const data = docSnap.data();
-    let html = `
-      <div class="campo"><h4>Paciente:</h4> ${data.nombrePaciente}</div>
-      <div class="campo"><h4>Edad:</h4> ${data.edad}</div>
-      <div class="campo"><h4>Observaciones:</h4> ${data.observaciones || 'Ninguna'}</div>
-      <div class="campo"><h4>Medicamentos:</h4>
-    `;
-
-    data.medicamentos.forEach((med, i) => {
-      const id = `med-${i}`;
-      const yaSurtido = (data.surtidoParcial || []).find(m => m.nombre === med.nombre);
-      html += `<div class="medicamento">
-        <input type="checkbox" id="${id}" ${yaSurtido ? 'disabled checked' : ''}>
-        <label for="${id}">${med.nombre}, ${med.dosis}, ${med.duracion}
-        ${yaSurtido ? `(Surtido por ${yaSurtido.surtidoPor}, Tel: ${yaSurtido.telefono})` : ''}
-        </label>
-      </div>`;
-    });
-
-    html += "</div>";
-
-    if (data.estado) {
-      html += `<div class="campo"><h4>Estado:</h4> ${data.estado}</div>`;
-    }
-
-    contenido.innerHTML = html;
-    botones.style.display = "block";
-    botones.setAttribute("data-id", id);
-
-  } catch (err) {
-    contenido.innerHTML = `<p>Error al consultar la receta: ${err.message}</p>`;
-    botones.style.display = "none";
-  }
-};
-
-window.actualizarEstado = async () => {
-  let estado = 'parcial';
-  const botones = document.getElementById("botones-estado");
-  const id = botones.getAttribute("data-id");
-  const recetaRef = doc(db, "recetas", id);
-
-  try {
-    const docSnap = await getDoc(recetaRef);
-    const receta = docSnap.data();
-    let medicamentosMarcados = [];
-
-    receta.medicamentos.forEach((med, i) => {
-      const checkbox = document.getElementById(`med-${i}`);
-      if (checkbox && checkbox.checked && !checkbox.disabled) {
-        medicamentosMarcados.push({
-          nombre: med.nombre,
-          dosis: med.dosis,
-          duracion: med.duracion,
-          surtidoPor: datosFarmacia?.nombreFarmacia || 'Farmacia desconocida',
-          telefono: datosFarmacia?.telefono || 'Sin teléfono',
-          fecha: new Date().toISOString()
-        });
-      }
-    });
-
-    if (medicamentosMarcados.length === 0) {
-      alert("Selecciona al menos un medicamento para marcar como surtido parcialmente.");
-      return;
-    }
-
-    const totalSurtidos = (receta.surtidoParcial || []).concat(medicamentosMarcados);
-    const yaTodos = totalSurtidos.length === receta.medicamentos.length;
-
-    const actualiza = {
-      surtidoParcial: totalSurtidos
-    };
-
-    if (estado === "surtida" || yaTodos) {
-      actualiza.estado = "surtida";
-      actualiza.surtidoPor = datosFarmacia?.nombreFarmacia || "Farmacia desconocida";
-      actualiza.telefonoFarmacia = datosFarmacia?.telefono || "Sin teléfono";
-    } else {
-      actualiza.estado = "parcial";
-    }
-
-    await updateDoc(recetaRef, actualiza);
-
-    alert("Receta actualizada correctamente.");
-    consultarReceta();
-  } catch (err) {
-    alert("Error al actualizar estado: " + err.message);
-  }
-};
-// Función para escanear QR desde navegador
-window.iniciarEscaneo = () => {
-  const reader = document.getElementById("reader");
-  reader.style.display = "block";
-
-  const html5QrCode = new Html5Qrcode("reader");
-  const config = { fps: 10, qrbox: 250 };
-
-  html5QrCode.start(
-    { facingMode: "environment" },
-    config,
-    (decodedText) => {
-      html5QrCode.stop().then(() => {
-        reader.style.display = "none";
-        document.getElementById("input-id").value = decodedText.split("id=")[1] || decodedText;
-        consultarReceta();
-      });
-    },
-    (errorMessage) => {
-      // Errores ignorados
-    }
-  ).catch((err) => {
-    alert("No se pudo acceder a la cámara: " + err);
-    reader.style.display = "none";
+  recetaGlobal.medicamentos.forEach((med, idx) => {
+    const ya = surtido.find(s => s.nombre === med.nombre);
+    const disable = ya ? "checked disabled" : "";
+    const extra = ya ? `<span class="surtido-info">Surtido por: ${ya.surtidoPor}, Tel: ${ya.telefono}</span>` : "";
+    html += `<div class="medicamento"><label><input type="checkbox" data-index="\${idx}" \${disable}> \${med.nombre} - \${med.dosis}, \${med.duracion}</label> \${extra}</div>`;
   });
+
+  html += `<br><button onclick="surtirReceta()">Surtir</button>`;
+  document.getElementById("resultado").innerHTML = html;
+}
+
+window.surtirReceta = async () => {
+  if (!recetaGlobal || !recetaIdActual || !datosFarmacia) return alert("Faltan datos para surtir.");
+
+  const checks = document.querySelectorAll('input[type="checkbox"]:not(:disabled):checked');
+  const seleccionados = Array.from(checks).map(c => recetaGlobal.medicamentos[c.dataset.index]);
+
+  if (seleccionados.length === 0) return alert("Selecciona al menos un medicamento.");
+
+  const nuevos = seleccionados.map(m => ({
+    ...m,
+    surtidoPor: datosFarmacia.nombreFarmacia,
+    telefono: datosFarmacia.telefono,
+    fecha: new Date().toISOString()
+  }));
+
+  const previos = recetaGlobal.surtidoParcial || [];
+  const actualizados = [...previos, ...nuevos];
+  const esTotal = actualizados.length === recetaGlobal.medicamentos.length;
+
+  await updateDoc(doc(db, "recetas", recetaIdActual), {
+    surtidoParcial: actualizados,
+    estado: esTotal ? "surtida" : "parcial"
+  });
+
+  alert("Receta actualizada.");
+  location.reload();
 };

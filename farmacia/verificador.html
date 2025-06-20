@@ -3,131 +3,28 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <title>Verificador de receta</title>
+  <title>Verificador de Receta - KodRx</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="/estilos/global.css" />
+  <script src="/componentes/header.js" defer></script>
   <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
-  <script type="module" src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js"></script>
-  <script type="module" src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js"></script>
-  <script type="module" src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js"></script>
-  <style>
-    body { font-family: Arial, sans-serif; margin: 20px; }
-    .medicamento { margin-bottom: 10px; }
-    .surtido-info { font-size: 0.9em; color: #555; margin-left: 10px; }
-  </style>
 </head>
 <body>
-  <h1>Verificador de receta</h1>
-  <button onclick="iniciarEscaneo()">📷 Escanear receta con cámara</button><br><br>
-  <input type="text" id="inputID" placeholder="Ingresar ID de receta manualmente" />
-  <button onclick="verificarManual()">Verificar</button>
+  <main class="seccion">
+    <h2>🔍 Verificador de Receta</h2>
 
-  <div id="qr-reader" style="width: 300px; margin-top: 20px;"></div>
-  <div id="resultado" style="margin-top: 20px;"></div>
+    <div style="max-width: 400px; margin: auto;">
+      <button onclick="iniciarEscaneo()">📷 Escanear receta con cámara</button>
+      <p style="text-align:center;">o</p>
+      <input type="text" id="inputID" placeholder="Ingresar ID de receta manualmente" />
+      <button onclick="verificarManual()">Verificar</button>
+    </div>
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
-    import { getFirestore, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
-    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
+    <div id="qr-reader" style="width: 300px; margin: 20px auto;"></div>
+    <div id="resultado" style="margin-top: 20px;"></div>
+  </main>
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyBIjaOe4HcGNDk0xrqen8etBv0RyjyOJHw",
-      authDomain: "kodrx-105b9.firebaseapp.com",
-      projectId: "kodrx-105b9",
-      storageBucket: "kodrx-105b9.appspot.com",
-      messagingSenderId: "239675098141",
-      appId: "1:239675098141:web:152ae3741b0ac79db7f2f4"
-    };
-
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-    const auth = getAuth();
-
-    let datosFarmacia = null;
-    let recetaGlobal = null;
-    let recetaIdActual = null;
-
-    onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        const docRef = doc(db, "farmacias", user.uid);
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
-          datosFarmacia = docSnap.data();
-        }
-      }
-    });
-
-    window.verificarManual = () => {
-      const id = document.getElementById("inputID").value.trim();
-      if (id) verificarReceta(id);
-    };
-
-    window.iniciarEscaneo = () => {
-      const qrReader = new Html5Qrcode("qr-reader");
-      qrReader.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 },
-        (decodedText) => {
-          qrReader.stop();
-          const id = new URL(decodedText).searchParams.get("id");
-          if (id) verificarReceta(id);
-        },
-        () => {}
-      );
-    };
-
-    async function verificarReceta(id) {
-      const ref = doc(db, "recetas", id);
-      const snap = await getDoc(ref);
-      if (!snap.exists()) {
-        document.getElementById("resultado").innerText = "Receta no encontrada.";
-        return;
-      }
-
-      recetaIdActual = id;
-      recetaGlobal = snap.data();
-      const surtido = recetaGlobal.surtidoParcial || [];
-
-      let html = `<h3>Paciente: ${recetaGlobal.nombrePaciente}</h3>`;
-      html += `<p>Edad: ${recetaGlobal.edad}</p>`;
-      html += `<p>Observaciones: ${recetaGlobal.observaciones || 'Ninguna'}</p>`;
-      html += `<p>Médico: ${recetaGlobal.medicoNombre || 'Desconocido'}</p>`;
-      html += `<h4>Medicamentos:</h4>`;
-
-      recetaGlobal.medicamentos.forEach((med, idx) => {
-        const ya = surtido.find(s => s.nombre === med.nombre);
-        const disable = ya ? "checked disabled" : "";
-        const extra = ya ? `<span class="surtido-info">Surtido por: ${ya.surtidoPor}, Tel: ${ya.telefono}</span>` : "";
-        html += `<div class="medicamento"><label><input type="checkbox" data-index="${idx}" ${disable}> ${med.nombre} - ${med.dosis}, ${med.duracion}</label> ${extra}</div>`;
-      });
-
-      html += `<br><button onclick="surtirReceta()">Surtir</button>`;
-      document.getElementById("resultado").innerHTML = html;
-    }
-
-    window.surtirReceta = async () => {
-      if (!recetaGlobal || !recetaIdActual || !datosFarmacia) return alert("Faltan datos para surtir.");
-
-      const checks = document.querySelectorAll('input[type="checkbox"]:not(:disabled):checked');
-      const seleccionados = Array.from(checks).map(c => recetaGlobal.medicamentos[c.dataset.index]);
-
-      if (seleccionados.length === 0) return alert("Selecciona al menos un medicamento.");
-
-      const nuevos = seleccionados.map(m => ({
-        ...m,
-        surtidoPor: datosFarmacia.nombreFarmacia,
-        telefono: datosFarmacia.telefono,
-        fecha: new Date().toISOString()
-      }));
-
-      const previos = recetaGlobal.surtidoParcial || [];
-      const actualizados = [...previos, ...nuevos];
-      const esTotal = actualizados.length === recetaGlobal.medicamentos.length;
-
-      await updateDoc(doc(db, "recetas", recetaIdActual), {
-        surtidoParcial: actualizados,
-        estado: esTotal ? "total" : "parcial"
-      });
-
-      alert("Receta actualizada.");
-      location.reload();
-    };
-  </script>
+  <script type="module" src="/firebase-init.js"></script>
+  <script type="module" src="/farmacia/verificador.js"></script>
 </body>
 </html>
