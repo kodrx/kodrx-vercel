@@ -1,107 +1,79 @@
 
-import { db, auth } from '../firebase-init.js';
-import {
-  collection,
-  query,
-  where,
-  getDocs,
-  onSnapshot
-} from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
+import { auth, db } from "/firebase-init.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
+import { collection, getDocs, query, where } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
 
-let recetasAgrupadas = {};
+const contenedor = document.getElementById("contenedor");
+let recetasPorDia = {};
 
 onAuthStateChanged(auth, async (user) => {
-  if (!user) return;
+  if (!user) return location.href = "login.html";
+  const q = query(collection(db, "recetas"), where("estado", "!=", ""));
+  const snapshot = await getDocs(q);
 
-  const uid = user.uid;
-  const ref = collection(db, "recetas");
-  const q = query(ref, where("surtidoParcial", "array-contains-any", [{
-    surtidoPor: "", telefono: "", nombre: "", dosis: "", duracion: "", fecha: ""
-  }]));
+  recetasPorDia = {};
 
-  try {
-    const snap = await getDocs(ref);
-    const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }))
-      .filter(receta =>
-        receta.surtidoParcial?.some(s => s.surtidoPor && s.telefono) &&
-        receta.surtidoParcial.find(s => s.telefono && user.email.includes(s.telefono))
-      );
+  snapshot.forEach(doc => {
+    const data = doc.data();
+    const surtidos = data.surtidoParcial || [];
 
-    mostrarRecetas(data);
-  } catch (e) {
-    console.error("Error al cargar historial:", e);
-    document.getElementById("contenedor").innerHTML = "<p>Error al cargar historial</p>";
-  }
+    if (!surtidos.find(m => m.surtidoPor === user.email)) return;
+
+    const fecha = new Date(surtidos[0].fecha).toLocaleDateString();
+    if (!recetasPorDia[fecha]) recetasPorDia[fecha] = [];
+
+    recetasPorDia[fecha].push({ id: doc.id, data });
+  });
+
+  renderizarRecetas(recetasPorDia);
 });
 
-function mostrarRecetas(recetas) {
-  const contenedor = document.getElementById("contenedor");
-  recetasAgrupadas = {};
-
-  recetas.forEach(receta => {
-    const fecha = new Date(receta.timestamp?.seconds * 1000).toLocaleDateString("es-MX");
-    if (!recetasAgrupadas[fecha]) recetasAgrupadas[fecha] = [];
-    recetasAgrupadas[fecha].push(receta);
-  });
-
-  renderizarHistorial(recetasAgrupadas);
-}
-
-function renderizarHistorial(data) {
-  const contenedor = document.getElementById("contenedor");
+function renderizarRecetas(recetas) {
   contenedor.innerHTML = "";
+  const fechas = Object.keys(recetas).sort((a, b) => new Date(b) - new Date(a));
 
-  Object.keys(data).sort((a, b) => new Date(b) - new Date(a)).forEach(dia => {
-    const diaDiv = document.createElement("div");
-    diaDiv.classList.add("dia");
-    diaDiv.textContent = dia;
-    contenedor.appendChild(diaDiv);
+  if (fechas.length === 0) {
+    contenedor.innerHTML = "<p>No hay recetas surtidas aún.</p>";
+    return;
+  }
 
-    data[dia].forEach(receta => {
-      const recetaDiv = document.createElement("div");
-      recetaDiv.classList.add("receta");
+  fechas.forEach(fecha => {
+    const seccion = document.createElement("section");
+    seccion.className = "dia";
+    seccion.innerHTML = `<h3>${fecha}</h3>`;
 
-      const cabecera = document.createElement("div");
-      cabecera.classList.add("cabecera");
-      cabecera.textContent = `Paciente: ${receta.nombrePaciente}`;
-      cabecera.onclick = () => {
-        detalle.style.display = detalle.style.display === "none" ? "block" : "none";
-      };
+    recetas[fecha].forEach(({ id, data }) => {
+      const detalle = document.createElement("details");
+      detalle.className = "lab-card";
 
-      const detalle = document.createElement("div");
-      detalle.classList.add("detalle");
-      detalle.innerHTML = `
-        Edad: ${receta.edad} <br>
-        Observaciones: ${receta.observaciones || 'Ninguna'}<br>
-        Médico: ${receta.medicoNombre || 'Desconocido'}<br><br>
-        <strong>Medicamentos surtidos:</strong>
-        <ul>${receta.surtidoParcial?.map(med => `<li>${med.nombre}, ${med.dosis}, ${med.duracion}</li>`).join('')}</ul>
+      const resumen = document.createElement("summary");
+      resumen.textContent = `${data.nombrePaciente} - ${data.edad} años`;
+      detalle.appendChild(resumen);
+
+      const cuerpo = document.createElement("div");
+      cuerpo.innerHTML = `
+        <p><strong>Observaciones:</strong> ${data.observaciones || "Ninguna"}</p>
+        <p><strong>Médico:</strong> ${data.medicoNombre || "N/D"}</p>
+        <p><strong>Medicamentos:</strong></p>
+        <ul>
+          ${data.medicamentos.map(m => `<li>${m.nombre} - ${m.dosis} - ${m.duracion}</li>`).join("")}
+        </ul>
       `;
-
-      recetaDiv.appendChild(cabecera);
-      recetaDiv.appendChild(detalle);
-      contenedor.appendChild(recetaDiv);
+      detalle.appendChild(cuerpo);
+      seccion.appendChild(detalle);
     });
-  });
 
-  // Agregar link de regreso
-  const volver = document.createElement("p");
-  volver.style.textAlign = "center";
-  volver.innerHTML = '<a href="panel.html">← Volver al panel</a>';
-  contenedor.appendChild(volver);
+    contenedor.appendChild(seccion);
+  });
 }
 
-window.filtrarRecetas = (texto) => {
-  const filtro = texto.toLowerCase();
-  const filtradas = {};
-
-  Object.keys(recetasAgrupadas).forEach(dia => {
-    const recetasDelDia = recetasAgrupadas[dia].filter(r =>
-      r.nombrePaciente.toLowerCase().includes(filtro)
+window.filtrarRecetas = function(valor) {
+  const resultado = {};
+  Object.entries(recetasPorDia).forEach(([fecha, recetas]) => {
+    const filtradas = recetas.filter(r =>
+      r.data.nombrePaciente.toLowerCase().includes(valor.toLowerCase())
     );
-    if (recetasDelDia.length) filtradas[dia] = recetasDelDia;
+    if (filtradas.length > 0) resultado[fecha] = filtradas;
   });
-
-  renderizarHistorial(filtradas);
+  renderizarRecetas(resultado);
 };
