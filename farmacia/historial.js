@@ -1,92 +1,107 @@
 
-import { auth, db } from "../firebase-init.js";
-import {
-  onAuthStateChanged
-} from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
+import { db, auth } from '../firebase-init.js';
 import {
   collection,
-  getDocs,
   query,
-  orderBy,
-  doc,
-  getDoc
+  where,
+  getDocs,
+  onSnapshot
 } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
+import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
 
-// Organizar recetas por fecha
-function agruparPorFecha(recetas) {
-  const agrupadas = {};
-  recetas.forEach((rec) => {
-    const fecha = new Date(rec.fecha).toLocaleDateString();
-    if (!agrupadas[fecha]) agrupadas[fecha] = [];
-    agrupadas[fecha].push(rec);
-  });
-  return agrupadas;
-}
-
-function crearAcordeon(fecha, recetas) {
-  const seccion = document.createElement("div");
-  const titulo = document.createElement("h3");
-  titulo.textContent = fecha;
-  titulo.className = "dia";
-  seccion.appendChild(titulo);
-
-  recetas.forEach((receta, i) => {
-    const details = document.createElement("details");
-    details.className = "lab-card";
-
-    const resumen = document.createElement("summary");
-    resumen.textContent = `Paciente: ${receta.paciente}`;
-    details.appendChild(resumen);
-
-    const contenido = document.createElement("div");
-    contenido.innerHTML = receta.medicamentos.map(
-      (m) => `<p>💊 ${m.nombre} - ${m.dosis} - ${m.duracion}</p>`
-    ).join("");
-    details.appendChild(contenido);
-
-    seccion.appendChild(details);
-  });
-
-  return seccion;
-}
+let recetasAgrupadas = {};
 
 onAuthStateChanged(auth, async (user) => {
   if (!user) return;
 
+  const uid = user.uid;
+  const ref = collection(db, "recetas");
+  const q = query(ref, where("surtidoParcial", "array-contains-any", [{
+    surtidoPor: "", telefono: "", nombre: "", dosis: "", duracion: "", fecha: ""
+  }]));
+
+  try {
+    const snap = await getDocs(ref);
+    const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+      .filter(receta =>
+        receta.surtidoParcial?.some(s => s.surtidoPor && s.telefono) &&
+        receta.surtidoParcial.find(s => s.telefono && user.email.includes(s.telefono))
+      );
+
+    mostrarRecetas(data);
+  } catch (e) {
+    console.error("Error al cargar historial:", e);
+    document.getElementById("contenedor").innerHTML = "<p>Error al cargar historial</p>";
+  }
+});
+
+function mostrarRecetas(recetas) {
   const contenedor = document.getElementById("contenedor");
-  contenedor.innerHTML = "Cargando recetas surtidas...";
+  recetasAgrupadas = {};
 
-  const snapFarmacia = await getDoc(doc(db, "farmacias", user.uid));
-  const nombreFarmacia = snapFarmacia.exists() ? snapFarmacia.data().nombreFarmacia : null;
+  recetas.forEach(receta => {
+    const fecha = new Date(receta.timestamp?.seconds * 1000).toLocaleDateString("es-MX");
+    if (!recetasAgrupadas[fecha]) recetasAgrupadas[fecha] = [];
+    recetasAgrupadas[fecha].push(receta);
+  });
 
-  const recetasSnap = await getDocs(query(collection(db, "recetas"), orderBy("timestamp", "desc")));
+  renderizarHistorial(recetasAgrupadas);
+}
 
-  const surtidas = [];
+function renderizarHistorial(data) {
+  const contenedor = document.getElementById("contenedor");
+  contenedor.innerHTML = "";
 
-  recetasSnap.forEach((docSnap) => {
-    const data = docSnap.data();
-    const surtido = data.surtidoParcial || [];
+  Object.keys(data).sort((a, b) => new Date(b) - new Date(a)).forEach(dia => {
+    const diaDiv = document.createElement("div");
+    diaDiv.classList.add("dia");
+    diaDiv.textContent = dia;
+    contenedor.appendChild(diaDiv);
 
-    surtido.forEach((med) => {
-      if (med.surtidoPor === nombreFarmacia) {
-        surtidas.push({
-          paciente: data.nombrePaciente,
-          fecha: med.fecha || data.timestamp?.toDate(),
-          medicamentos: [med]
-        });
-      }
+    data[dia].forEach(receta => {
+      const recetaDiv = document.createElement("div");
+      recetaDiv.classList.add("receta");
+
+      const cabecera = document.createElement("div");
+      cabecera.classList.add("cabecera");
+      cabecera.textContent = `Paciente: ${receta.nombrePaciente}`;
+      cabecera.onclick = () => {
+        detalle.style.display = detalle.style.display === "none" ? "block" : "none";
+      };
+
+      const detalle = document.createElement("div");
+      detalle.classList.add("detalle");
+      detalle.innerHTML = `
+        Edad: ${receta.edad} <br>
+        Observaciones: ${receta.observaciones || 'Ninguna'}<br>
+        Médico: ${receta.medicoNombre || 'Desconocido'}<br><br>
+        <strong>Medicamentos surtidos:</strong>
+        <ul>${receta.surtidoParcial?.map(med => `<li>${med.nombre}, ${med.dosis}, ${med.duracion}</li>`).join('')}</ul>
+      `;
+
+      recetaDiv.appendChild(cabecera);
+      recetaDiv.appendChild(detalle);
+      contenedor.appendChild(recetaDiv);
     });
   });
 
-  if (surtidas.length === 0) {
-    contenedor.innerHTML = "<p>No se encontraron recetas surtidas por esta farmacia.</p>";
-    return;
-  }
+  // Agregar link de regreso
+  const volver = document.createElement("p");
+  volver.style.textAlign = "center";
+  volver.innerHTML = '<a href="panel.html">← Volver al panel</a>';
+  contenedor.appendChild(volver);
+}
 
-  const agrupadas = agruparPorFecha(surtidas);
-  contenedor.innerHTML = "";
+window.filtrarRecetas = (texto) => {
+  const filtro = texto.toLowerCase();
+  const filtradas = {};
 
-  Object.keys(agrupadas).forEach((fecha) => {
-    contenedor.appendChild(crearAcordeon(fecha, agrupadas[fecha]));
+  Object.keys(recetasAgrupadas).forEach(dia => {
+    const recetasDelDia = recetasAgrupadas[dia].filter(r =>
+      r.nombrePaciente.toLowerCase().includes(filtro)
+    );
+    if (recetasDelDia.length) filtradas[dia] = recetasDelDia;
   });
-});
+
+  renderizarHistorial(filtradas);
+};
