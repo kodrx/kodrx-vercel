@@ -55,7 +55,7 @@ async function verificarReceta(id) {
     const ya = surtido.find(s => s.nombre === med.nombre);
     const disable = ya ? "checked disabled" : "";
     const extra = ya ? `<span class="surtido-info">Surtido por: ${ya.surtidoPor}, Tel: ${ya.telefono}</span>` : "";
-    html += `<div class="medicamento"><label><input type="checkbox" data-index="\${idx}" \${disable}> \${med.nombre} - \${med.dosis}, \${med.duracion}</label> \${extra}</div>`;
+html += `<div class="medicamento"><label><input type="checkbox" data-index="${idx}" ${disable}> ${med.nombre} - ${med.dosis}, ${med.duracion}</label> ${extra}</div>`;
   });
 
   html += `<br><button onclick="surtirReceta()">Surtir</button>`;
