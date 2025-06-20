@@ -1,0 +1,71 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Panel Médico - KodRx</title>
+  <link rel="stylesheet" href="/estilos/global.css" />
+  <script src="/componentes/header.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
+</head>
+<body>
+  <main class="seccion">
+    <h2>Panel Médico</h2>
+
+    <div style="margin-bottom: 20px; display: flex; gap: 10px; flex-wrap: wrap;">
+      <button onclick="nuevaReceta()">🆕 Nueva receta</button>
+      <button onclick="verHistorial()">📜 Historial</button>
+      <button onclick="cerrarSesion()">🚪 Cerrar sesión</button>
+    </div>
+
+    <form id="generarRecetaForm" class="form-login">
+      <label>Nombre del paciente:</label>
+      <input type="text" id="nombre" required />
+
+      <label>Edad:</label>
+      <input type="number" id="edad" required />
+
+      <label>Observaciones:</label>
+      <textarea id="observaciones"></textarea>
+
+      <h3>Medicamentos</h3>
+      <div id="medicamentos"></div>
+      <button type="button" id="btnAgregar">+ Agregar medicamento</button>
+
+      <button type="submit">Generar receta</button>
+    </form>
+
+    <div class="card" style="margin-top: 30px;">
+      <h3>QR generado:</h3>
+      <div id="qr"></div>
+    </div>
+
+    <div class="card" style="margin-top: 30px; opacity: 0.6; pointer-events: none;">
+      <h3>🔒 Diagnóstico asistido con IA</h3>
+      <p>Muy pronto podrás ingresar síntomas y obtener sugerencias clínicas con apoyo de inteligencia artificial.</p>
+    </div>
+  </main>
+
+  <datalist id="listaMedicamentos"></datalist>
+
+  <script type="module" src="/medico/panel-medico-debug.js"></script>
+  <script>
+    function nuevaReceta() {
+      document.getElementById("generarRecetaForm").reset();
+      document.getElementById("medicamentos").innerHTML = "";
+      agregarMedicamento();
+      document.getElementById("qr").innerHTML = "";
+    }
+
+    function verHistorial() {
+      window.location.href = "/medico/historial.html";
+    }
+
+    function cerrarSesion() {
+      sessionStorage.clear();
+      localStorage.clear();
+      window.location.href = "/medico/login.html";
+    }
+  </script>
+</body>
+</html>
