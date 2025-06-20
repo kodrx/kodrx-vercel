@@ -1,26 +1,24 @@
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Historial de Recetas - Médico</title>
-  <style>
-    body { font-family: sans-serif; padding: 20px; max-width: 800px; margin: auto; }
-    h2 { color: #003366; }
-    input { padding: 10px; margin-bottom: 20px; width: 100%; }
-    .dia { font-weight: bold; margin-top: 20px; color: #007B83; }
-    .receta { background: #f5f5f5; margin: 10px 0; padding: 10px; border-radius: 8px; }
-    .cabecera { cursor: pointer; font-weight: bold; color: #444; }
-    .detalle { display: none; margin-top: 10px; }
-    ul { padding-left: 20px; }
-  </style>
+  <link rel="stylesheet" href="/estilos/global.css" />
+  <script src="/componentes/header.js" defer></script>
 </head>
 <body>
-  <h2>📋 Historial de Recetas Emitidas</h2>
-<input type="text" id="busqueda" placeholder="Buscar por nombre del paciente" oninput="filtrarRecetas(this.value)">
+  <main class="seccion">
+    <h2>📋 Historial de Recetas Emitidas</h2>
+    <input type="text" id="busqueda" placeholder="Buscar por nombre del paciente" oninput="filtrarRecetas(this.value)" style="padding: 10px; width: 100%; max-width: 500px; margin: 20px auto; display: block;" />
 
-<div id="recetasContainer"></div>
+    <div id="recetasContainer"></div>
 
-  <script type="module" src="../firebase-init.js"></script>
-  <script type="module" src="historial.js"></script>
+    <datalist id="listaMedicamentos"></datalist>
+  </main>
+
+  <script type="module" src="/firebase-init.js"></script>
+  <script type="module" src="/medico/historial.js"></script>
 </body>
 </html>
