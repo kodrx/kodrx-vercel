@@ -5,7 +5,6 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Mis Recetas Surtidas - KodRx</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="stylesheet" href="/estilos/global.css" />
   <script src="/componentes/header.js" defer></script>
 </head>
@@ -15,13 +14,14 @@
     <input type="text" id="busqueda" placeholder="Buscar por nombre del paciente" oninput="filtrarRecetas(this.value)" />
 
     <div id="contenedor">Cargando historial...</div>
+
+    <p style="margin-top: 30px; text-align: center;">
+      <a href="panel.html">← Volver al panel</a>
+    </p>
   </main>
 
   <script type="module" src="/firebase-init.js"></script>
   <script type="module" src="/farmacia/historial.js"></script>
-  <p style="margin-top: 30px; text-align: center;">
-  <a href="panel.html">← Volver al panel</a>
-  </p>
-
 </body>
 </html>
+
