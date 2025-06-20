@@ -1,89 +1,93 @@
-// historial.js
-import { db, auth } from '../firebase-init.js';
-import { collection, getDocs, query, where, doc, getDoc } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
+
+import { auth, db } from "/firebase-init.js";
+import {
+  collection,
+  getDocs,
+  query,
+  where,
+  orderBy
+} from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
 
-const contenedor = document.getElementById("contenedor");
+let historialGlobal = [];
 
-onAuthStateChanged(auth, async (user) => {
-  if (!user) {
-    contenedor.innerHTML = "<p>Debes iniciar sesión para ver el historial.</p>";
-    return;
-  }
-
-  const farmaciaRef = doc(db, "farmacias", user.uid);
-  const snap = await getDoc(farmaciaRef);
-  const nombreFarmacia = snap.exists() ? snap.data().nombreFarmacia : null;
-
-  if (!nombreFarmacia) {
-    contenedor.innerHTML = "<p>Error: No se pudo obtener el nombre de la farmacia.</p>";
-    return;
-  }
-
-  const recetasRef = collection(db, "recetas");
-  const q = query(recetasRef, where("surtidoParcial", "!=", null));
-  const snapshot = await getDocs(q);
-
-  if (snapshot.empty) {
-    contenedor.innerHTML = "<p>No se encontraron recetas surtidas.</p>";
-    return;
-  }
-
-  const agrupadas = {};
-
-  snapshot.forEach(docSnap => {
-    const receta = docSnap.data();
-    const surtidos = receta.surtidoParcial || [];
-    const recetaId = docSnap.id;
-
-    // Filtrar medicamentos surtidos por esta farmacia
-    const medsFarmacia = surtidos.filter(m => m.surtidoPor === nombreFarmacia);
-
-    if (medsFarmacia.length > 0) {
-      const fechaRaw = medsFarmacia[0].fecha || receta.fecha || new Date().toISOString();
-      const dia = fechaRaw.split("T")[0];
-      const hora = fechaRaw.split("T")[1]?.split(".")[0] || "--:--";
-
-      if (!agrupadas[dia]) agrupadas[dia] = [];
-      agrupadas[dia].push({
-        id: recetaId,
-        nombrePaciente: receta.nombrePaciente,
-        estado: receta.estado,
-        hora: hora,
-        medicamentos: medsFarmacia.map(m => `${m.nombre}, ${m.dosis}, ${m.duracion}`)
-      });
-    }
+function agruparPorDia(data) {
+  const agrupado = {};
+  data.forEach(item => {
+    const fecha = new Date(item.fecha).toLocaleDateString();
+    if (!agrupado[fecha]) agrupado[fecha] = [];
+    agrupado[fecha].push(item);
   });
+  return agrupado;
+}
 
-  let html = "";
-  const dias = Object.keys(agrupadas).sort().reverse();
+function renderizarHistorial(data) {
+  const contenedor = document.getElementById("contenedor");
+  contenedor.innerHTML = "";
 
-  dias.forEach(dia => {
-    html += `<div class="dia">${dia}</div>`;
-    agrupadas[dia].forEach((r, index) => {
-      const idDetalle = `detalle-${dia}-${index}`;
-      html += `
-        <div class="receta">
-          <div class="cabecera" onclick="toggleDetalle('${idDetalle}')">
-            👤 ${r.nombrePaciente} — 🕒 ${r.hora}
-          </div>
-          <div class="detalle" id="${idDetalle}">
-            <strong>ID de receta:</strong> ${r.id}<br>
+  const porDia = agruparPorDia(data);
+  Object.keys(porDia).forEach(dia => {
+    const bloque = document.createElement("details");
+    bloque.className = "lab-card";
+    bloque.innerHTML = `
+      <summary>${dia}</summary>
+      <div>
+        ${porDia[dia].map(receta => `
+          <div class="card" style="margin: 10px 0;">
+            <strong>Paciente:</strong> ${receta.nombrePaciente}<br>
+            <strong>Médico:</strong> ${receta.medicoNombre}<br>
+            <strong>Observaciones:</strong> ${receta.observaciones || "Sin observaciones"}<br>
             <strong>Medicamentos surtidos:</strong>
             <ul>
-              ${r.medicamentos.map(m => `<li>${m}</li>`).join("")}
+              ${receta.medicamentos.map(m => `
+                <li>${m.nombre} - ${m.dosis} - ${m.duracion}</li>
+              `).join("")}
             </ul>
-            <strong>Estado:</strong> ${r.estado}
           </div>
-        </div>
-      `;
-    });
+        `).join("")}
+      </div>
+    `;
+    contenedor.appendChild(bloque);
   });
+}
 
-  contenedor.innerHTML = html;
-});
-
-window.toggleDetalle = (id) => {
-  const elem = document.getElementById(id);
-  elem.style.display = (elem.style.display === "block") ? "none" : "block";
+window.filtrarHistorial = (texto) => {
+  const filtro = texto.toLowerCase();
+  const filtrado = historialGlobal.filter(item =>
+    item.nombrePaciente.toLowerCase().includes(filtro)
+  );
+  renderizarHistorial(filtrado);
 };
+
+onAuthStateChanged(auth, async (user) => {
+  if (!user) return window.location.href = "/farmacia/login.html";
+
+  try {
+    const recetasRef = collection(db, "recetas");
+    const q = query(recetasRef, where("estado", "!=", null), orderBy("estado"));
+    const snapshot = await getDocs(q);
+
+    const resultado = [];
+    snapshot.forEach(doc => {
+      const data = doc.data();
+      const surtidos = data.surtidoParcial || [];
+      surtidos.forEach(med => {
+        if (med.surtidoPor === user.displayName || med.telefono === user.phoneNumber || med.surtidoPor?.includes(user.email)) {
+          resultado.push({
+            nombrePaciente: data.nombrePaciente,
+            medicoNombre: data.medicoNombre,
+            observaciones: data.observaciones,
+            medicamentos: [med],
+            fecha: med.fecha
+          });
+        }
+      });
+    });
+
+    historialGlobal = resultado;
+    renderizarHistorial(historialGlobal);
+  } catch (error) {
+    document.getElementById("contenedor").innerHTML = "<p>Error al cargar historial.</p>";
+    console.error(error);
+  }
+});
