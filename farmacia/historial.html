@@ -12,12 +12,16 @@
 <body>
   <main class="seccion">
     <h2>📦 Recetas Surtidas</h2>
-    <input type="text" id="busqueda" placeholder="Buscar por nombre del paciente" oninput="filtrarHistorial(this.value)" style="padding: 10px; width: 100%; max-width: 500px; margin: 20px auto; display: block;" />
+    <input type="text" id="busqueda" placeholder="Buscar por nombre del paciente" oninput="filtrarRecetas(this.value)" />
 
     <div id="contenedor">Cargando historial...</div>
   </main>
 
   <script type="module" src="/firebase-init.js"></script>
   <script type="module" src="/farmacia/historial.js"></script>
+  <p style="margin-top: 30px; text-align: center;">
+  <a href="panel.html">← Volver al panel</a>
+  </p>
+
 </body>
 </html>
