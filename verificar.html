@@ -2,20 +2,21 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Verificar Receta - KodRx</title>
-  <style>
-    body { font-family: sans-serif; padding: 20px; max-width: 600px; margin: auto; }
-    h2 { color: #003366; }
-    .campo { margin-bottom: 15px; }
-    .campo h4 { margin: 5px 0 2px; }
-    .medicamento { margin-left: 20px; }
-  </style>
+  <link rel="stylesheet" href="/estilos/global.css" />
+  <script src="/componentes/header.js" defer></script>
 </head>
 <body>
-  <h2>Receta Médica</h2>
-  <div id="contenido">Cargando receta...</div>
+  <main class="seccion">
+    <h2>📄 Receta Médica</h2>
+    <div id="contenido">Cargando receta...</div>
+    <p style="margin-top: 30px; text-align: center;">
+      <a href="/index.html">← Volver al inicio</a>
+    </p>
+  </main>
 
-  <script type="module" src="firebase-init.js"></script>
-  <script type="module" src="verificar.js"></script>
+  <script type="module" src="/firebase-init.js"></script>
+  <script type="module" src="/public/verificar.js"></script>
 </body>
 </html>
