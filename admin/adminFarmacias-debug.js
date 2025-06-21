@@ -13,8 +13,18 @@ onAuthStateChanged(auth, (user) => {
   if (!user || user.email !== "admin@kodrx.app") {
     window.location.href = "/admin/login.html";
   } else {
-    cargarFarmacias();
-    document.getElementById("buscador").addEventListener("input", filtrarFarmacias);
+ const iniciar = () => {
+  console.log("[DOM] DOM listo. Iniciando cargarFarmacias()");
+  cargarFarmacias();
+  document.getElementById("buscador").addEventListener("input", filtrarFarmacias);
+};
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", iniciar);
+} else {
+  iniciar();
+}
+
   }
 });
 
