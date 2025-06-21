@@ -1,9 +1,10 @@
-
 import { auth, db } from "/firebase-init.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
 import {
   collection,
-  getDocs
+  getDocs,
+  updateDoc,
+  doc
 } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
 
 console.log("[INICIO] adminMedicos-debug.js cargado");
@@ -18,7 +19,7 @@ onAuthStateChanged(auth, (user) => {
   }
 });
 
-let listaGlobal = [];
+let medicosGlobal = [];
 
 async function cargarMedicos() {
   const contenedor = document.getElementById("listaMedicos");
@@ -31,19 +32,25 @@ async function cargarMedicos() {
       return;
     }
 
-    listaGlobal = querySnapshot.docs.map(doc => doc.data());
-    renderizarLista(listaGlobal);
+    medicosGlobal = querySnapshot.docs.map(docSnap => ({
+      id: docSnap.id,
+      ...docSnap.data()
+    }));
 
+    renderizarMedicos(medicosGlobal);
   } catch (error) {
     contenedor.innerHTML = `<p>Error al cargar médicos: ${error.message}</p>`;
   }
 }
 
-function renderizarLista(medicos) {
+function renderizarMedicos(lista) {
   const contenedor = document.getElementById("listaMedicos");
   contenedor.innerHTML = "";
 
-  medicos.forEach((med) => {
+  const verificados = lista.filter(m => m.verificado);
+  const pendientes = lista.filter(m => !m.verificado);
+
+  const crearCard = (med, incluirBoton = false) => {
     const card = document.createElement("details");
     card.className = "lab-card";
 
@@ -59,16 +66,41 @@ function renderizarLista(medicos) {
       <p><strong>Fecha de registro:</strong> ${med.fechaRegistro?.toDate().toLocaleString() || "N/D"}</p>
     `;
 
+    if (incluirBoton) {
+      const btn = document.createElement("button");
+      btn.innerText = "Verificar médico";
+      btn.onclick = async () => {
+        await updateDoc(doc(db, "medicos", med.id), {
+          verificado: true
+        });
+        alert("Médico verificado correctamente.");
+        cargarMedicos();
+      };
+      contenido.appendChild(btn);
+    }
+
     card.appendChild(contenido);
-    contenedor.appendChild(card);
-  });
+    return card;
+  };
+
+  const bloqueVerificados = document.createElement("div");
+  bloqueVerificados.innerHTML = `<h3>✅ Médicos verificados</h3>`;
+  verificados.forEach(med => bloqueVerificados.appendChild(crearCard(med)));
+
+  const bloquePendientes = document.createElement("div");
+  bloquePendientes.innerHTML = `<h3>⏳ En espera de verificación</h3>`;
+  pendientes.forEach(med => bloquePendientes.appendChild(crearCard(med, true)));
+
+  contenedor.appendChild(bloquePendientes);
+  contenedor.appendChild(bloqueVerificados);
 }
 
 function filtrarMedicos(e) {
   const texto = e.target.value.toLowerCase();
-  const filtrados = listaGlobal.filter(m =>
+  const filtrados = medicosGlobal.filter(m =>
     m.nombre.toLowerCase().includes(texto) ||
     (m.especialidad || "").toLowerCase().includes(texto)
   );
-  renderizarLista(filtrados);
+  renderizarMedicos(filtrados);
 }
+
