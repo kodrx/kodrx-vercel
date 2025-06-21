@@ -29,27 +29,41 @@ onAuthStateChanged(auth, (user) => {
   }
 });
 
-
 async function cargarFarmacias() {
-  const contenedor = document.getElementById("listaFarmacias");
-  contenedor.innerHTML = "Cargando farmacias...";
+  const contVerificadas = document.getElementById("farmaciasVerificadas");
+  const contPendientes = document.getElementById("farmaciasPendientes");
+
+  if (!contVerificadas || !contPendientes) {
+    console.error("[ERROR] Contenedores no encontrados en el DOM");
+    return;
+  }
+
+  contVerificadas.innerHTML = "Cargando farmacias verificadas...";
+  contPendientes.innerHTML = "Cargando farmacias pendientes...";
 
   try {
     const querySnapshot = await getDocs(collection(db, "farmacias"));
     if (querySnapshot.empty) {
-      contenedor.innerHTML = "<p>No hay farmacias registradas.</p>";
+      contVerificadas.innerHTML = "<p>No hay farmacias registradas.</p>";
+      contPendientes.innerHTML = "";
       return;
     }
 
     listaGlobal = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    renderizarLista(listaGlobal);
+
+    const verificadas = listaGlobal.filter(f => f.verificado);
+    const pendientes = listaGlobal.filter(f => !f.verificado);
+
+    renderizarLista(verificadas, contVerificadas);
+    renderizarLista(pendientes, contPendientes);
+
   } catch (error) {
-    contenedor.innerHTML = `<p>Error al cargar farmacias: ${error.message}</p>`;
+    contVerificadas.innerHTML = `<p>Error al cargar farmacias: ${error.message}</p>`;
+    contPendientes.innerHTML = "";
   }
 }
 
-function renderizarLista(farmacias) {
-  const contenedor = document.getElementById("listaFarmacias");
+function renderizarLista(farmacias, contenedor) {
   contenedor.innerHTML = "";
 
   farmacias.forEach(f => {
@@ -82,7 +96,7 @@ function renderizarLista(farmacias) {
       btn.onclick = async () => {
         await updateDoc(doc(db, "farmacias", f.id), { verificado: true });
         alert("Farmacia verificada");
-        cargarFarmacias(); // Recarga
+        cargarFarmacias();
       };
       contenido.appendChild(btn);
     }
@@ -94,9 +108,15 @@ function renderizarLista(farmacias) {
 
 function filtrarFarmacias(e) {
   const texto = e.target.value.toLowerCase();
-  const filtradas = listaGlobal.filter(f =>
-    (f.nombreFarmacia || "").toLowerCase().includes(texto) ||
-    (f.colonia || "").toLowerCase().includes(texto)
-  );
-  renderizarLista(filtradas);
+  const verificadas = listaGlobal.filter(f => f.verificado &&
+    ((f.nombreFarmacia || "").toLowerCase().includes(texto) ||
+     (f.colonia || "").toLowerCase().includes(texto)));
+
+  const pendientes = listaGlobal.filter(f => !f.verificado &&
+    ((f.nombreFarmacia || "").toLowerCase().includes(texto) ||
+     (f.colonia || "").toLowerCase().includes(texto)));
+
+  renderizarLista(verificadas, document.getElementById("farmaciasVerificadas"));
+  renderizarLista(pendientes, document.getElementById("farmaciasPendientes"));
 }
+
