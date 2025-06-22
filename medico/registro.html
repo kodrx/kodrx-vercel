@@ -2,35 +2,31 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <title>Registro Médico</title>
-  <style>
-    body { font-family: sans-serif; background-color: #f4f4f4; padding: 30px; }
-    form { max-width: 400px; margin: auto; background: white; padding: 20px; border-radius: 8px; }
-    input, select {
-      width: 100%; margin: 8px 0; padding: 10px; font-size: 14px;
-    }
-    button {
-      background-color: #00c9a7; color: white; padding: 10px; border: none; width: 100%;
-      border-radius: 5px;
-    }
-  </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Registro de Médico - KodRx</title>
+  <link rel="stylesheet" href="/estilos/global.css" />
+  <script src="/componentes/header.js" defer></script>
 </head>
 <body>
-  <form>
-    <h3>Registro de Médico</h3>
-    <input type="text" id="nombre" placeholder="Nombre completo" required>
-    <input type="text" id="especialidad" placeholder="Especialidad (opcional)">
-    <input type="email" id="correo" placeholder="Correo electrónico" required>
-    <input type="tel" id="telefono" placeholder="Teléfono celular" required>
-    <input type="text" id="cedula" placeholder="Cédula profesional" required>
-    <input type="text" id="colonia" placeholder="Colonia de residencia" required>
-    <input type="text" id="estado" placeholder="Estado de residencia" required>
-    <input type="password" id="password" placeholder="Contraseña" required>
-    <button id="btnRegistro">Enviar registro</button>
-  </form>
-
-  <script type="module" src="firebase-init.js"></script>
-  <script type="module" src="registro.js"></script>
+  <main class="seccion">
+    <h2>Registro de Médico</h2>
+    <form id="registroForm">
+      <label>Nombre completo</label>
+      <input type="text" id="nombre" required />
+      <label>Correo electrónico</label>
+      <input type="email" id="correo" required />
+      <label>Contraseña</label>
+      <input type="password" id="password" required />
+      <label>Especialidad</label>
+      <input type="text" id="especialidad" required />
+      <label>Cédula profesional</label>
+      <input type="text" id="cedula" required />
+      <button type="submit">Registrar</button>
+    </form>
+    <p class="volver"><a href="/medico/login.html">← Volver al inicio de sesión</a></p>
+  </main>
+  <script type="module" src="/firebase-init.js"></script>
+  <script type="module" src="/medico/registro.js"></script>
 </body>
 </html>
