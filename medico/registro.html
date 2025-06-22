@@ -7,6 +7,80 @@
   <title>Registro de Médico - KodRx</title>
   <link rel="stylesheet" href="/estilos/global.css" />
   <script src="/componentes/header.js" defer></script>
+  <style>
+  body {
+    font-family: sans-serif;
+    background-color: #f4f4f4;
+    margin: 0;
+    padding: 0;
+  }
+
+  main.seccion {
+    max-width: 500px;
+    margin: auto;
+    padding: 30px 20px;
+    background-color: #fff;
+    box-shadow: 0 0 10px rgba(0,0,0,0.05);
+    border-radius: 8px;
+    margin-top: 40px;
+  }
+
+  form {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  label {
+    font-weight: bold;
+    margin-top: 8px;
+  }
+
+  input {
+    padding: 10px;
+    font-size: 14px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+  }
+
+  button {
+    background-color: #00c9a7;
+    color: white;
+    padding: 12px;
+    border: none;
+    border-radius: 6px;
+    font-weight: bold;
+    font-size: 15px;
+    margin-top: 12px;
+    cursor: pointer;
+  }
+
+  button:hover {
+    background-color: #00b59c;
+  }
+
+  .volver {
+    margin-top: 20px;
+    text-align: center;
+  }
+
+  .volver a {
+    color: #4b0082;
+    font-weight: bold;
+    text-decoration: none;
+  }
+
+  .volver a:hover {
+    text-decoration: underline;
+  }
+
+  @media (max-width: 600px) {
+    main.seccion {
+      padding: 20px 10px;
+    }
+  }
+</style>
+
 </head>
 <body>
   <main class="seccion">
