@@ -1,36 +1,49 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <title>Registro Farmacia</title>
-  <style>
-    body { font-family: sans-serif; background-color: #f4f4f4; padding: 30px; }
-    form { max-width: 400px; margin: auto; background: white; padding: 20px; border-radius: 8px; }
-    input {
-      width: 100%; margin: 8px 0; padding: 10px; font-size: 14px;
-    }
-    button {
-      background-color: #00c9a7; color: white; padding: 10px; border: none; width: 100%;
-      border-radius: 5px;
-    }
-  </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Registro de Farmacia - KodRx</title>
+  <link rel="stylesheet" href="/estilos/global.css" />
+  <script src="/componentes/header.js" defer></script>
 </head>
 <body>
-  <form id="registroFarmaciaForm">
-    <h3>Registro de Farmacia</h3>
-    <input type="text" placeholder="Nombre de la farmacia" required>
-    <input type="text" placeholder="Médico responsable" required>
-    <input type="email" placeholder="Correo electrónico" required>
-    <input type="tel" placeholder="Teléfono" required>
-    <input type="text" placeholder="Colonia" required>
-    <input type="text" placeholder="Municipio" required>
-    <input type="text" placeholder="Estado" required>
-    <input type="password" placeholder="Contraseña" required>
-    <button>Enviar registro</button>
-  </form>
+  <main class="seccion">
+    <h2>Registro de Farmacia</h2>
+    <form id="registroFarmaciaForm">
+      <label>Nombre de la farmacia</label>
+      <input type="text" id="nombre" required />
 
-  <script type="module" src="../firebase-init.js"></script>
-  <script type="module" src="registroFarmacia.js"></script>
+      <label>Teléfono</label>
+      <input type="tel" id="telefono" required />
+
+      <label>Médico responsable</label>
+      <input type="text" id="medico" required />
+
+      <label>Correo electrónico</label>
+      <input type="email" id="correo" required />
+
+      <label>Contraseña</label>
+      <input type="password" id="password" required />
+
+      <label>Colonia</label>
+      <input type="text" id="colonia" required />
+
+      <label>Municipio</label>
+      <input type="text" id="municipio" required />
+
+      <label>Estado</label>
+      <input type="text" id="estado" required />
+
+     
+
+      <button type="submit">Registrar</button>
+    </form>
+
+    <p class="volver"><a href="/farmacia/login.html">← Volver al inicio de sesión</a></p>
+  </main>
+
+  <script type="module" src="/firebase-init.js"></script>
+  <script type="module" src="/farmacia/registroFarmacia.js"></script>
 </body>
 </html>
-
