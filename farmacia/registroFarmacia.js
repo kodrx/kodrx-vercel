@@ -3,22 +3,33 @@ import { createUserWithEmailAndPassword } from "https://www.gstatic.com/firebase
 import { doc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
 
 document.addEventListener('DOMContentLoaded', () => {
-  const form = document.querySelector('#registroFarmaciaForm');
+  const form = document.getElementById('registroFarmaciaForm');
+  if (!form) {
+    console.error("Formulario no encontrado.");
+    return;
+  }
+
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
 
-    const nombreFarmacia = form.querySelector('input[placeholder="Nombre de la farmacia"]').value;
-    const medicoResponsable = form.querySelector('input[placeholder="Médico responsable"]').value;
-    const correo = form.querySelector('input[placeholder="Correo electrónico"]').value;
-    const telefono = form.querySelector('input[placeholder="Teléfono"]').value;
-    const colonia = form.querySelector('input[placeholder="Colonia"]').value;
-    const municipio = form.querySelector('input[placeholder="Municipio"]').value;
-    const estado = form.querySelector('input[placeholder="Estado"]').value;
-    const password = form.querySelector('input[placeholder="Contraseña"]').value;
+    const nombreFarmacia = document.getElementById("nombre").value.trim();
+    const telefono = document.getElementById("telefono").value.trim();
+    const medicoResponsable = document.getElementById("medico").value.trim();
+    const correo = document.getElementById("correo").value.trim();
+    const password = document.getElementById("password").value;
+    const colonia = document.getElementById("colonia").value.trim();
+    const municipio = document.getElementById("municipio").value.trim();
+    const estado = document.getElementById("estado").value.trim();
+   
+
+    if (!nombreFarmacia || !medicoResponsable || !correo || !telefono || !colonia || !municipio || !estado || !password) {
+      alert("Por favor completa todos los campos.");
+      return;
+    }
 
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, correo, password);
-      const uid = userCredential.user.uid;
+      const credenciales = await createUserWithEmailAndPassword(auth, correo, password);
+      const uid = credenciales.user.uid;
 
       await setDoc(doc(db, "farmacias", uid), {
         nombreFarmacia,
@@ -32,9 +43,11 @@ document.addEventListener('DOMContentLoaded', () => {
         fechaRegistro: serverTimestamp()
       });
 
-      window.location.href = "espera_verificacion.html";
+      alert("Registro enviado correctamente.");
+      window.location.href = "/farmacia/espera_verificacion.html";
     } catch (error) {
-      alert("Error al registrar: " + error.message);
+      console.error("Error al registrar:", error);
+      alert("Ocurrió un error al registrar la farmacia.");
     }
   });
 });
