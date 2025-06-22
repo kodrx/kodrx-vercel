@@ -1,28 +1,33 @@
-
 import { auth, db } from './firebase-init.js';
 import { createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
 import { doc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
 
 document.addEventListener("DOMContentLoaded", () => {
   const btn = document.getElementById("btnRegistro");
+
   if (!btn) {
-    console.error("No se encontró el botón #btnRegistro");
+    console.error("No se encontró el botón con ID 'btnRegistro'");
     return;
   }
 
   btn.addEventListener("click", async (e) => {
     e.preventDefault();
 
-    const nombre = document.getElementById("nombre").value.trim();
-    const especialidad = document.getElementById("especialidad").value.trim();
-    const correo = document.getElementById("correo").value.trim();
-    const telefono = document.getElementById("telefono").value.trim();
-    const cedula = document.getElementById("cedula").value.trim();
-    const colonia = document.getElementById("colonia").value.trim();
-    const estado = document.getElementById("estado").value.trim();
-    const password = document.getElementById("password").value;
+    const campos = ["nombre", "especialidad", "correo", "telefono", "cedula", "colonia", "estado", "password"];
+    const datos = {};
 
-    if (!nombre || !correo || !telefono || !cedula || !colonia || !estado || !password) {
+    for (const campo of campos) {
+      const input = document.getElementById(campo);
+      if (!input) {
+        alert(`Falta el campo '${campo}' en el formulario`);
+        return;
+      }
+      datos[campo] = input.value.trim();
+    }
+
+    const { nombre, especialidad, correo, telefono, cedula, colonia, estado, password } = datos;
+
+    if (Object.values(datos).some(v => !v)) {
       alert("Por favor completa todos los campos.");
       return;
     }
@@ -46,8 +51,9 @@ document.addEventListener("DOMContentLoaded", () => {
       alert("Registro enviado correctamente.");
       window.location.href = "/medico/espera_verificacion.html";
     } catch (error) {
-      console.error("Error al registrar:", error);
-      alert("Ocurrió un error al registrar el médico.");
+      console.error("Error al registrar médico:", error.code, error.message);
+      alert("Ocurrió un error al registrar el médico. Revisa los datos o intenta más tarde.");
     }
   });
 });
+
