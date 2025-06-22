@@ -1,3 +1,4 @@
+
 // verificar.js
 import { db } from './firebase-init.js';
 import { doc, getDoc } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
@@ -35,10 +36,12 @@ async function cargarReceta() {
       );
 
       if (match) {
+        const fechaLocal = new Date(match.fecha).toLocaleString('es-MX');
         surtidoInfo = `
           <div style="margin-left: 15px;">
             ✅ Surtido por: ${match.surtidoPor}<br>
-            📞 Tel: ${match.telefono}
+            📞 Tel: ${match.telefono}<br>
+            🕒 Fecha de surtido: ${fechaLocal}
           </div>`;
       }
 
