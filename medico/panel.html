@@ -16,11 +16,11 @@
     <div style="margin-bottom: 20px; display: flex; gap: 10px; flex-wrap: wrap;">
       <button onclick="nuevaReceta()"> Nueva receta</button>
       <button onclick="verHistorial()"> Historial</button>
-      <button onclick="cerrarSesion()"> Cerrar sesión</button>
-      <a href="https://kodrx-blockchain.onrender.com/panel/verificar-receta.html" target="_blank" class="boton-secundario">
-  🔎 Verificar receta en blockchain
-</a>
-
+    
+      <button onclick="window.open('https://kodrx-blockchain.onrender.com/panel/verificar-receta.html', '_blank')">
+   Verificar receta en blockchain
+</button>
+<button onclick="cerrarSesion()"> Cerrar sesión</button>
     </div>
 
     <form id="generarRecetaForm" class="form-login">
