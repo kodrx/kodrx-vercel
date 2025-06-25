@@ -33,58 +33,53 @@ onAuthStateChanged(auth, async (user) => {
       const medicoNombre = medicoSnap.exists() ? medicoSnap.data().nombre : "Desconocido";
 
       try {
-        const docRef = await addDoc(collection(db, "recetas"), {
-          uid: user.uid,
-          medicoNombre,
-          nombrePaciente: nombre,
-          edad,
-          observaciones,
-          medicamentos,
-          timestamp: serverTimestamp()
-        });
+  const medicamentos = obtenerMedicamentos();
 
-        const recetaId = docRef.id;
-        generarQR(recetaId);
+  const docRef = await addDoc(collection(db, "recetas"), {
+    uid: user.uid,
+    medicoNombre,
+    nombrePaciente: nombre,
+    edad,
+    observaciones,
+    medicamentos,
+    timestamp: serverTimestamp()
+  });
 
-        // 🔗 Encadenamiento en blockchain
-        try {
-          const blockchainResp = await fetch("https://kodrx-blockchain.onrender.com/bloques", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "Authorization": "Bearer kodrx-secret-2025"
-            },
-            body: JSON.stringify({
-              receta: medicamentos.map(m => `${m.nombre} ${m.dosis} por ${m.duracion}`).join(', '),
-              medico: medicoNombre,
-              cedula: "00000000"
-            })
-          });
+  const recetaId = docRef.id;
 
-          const blockchainData = await blockchainResp.json();
-
-          if (blockchainResp.ok) {
-            const idBlockchain = blockchainData.bloque.index;
-            console.log("✅ Receta registrada en blockchain. ID:", idBlockchain);
-
-            // Mostrar ID en pantalla
-            const qrDiv = document.getElementById("qr");
-            const info = document.createElement("p");
-            info.textContent = `ID Blockchain: ${idBlockchain}`;
-            qrDiv.appendChild(info);
-          } else {
-            console.warn("⚠️ No se pudo registrar en blockchain:", blockchainData.error);
-          }
-        } catch (error) {
-          console.error("❌ Error al conectar con blockchain:", error.message);
-        }
-
-      } catch (error) {
-        console.error("Error al guardar la receta:", error);
-      }
+  // 🔗 Encadenamiento en blockchain
+  try {
+    const blockchainResp = await fetch("https://kodrx-blockchain.onrender.com/bloques", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer kodrx-secret-2025"
+      },
+      body: JSON.stringify({
+        receta: medicamentos.map(m => `${m.nombre} ${m.dosis} por ${m.duracion}`).join(', '),
+        medico: medicoNombre,
+        cedula: cedula
+      })
     });
+
+    const blockchainData = await blockchainResp.json();
+
+    if (blockchainResp.ok) {
+      const idBlockchain = blockchainData.bloque.index;
+      console.log("✅ Receta registrada en blockchain. ID:", idBlockchain);
+    } else {
+      console.warn("⚠️ No se pudo registrar en blockchain:", blockchainData.error);
+    }
+  } catch (error) {
+    console.error("❌ Error al conectar con blockchain:", error.message);
   }
-});
+
+  // ✅ Ahora sí, redirigimos después de todo
+  window.location.href = `/panel/ver-receta.html?id=${recetaId}`;
+
+} catch (error) {
+  console.error("Error al guardar la receta:", error);
+}
 
 // Generador de QR
 function generarQR(id) {
