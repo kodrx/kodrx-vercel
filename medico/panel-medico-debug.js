@@ -17,6 +17,8 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
+const medicamentos = obtenerMedicamentos();
+
 
 // Autenticación
 onAuthStateChanged(auth, async (user) => {
@@ -34,6 +36,8 @@ onAuthStateChanged(auth, async (user) => {
       const medicoNombre = medicoSnap.exists() ? medicoSnap.data().nombre : "Desconocido";
 
     try {
+  const medicamentos = obtenerMedicamentos(); // AQUI, arriba
+
   const docRef = await addDoc(collection(db, "recetas"), {
     uid: user.uid,
     medicoNombre,
@@ -68,12 +72,11 @@ onAuthStateChanged(auth, async (user) => {
       const idBlockchain = blockchainData.bloque.index;
       console.log("✅ Receta registrada en blockchain. ID:", idBlockchain);
 
-      // Puedes mostrarlo visualmente si gustas
+      // Mostrar ID en pantalla
       const qrDiv = document.getElementById("qr");
       const info = document.createElement("p");
       info.textContent = `ID Blockchain: ${idBlockchain}`;
       qrDiv.appendChild(info);
-
     } else {
       console.warn("⚠️ No se pudo registrar en blockchain:", blockchainData.error);
     }
