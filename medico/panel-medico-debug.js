@@ -33,25 +33,58 @@ onAuthStateChanged(auth, async (user) => {
       const medicoSnap = await getDoc(medicoRef);
       const medicoNombre = medicoSnap.exists() ? medicoSnap.data().nombre : "Desconocido";
 
-      try {
-        const docRef = await addDoc(collection(db, "recetas"), {
-          uid: user.uid,
-          medicoNombre,
-          nombrePaciente: nombre,
-          edad,
-          observaciones,
-          medicamentos,
-          timestamp: serverTimestamp()
-        });
+    try {
+  const docRef = await addDoc(collection(db, "recetas"), {
+    uid: user.uid,
+    medicoNombre,
+    nombrePaciente: nombre,
+    edad,
+    observaciones,
+    medicamentos,
+    timestamp: serverTimestamp()
+  });
 
-        const recetaId = docRef.id;
-        generarQR(recetaId);
-      } catch (error) {
-        console.error("Error al guardar la receta:", error);
-      }
+  const recetaId = docRef.id;
+  generarQR(recetaId);
+
+  // 🔗 Encadenamiento en blockchain
+  try {
+    const blockchainResp = await fetch("https://kodrx-blockchain.onrender.com/bloques", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer kodrx-secret-2025"
+      },
+      body: JSON.stringify({
+        receta: medicamentos.map(m => `${m.nombre} ${m.dosis} por ${m.duracion}`).join(', '),
+        medico: medicoNombre,
+        cedula: "00000000"
+      })
     });
+
+    const blockchainData = await blockchainResp.json();
+
+    if (blockchainResp.ok) {
+      const idBlockchain = blockchainData.bloque.index;
+      console.log("✅ Receta registrada en blockchain. ID:", idBlockchain);
+
+      // Puedes mostrarlo visualmente si gustas
+      const qrDiv = document.getElementById("qr");
+      const info = document.createElement("p");
+      info.textContent = `ID Blockchain: ${idBlockchain}`;
+      qrDiv.appendChild(info);
+
+    } else {
+      console.warn("⚠️ No se pudo registrar en blockchain:", blockchainData.error);
+    }
+  } catch (error) {
+    console.error("❌ Error al conectar con blockchain:", error.message);
   }
-});
+
+} catch (error) {
+  console.error("Error al guardar la receta:", error);
+}
+
 
 // Generador de QR
 function generarQR(id) {
