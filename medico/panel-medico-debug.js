@@ -17,10 +17,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
-const medicamentos = obtenerMedicamentos();
 
-
-// Autenticación
 onAuthStateChanged(auth, async (user) => {
   if (user) {
     document.getElementById("generarRecetaForm").addEventListener("submit", async (e) => {
@@ -35,59 +32,59 @@ onAuthStateChanged(auth, async (user) => {
       const medicoSnap = await getDoc(medicoRef);
       const medicoNombre = medicoSnap.exists() ? medicoSnap.data().nombre : "Desconocido";
 
-    try {
-  const medicamentos = obtenerMedicamentos(); // AQUI, arriba
+      try {
+        const docRef = await addDoc(collection(db, "recetas"), {
+          uid: user.uid,
+          medicoNombre,
+          nombrePaciente: nombre,
+          edad,
+          observaciones,
+          medicamentos,
+          timestamp: serverTimestamp()
+        });
 
-  const docRef = await addDoc(collection(db, "recetas"), {
-    uid: user.uid,
-    medicoNombre,
-    nombrePaciente: nombre,
-    edad,
-    observaciones,
-    medicamentos,
-    timestamp: serverTimestamp()
-  });
+        const recetaId = docRef.id;
+        generarQR(recetaId);
 
-  const recetaId = docRef.id;
-  generarQR(recetaId);
+        // 🔗 Encadenamiento en blockchain
+        try {
+          const blockchainResp = await fetch("https://kodrx-blockchain.onrender.com/bloques", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": "Bearer kodrx-secret-2025"
+            },
+            body: JSON.stringify({
+              receta: medicamentos.map(m => `${m.nombre} ${m.dosis} por ${m.duracion}`).join(', '),
+              medico: medicoNombre,
+              cedula: "00000000"
+            })
+          });
 
-  // 🔗 Encadenamiento en blockchain
-  try {
-    const blockchainResp = await fetch("https://kodrx-blockchain.onrender.com/bloques", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": "Bearer kodrx-secret-2025"
-      },
-      body: JSON.stringify({
-        receta: medicamentos.map(m => `${m.nombre} ${m.dosis} por ${m.duracion}`).join(', '),
-        medico: medicoNombre,
-        cedula: "00000000"
-      })
+          const blockchainData = await blockchainResp.json();
+
+          if (blockchainResp.ok) {
+            const idBlockchain = blockchainData.bloque.index;
+            console.log("✅ Receta registrada en blockchain. ID:", idBlockchain);
+
+            // Mostrar ID en pantalla
+            const qrDiv = document.getElementById("qr");
+            const info = document.createElement("p");
+            info.textContent = `ID Blockchain: ${idBlockchain}`;
+            qrDiv.appendChild(info);
+          } else {
+            console.warn("⚠️ No se pudo registrar en blockchain:", blockchainData.error);
+          }
+        } catch (error) {
+          console.error("❌ Error al conectar con blockchain:", error.message);
+        }
+
+      } catch (error) {
+        console.error("Error al guardar la receta:", error);
+      }
     });
-
-    const blockchainData = await blockchainResp.json();
-
-    if (blockchainResp.ok) {
-      const idBlockchain = blockchainData.bloque.index;
-      console.log("✅ Receta registrada en blockchain. ID:", idBlockchain);
-
-      // Mostrar ID en pantalla
-      const qrDiv = document.getElementById("qr");
-      const info = document.createElement("p");
-      info.textContent = `ID Blockchain: ${idBlockchain}`;
-      qrDiv.appendChild(info);
-    } else {
-      console.warn("⚠️ No se pudo registrar en blockchain:", blockchainData.error);
-    }
-  } catch (error) {
-    console.error("❌ Error al conectar con blockchain:", error.message);
   }
-
-} catch (error) {
-  console.error("Error al guardar la receta:", error);
-}
-
+});
 
 // Generador de QR
 function generarQR(id) {
@@ -125,7 +122,7 @@ window.agregarMedicamento = function () {
     <input class="duracion" placeholder="Duración" />
   `;
   document.getElementById("medicamentos").appendChild(div);
-  cargarMedicamentos(); // Reactiva autocompletado
+  cargarMedicamentos();
 };
 
 // Cargar medicamentos en datalist
@@ -149,3 +146,4 @@ async function cargarMedicamentos() {
 document.getElementById("btnAgregar").addEventListener("click", agregarMedicamento);
 agregarMedicamento();
 cargarMedicamentos();
+
