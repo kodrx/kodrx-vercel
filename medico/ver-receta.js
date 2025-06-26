@@ -31,6 +31,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     const receta = docSnap.data();
+    const receta = docSnap.data();
+    console.log("✅ Receta encontrada:", receta); 
+
     const fecha = receta.timestamp?.toDate().toLocaleString() || "Sin fecha";
 
     // 🔗 Buscar el último bloque (opcional, podrías usar también solo el ID blockchain si se guarda)
@@ -53,7 +56,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       <p><strong>🧬 Hash:</strong> <code>${hash}</code></p>
     `;
 
-   
+   console.log("🔗 Generando QR para ID blockchain:", index);
     if (index !== "N/A") {
   new QRious({
     element: document.getElementById("qr"),
