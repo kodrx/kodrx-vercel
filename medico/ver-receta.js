@@ -61,8 +61,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     size: 200
   });
 
-}
-  } catch (err) {
+ catch (err) {
     contenido.innerHTML = "<p>⚠️ Error al cargar receta.</p>";
     console.error(err);
   }
