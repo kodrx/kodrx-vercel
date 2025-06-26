@@ -30,7 +30,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       return;
     }
 
-    const receta = docSnap.data();
+
     const receta = docSnap.data();
     console.log("✅ Receta encontrada:", receta); 
 
