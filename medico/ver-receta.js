@@ -44,41 +44,24 @@ const bloque = cadena.find(b => b.data?.receta?.includes(receta.medicamentos?.[0
 const hash = bloque?.hash || "N/A";
 const index = bloque?.index || "N/A";
 
-contenido.innerHTML = `
-  <p><strong>📅 Fecha:</strong> ${fecha}</p>
-  <p><strong>👨‍⚕️ Médico:</strong> ${abreviarNombre(receta.medicoNombre)}</p>
-  <p><strong>🧪 Medicamentos:</strong></p>
-  <ul>
-    ${receta.medicamentos.map(m => `<li>${m.nombre} ${m.dosis} por ${m.duracion}</li>`).join("")}
-  </ul>
-  <p><strong>🔗 ID Blockchain:</strong> ${index}</p>
-  <p><strong>🧬 Hash:</strong> <code>${hash}</code></p>
-`;
+// Mostrar datos
+document.getElementById("fecha").textContent = fecha;
+document.getElementById("medico").textContent = abreviarNombre(receta.medicoNombre);
+document.getElementById("index").textContent = index;
+document.getElementById("hash").textContent = hash;
+document.getElementById("listaMedicamentos").innerHTML =
+  receta.medicamentos.map(m => `<li>${m.nombre} ${m.dosis} por ${m.duracion}</li>`).join("");
 
-console.log("🔗 Generando QR para ID blockchain:", index);
-if (index !== "N/A") {
+// QR blockchain
+const canvas1 = document.createElement("canvas");
+document.getElementById("qrBlockchain").appendChild(canvas1);
+QRCode.toCanvas(canvas1, `https://kodrx-blockchain.onrender.com/verificar.html?id=${index}`, { width: 200 });
 
-  const titulo1 = document.createElement("p");
-titulo1.textContent = "🧱 Verificación Blockchain";
-document.getElementById("qr").appendChild(titulo1);
-  // 🧾 QR Blockchain (valida integridad)
-const canvasBlockchain = document.createElement("canvas");
-document.getElementById("qr").appendChild(canvasBlockchain);
-QRCode.toCanvas(canvasBlockchain, `https://kodrx-blockchain.onrender.com/verificar.html?id=${index}`, { width: 200 }, function (error) {
-  if (error) console.error(error);
-  console.log("📦 QR Blockchain generado");
-});
-const titulo2 = document.createElement("p");
-titulo2.textContent = "💊 Validación y surtido";
-document.getElementById("qr").appendChild(titulo2);
-// 💊 QR Firebase (para que farmacias surtan)
-const canvasFirebase = document.createElement("canvas");
-canvasFirebase.style.marginTop = "20px";
-document.getElementById("qr").appendChild(canvasFirebase);
-QRCode.toCanvas(canvasFirebase, `https://www.kodrx.app/verificar.html?id=${recetaId}`, { width: 200 }, function (error) {
-  if (error) console.error(error);
-  console.log("💊 QR Firebase generado");
-});
+// QR firebase
+const canvas2 = document.createElement("canvas");
+document.getElementById("qrFirebase").appendChild(canvas2);
+QRCode.toCanvas(canvas2, `https://www.kodrx.app/verificar.html?id=${recetaId}`, { width: 200 });
+
 
 
 }
