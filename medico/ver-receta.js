@@ -24,7 +24,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const receta = docSnap.data();
     document.getElementById("fecha").textContent = receta.timestamp?.toDate().toLocaleString() || "Sin fecha";
     document.getElementById("medico").textContent = receta.medicoNombre || "-";
-    document.getElementById("cedula").textContent = receta.cedula || "-";
+    document.getElementById("cedula").textContent =receta.cedula || receta.cedulaProfesional || receta.cedula_medico || "-";
     document.getElementById("especialidad").textContent = receta.especialidad || "-";
 
     const cadenaResp = await fetch("https://kodrx-blockchain.onrender.com/blockchain");
