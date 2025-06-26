@@ -74,8 +74,7 @@ const auth = getAuth(app);
         }
 
         console.log("➡️ Redirigiendo a ver-receta...");
-        window.location.href = `/medico/ver-receta.html?id=${recetaId}`;
-
+        window.location.href = `/ver-receta.html?id=${recetaId}`;
 
       } catch (error) {
         console.error("❌ Error al guardar la receta:", error);
