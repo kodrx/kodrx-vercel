@@ -20,58 +20,50 @@ document.addEventListener("DOMContentLoaded", async () => {
     return;
   }
 
-  try {
-    // 🔍 Obtener receta desde Firestore
-    const docRef = doc(db, "recetas", recetaId);
-    const docSnap = await getDoc(docRef);
+try {
+  // 🔍 Obtener receta desde Firestore
+  const docRef = doc(db, "recetas", recetaId);
+  const docSnap = await getDoc(docRef);
 
-    if (!docSnap.exists()) {
-      contenido.innerHTML = "<p>❌ Receta no encontrada.</p>";
-      return;
-    }
+  if (!docSnap.exists()) {
+    document.getElementById("fecha").textContent = "❌ Receta no encontrada";
+    return;
+  }
 
+  const receta = docSnap.data();
+  const fecha = receta.timestamp?.toDate().toLocaleString() || "Sin fecha";
 
- const receta = docSnap.data();
-console.log("✅ Receta encontrada:", receta);
+  // 🔗 Buscar bloque en blockchain
+  const resp = await fetch("https://kodrx-blockchain.onrender.com/blockchain");
+  const cadena = await resp.json();
+  const bloque = cadena.find(b => b.data?.receta?.includes(receta.medicamentos?.[0]?.nombre));
 
-const fecha = receta.timestamp?.toDate().toLocaleString() || "Sin fecha";
+  const hash = bloque?.hash || "N/A";
+  const index = bloque?.index || "N/A";
 
-// 🔗 Buscar bloque
-const resp = await fetch("https://kodrx-blockchain.onrender.com/blockchain");
-const cadena = await resp.json();
-const bloque = cadena.find(b => b.data?.receta?.includes(receta.medicamentos?.[0]?.nombre));
+  // Mostrar datos
+  document.getElementById("fecha").textContent = fecha;
+  document.getElementById("medico").textContent = abreviarNombre(receta.medicoNombre);
+  document.getElementById("index").textContent = index;
+  document.getElementById("hash").textContent = hash;
+  document.getElementById("listaMedicamentos").innerHTML =
+    receta.medicamentos.map(m => `<li>${m.nombre} ${m.dosis} por ${m.duracion}</li>`).join("");
 
-const hash = bloque?.hash || "N/A";
-const index = bloque?.index || "N/A";
+  // QR Blockchain
+  const canvas1 = document.createElement("canvas");
+  document.getElementById("qrBlockchain").appendChild(canvas1);
+  QRCode.toCanvas(canvas1, `https://kodrx-blockchain.onrender.com/verificar.html?id=${index}`, { width: 200 });
 
-// Mostrar datos
-document.getElementById("fecha").textContent = fecha;
-document.getElementById("medico").textContent = abreviarNombre(receta.medicoNombre);
-document.getElementById("index").textContent = index;
-document.getElementById("hash").textContent = hash;
-document.getElementById("listaMedicamentos").innerHTML =
-  receta.medicamentos.map(m => `<li>${m.nombre} ${m.dosis} por ${m.duracion}</li>`).join("");
+  // QR Firebase
+  const canvas2 = document.createElement("canvas");
+  document.getElementById("qrFirebase").appendChild(canvas2);
+  QRCode.toCanvas(canvas2, `https://www.kodrx.app/verificar.html?id=${recetaId}`, { width: 200 });
 
-// QR blockchain
-const canvas1 = document.createElement("canvas");
-document.getElementById("qrBlockchain").appendChild(canvas1);
-QRCode.toCanvas(canvas1, `https://kodrx-blockchain.onrender.com/verificar.html?id=${index}`, { width: 200 });
-
-// QR firebase
-const canvas2 = document.createElement("canvas");
-document.getElementById("qrFirebase").appendChild(canvas2);
-QRCode.toCanvas(canvas2, `https://www.kodrx.app/verificar.html?id=${recetaId}`, { width: 200 });
-
-
-
+} catch (error) {
+  console.error("❌ Error al cargar receta:", error);
+  document.getElementById("fecha").textContent = "⚠️ Error al conectar con base de datos";
 }
 
-
-    } catch (err) {
-    contenido.innerHTML = "<p>⚠️ Error al cargar receta.</p>";
-    console.error(err);
-  }
-}); // ← 🔒 Cierre correcto de DOMContentLoaded
 
 // ✂️ Función para acortar nombre del médico
 function abreviarNombre(nombreCompleto) {
