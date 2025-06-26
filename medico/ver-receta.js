@@ -65,10 +65,11 @@ if (index !== "N/A") {
 }
 
 
-  } catch (err) {  // ← esta línea ya está bien ahora
+    } catch (err) {
     contenido.innerHTML = "<p>⚠️ Error al cargar receta.</p>";
     console.error(err);
   }
+}); // ← 🔒 Cierre correcto de DOMContentLoaded
 
 // ✂️ Función para acortar nombre del médico
 function abreviarNombre(nombreCompleto) {
