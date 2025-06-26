@@ -29,7 +29,7 @@ onAuthStateChanged(auth, async (user) => {
       const observaciones = document.getElementById("observaciones").value;
       const medicamentos = obtenerMedicamentos();
 
-      // 🔍 Obtener datos del médico
+      // ✅ Obtener snapshot del médico desde Firebase
       const medicoRef = doc(db, "medicos", user.uid);
       const medicoSnap = await getDoc(medicoRef);
 
@@ -59,7 +59,6 @@ onAuthStateChanged(auth, async (user) => {
 
         const recetaId = docRef.id;
 
-        // 🔗 Encadenamiento en blockchain
         try {
           const blockchainResp = await fetch("https://kodrx-blockchain.onrender.com/bloques", {
             method: "POST",
@@ -81,11 +80,12 @@ onAuthStateChanged(auth, async (user) => {
           } else {
             console.warn("⚠️ Blockchain falló:", blockchainData.error);
           }
+
         } catch (error) {
           console.error("❌ Error de conexión con blockchain:", error.message);
         }
 
-        // ✅ Redirigir a ver-receta
+        console.log("➡️ Redirigiendo a ver-receta...");
         window.location.href = `/medico/ver-receta.html?id=${recetaId}`;
 
       } catch (error) {
@@ -94,7 +94,6 @@ onAuthStateChanged(auth, async (user) => {
     });
   }
 });
-
 
 
 
