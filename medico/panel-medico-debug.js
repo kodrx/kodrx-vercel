@@ -85,6 +85,7 @@ const auth = getAuth(app);
 
 
 
+
 // Generador de QR
 function generarQR(id) {
   const url = `https://www.kodrx.app/verificar.html?id=${id}`;
