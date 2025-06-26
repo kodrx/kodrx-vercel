@@ -18,8 +18,7 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
 
-onAuthStateChanged(auth, async (user) => {
-  if (user) {
+
    onAuthStateChanged(auth, async (user) => {
   if (user) {
     document.getElementById("generarRecetaForm").addEventListener("submit", async (e) => {
