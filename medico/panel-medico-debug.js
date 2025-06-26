@@ -20,67 +20,70 @@ const auth = getAuth(app);
 
 onAuthStateChanged(auth, async (user) => {
   if (user) {
-   document.getElementById("generarRecetaForm").addEventListener("submit", async (e) => {
-  e.preventDefault();
+   onAuthStateChanged(auth, async (user) => {
+  if (user) {
+    document.getElementById("generarRecetaForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
 
-  const nombre = document.getElementById("nombre").value;
-  const edad = document.getElementById("edad").value;
-  const observaciones = document.getElementById("observaciones").value;
-  const medicamentos = obtenerMedicamentos();
-  const cedula = "00000000"; // ← Asegúrate de definirla aquí
+      const nombre = document.getElementById("nombre").value;
+      const edad = document.getElementById("edad").value;
+      const observaciones = document.getElementById("observaciones").value;
+      const medicamentos = obtenerMedicamentos();
+      const cedula = "00000000";
 
-  const medicoRef = doc(db, "medicos", user.uid);
-  const medicoSnap = await getDoc(medicoRef);
-  const medicoNombre = medicoSnap.exists() ? medicoSnap.data().nombre : "Desconocido";
+      const medicoRef = doc(db, "medicos", user.uid);
+      const medicoSnap = await getDoc(medicoRef);
+      const medicoNombre = medicoSnap.exists() ? medicoSnap.data().nombre : "Desconocido";
 
-  try {
-    const docRef = await addDoc(collection(db, "recetas"), {
-      uid: user.uid,
-      medicoNombre,
-      nombrePaciente: nombre,
-      edad,
-      observaciones,
-      medicamentos,
-      timestamp: serverTimestamp()
-    });
+      try {
+        const docRef = await addDoc(collection(db, "recetas"), {
+          uid: user.uid,
+          medicoNombre,
+          nombrePaciente: nombre,
+          edad,
+          observaciones,
+          medicamentos,
+          timestamp: serverTimestamp()
+        });
 
-    const recetaId = docRef.id;
+        const recetaId = docRef.id;
 
-    // 🔗 Intentar encadenar en blockchain
-    try {
-      const blockchainResp = await fetch("https://kodrx-blockchain.onrender.com/bloques", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": "Bearer kodrx-secret-2025"
-        },
-        body: JSON.stringify({
-          receta: medicamentos.map(m => `${m.nombre} ${m.dosis} por ${m.duracion}`).join(', '),
-          medico: medicoNombre,
-          cedula: cedula
-        })
-      });
+        try {
+          const blockchainResp = await fetch("https://kodrx-blockchain.onrender.com/bloques", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": "Bearer kodrx-secret-2025"
+            },
+            body: JSON.stringify({
+              receta: medicamentos.map(m => `${m.nombre} ${m.dosis} por ${m.duracion}`).join(', '),
+              medico: medicoNombre,
+              cedula: cedula
+            })
+          });
 
-      const blockchainData = await blockchainResp.json();
+          const blockchainData = await blockchainResp.json();
 
-      if (blockchainResp.ok) {
-        console.log("✅ Receta registrada en blockchain. ID:", blockchainData.bloque.index);
-      } else {
-        console.warn("⚠️ Blockchain falló:", blockchainData.error);
+          if (blockchainResp.ok) {
+            console.log("✅ Receta registrada en blockchain. ID:", blockchainData.bloque.index);
+          } else {
+            console.warn("⚠️ Blockchain falló:", blockchainData.error);
+          }
+
+        } catch (error) {
+          console.error("❌ Error de conexión con blockchain:", error.message);
+        }
+
+        console.log("➡️ Redirigiendo a ver-receta...");
+        window.location.href = `/panel/ver-receta.html?id=${recetaId}`;
+
+      } catch (error) {
+        console.error("❌ Error al guardar la receta:", error);
       }
-
-    } catch (error) {
-      console.error("❌ Error de conexión con blockchain:", error.message);
-    }
-
-    // ✅ Redirigir pase lo que pase
-    console.log("➡️ Redirigiendo a ver-receta...");
-    window.location.href = `/panel/ver-receta.html?id=${recetaId}`;
-
-  } catch (error) {
-    console.error("❌ Error al guardar la receta:", error);
+    });
   }
 });
+
 
 
 // Generador de QR
