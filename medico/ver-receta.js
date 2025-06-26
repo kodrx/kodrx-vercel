@@ -31,39 +31,39 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
 
-    const receta = docSnap.data();
-    console.log("✅ Receta encontrada:", receta); 
+ const receta = docSnap.data();
+console.log("✅ Receta encontrada:", receta);
 
-    const fecha = receta.timestamp?.toDate().toLocaleString() || "Sin fecha";
+const fecha = receta.timestamp?.toDate().toLocaleString() || "Sin fecha";
 
-    // 🔗 Buscar el último bloque (opcional, podrías usar también solo el ID blockchain si se guarda)
-    const resp = await fetch("https://kodrx-blockchain.onrender.com/blockchain");
-    const cadena = await resp.json();
-    const bloque = cadena.find(b => b.data?.receta?.includes(receta.medicamentos?.[0]?.nombre));
+// 🔗 Buscar bloque
+const resp = await fetch("https://kodrx-blockchain.onrender.com/blockchain");
+const cadena = await resp.json();
+const bloque = cadena.find(b => b.data?.receta?.includes(receta.medicamentos?.[0]?.nombre));
 
-    const hash = bloque?.hash || "N/A";
-    const index = bloque?.index || "N/A";
+const hash = bloque?.hash || "N/A";
+const index = bloque?.index || "N/A";
 
-    
-      contenido.innerHTML = `
-      <p><strong>📅 Fecha:</strong> ${fecha}</p>
-      <p><strong>👨‍⚕️ Médico:</strong> ${abreviarNombre(receta.medicoNombre)}</p>
-      <p><strong>🧪 Medicamentos:</strong></p>
-      <ul>
-        ${receta.medicamentos.map(m => `<li>${m.nombre} ${m.dosis} por ${m.duracion}</li>`).join("")}
-      </ul>
-      <p><strong>🔗 ID Blockchain:</strong> ${index}</p>
-      <p><strong>🧬 Hash:</strong> <code>${hash}</code></p>
-    `;
+contenido.innerHTML = `
+  <p><strong>📅 Fecha:</strong> ${fecha}</p>
+  <p><strong>👨‍⚕️ Médico:</strong> ${abreviarNombre(receta.medicoNombre)}</p>
+  <p><strong>🧪 Medicamentos:</strong></p>
+  <ul>
+    ${receta.medicamentos.map(m => `<li>${m.nombre} ${m.dosis} por ${m.duracion}</li>`).join("")}
+  </ul>
+  <p><strong>🔗 ID Blockchain:</strong> ${index}</p>
+  <p><strong>🧬 Hash:</strong> <code>${hash}</code></p>
+`;
 
-    console.log("🔗 Generando QR para ID blockchain:", index);
-    if (index !== "N/A") {
-      new QRious({
-        element: document.getElementById("qr"),
-        value: `https://kodrx-blockchain.onrender.com/verificar.html?id=${index}`,
-        size: 200
-      });
-    }
+console.log("🔗 Generando QR para ID blockchain:", index);
+if (index !== "N/A") {
+  new QRious({
+    element: document.getElementById("qr"),
+    value: `https://kodrx-blockchain.onrender.com/verificar.html?id=${index}`,
+    size: 200
+  });
+}
+
 
   } catch (err) {  // ← esta línea ya está bien ahora
     contenido.innerHTML = "<p>⚠️ Error al cargar receta.</p>";
