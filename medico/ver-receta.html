@@ -1,11 +1,15 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
+  <header class="no-print">
+  <script src="/componentes/header.js" defer></script>
+
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Receta KodRx</title>
   <link rel="stylesheet" href="/estilos/global.css" />
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+
   <style>
     body {
       font-family: sans-serif;
@@ -78,6 +82,8 @@
   </style>
 </head>
 <body>
+  <a href="/medico/panel.html" class="volver no-print">← Volver al panel</a>
+
   <div class="receta-container" id="captura">
     <div class="cabecera">
       <p><strong> Médico:</strong> <span id="medico"></span></p>
