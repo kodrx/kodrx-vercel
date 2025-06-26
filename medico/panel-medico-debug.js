@@ -30,14 +30,24 @@ const auth = getAuth(app);
       const medicamentos = obtenerMedicamentos();
       const cedula = "00000000";
 
-      const medicoRef = doc(db, "medicos", user.uid);
-      const medicoSnap = await getDoc(medicoRef);
-      const medicoNombre = medicoSnap.exists() ? medicoSnap.data().nombre : "Desconocido";
+     let medicoNombre = "Desconocido";
+let medicoCedula = "-";
+let medicoEspecialidad = "-";
+
+if (medicoSnap.exists()) {
+  const data = medicoSnap.data();
+  medicoNombre = data.nombre || "Desconocido";
+  medicoCedula = data.cedula || "-";
+  medicoEspecialidad = data.especialidad || "-";
+}
+
 
       try {
         const docRef = await addDoc(collection(db, "recetas"), {
           uid: user.uid,
           medicoNombre,
+          medicoCedula,
+          medicoEspecialidad,
           nombrePaciente: nombre,
           edad,
           observaciones,
