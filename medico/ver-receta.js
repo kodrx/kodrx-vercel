@@ -57,11 +57,14 @@ contenido.innerHTML = `
 
 console.log("🔗 Generando QR para ID blockchain:", index);
 if (index !== "N/A") {
-  new QRious({
-    element: document.getElementById("qr"),
-    value: `https://kodrx-blockchain.onrender.com/verificar.html?id=${index}`,
-    size: 200
-  });
+  const canvas = document.createElement("canvas");
+document.getElementById("qr").appendChild(canvas);
+
+QRCode.toCanvas(canvas, `https://kodrx-blockchain.onrender.com/verificar.html?id=${index}`, { width: 200 }, function (error) {
+  if (error) console.error(error);
+  console.log("🎉 QR generado exitosamente");
+});
+
 }
 
 
