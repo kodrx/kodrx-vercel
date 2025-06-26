@@ -1,4 +1,4 @@
-
+o
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getFirestore, collection, addDoc, serverTimestamp, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
@@ -74,7 +74,7 @@ const auth = getAuth(app);
         }
 
         console.log("➡️ Redirigiendo a ver-receta...");
-        window.location.href = `/ver-receta.html?id=${recetaId}`;
+        window.location.href = `/medico/ver-receta.html?id=${recetaId}`;
 
       } catch (error) {
         console.error("❌ Error al guardar la receta:", error);
