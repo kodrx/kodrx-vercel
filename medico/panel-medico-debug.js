@@ -19,7 +19,7 @@ const db = getFirestore(app);
 const auth = getAuth(app);
 
 
-   onAuthStateChanged(auth, async (user) => {
+onAuthStateChanged(auth, async (user) => {
   if (user) {
     document.getElementById("generarRecetaForm").addEventListener("submit", async (e) => {
       e.preventDefault();
@@ -28,19 +28,21 @@ const auth = getAuth(app);
       const edad = document.getElementById("edad").value;
       const observaciones = document.getElementById("observaciones").value;
       const medicamentos = obtenerMedicamentos();
-      const cedula = "00000000";
 
-     let medicoNombre = "Desconocido";
-let medicoCedula = "-";
-let medicoEspecialidad = "-";
+      // 🔍 Obtener datos del médico
+      const medicoRef = doc(db, "medicos", user.uid);
+      const medicoSnap = await getDoc(medicoRef);
 
-if (medicoSnap.exists()) {
-  const data = medicoSnap.data();
-  medicoNombre = data.nombre || "Desconocido";
-  medicoCedula = data.cedula || "-";
-  medicoEspecialidad = data.especialidad || "-";
-}
+      let medicoNombre = "Desconocido";
+      let medicoCedula = "-";
+      let medicoEspecialidad = "-";
 
+      if (medicoSnap.exists()) {
+        const data = medicoSnap.data();
+        medicoNombre = data.nombre || "Desconocido";
+        medicoCedula = data.cedula || "-";
+        medicoEspecialidad = data.especialidad || "-";
+      }
 
       try {
         const docRef = await addDoc(collection(db, "recetas"), {
@@ -57,6 +59,7 @@ if (medicoSnap.exists()) {
 
         const recetaId = docRef.id;
 
+        // 🔗 Encadenamiento en blockchain
         try {
           const blockchainResp = await fetch("https://kodrx-blockchain.onrender.com/bloques", {
             method: "POST",
@@ -67,7 +70,7 @@ if (medicoSnap.exists()) {
             body: JSON.stringify({
               receta: medicamentos.map(m => `${m.nombre} ${m.dosis} por ${m.duracion}`).join(', '),
               medico: medicoNombre,
-              cedula: cedula
+              cedula: medicoCedula
             })
           });
 
@@ -78,12 +81,11 @@ if (medicoSnap.exists()) {
           } else {
             console.warn("⚠️ Blockchain falló:", blockchainData.error);
           }
-
         } catch (error) {
           console.error("❌ Error de conexión con blockchain:", error.message);
         }
 
-        console.log("➡️ Redirigiendo a ver-receta...");
+        // ✅ Redirigir a ver-receta
         window.location.href = `/medico/ver-receta.html?id=${recetaId}`;
 
       } catch (error) {
