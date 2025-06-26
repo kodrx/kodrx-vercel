@@ -3,25 +3,23 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Receta KodRx Verificada</title>
+  <title>Ver receta KodRx</title>
   <link rel="stylesheet" href="/estilos/global.css" />
 </head>
 <body>
-  <main class="card">
-    <h1>🧾 Receta KodRx Verificada</h1>
-    
-<div id="contenido"></div>
-<div id="qr" style="margin-top: 20px;"></div>
-
-      <p>Cargando datos...</p>
+  <main>
+    <div class="card">
+      <h1>🧾 Receta KodRx Verificada</h1>
+      <div id="contenido">Cargando datos...</div>
+      <div id="qr" style="margin-top: 20px;"></div>
     </div>
-
-    <div id="qr" class="mt-4"></div>
-
-    <a href="https://www.kodrx.app" class="volver">← Volver a KodRx</a>
+    <a href="/medico/panel.html" class="volver">← Volver a KodRx</a>
   </main>
 
-  <script src="https://cdn.jsdelivr.net/npm/qrious/dist/qrious.min.js"></script>
+  <!-- 📦 Librería QRious -->
+  <script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js"></script>
+
+  <!-- 🧠 Script principal -->
   <script type="module" src="ver-receta.js"></script>
 </body>
 </html>
