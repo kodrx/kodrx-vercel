@@ -44,18 +44,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const hash = bloque?.hash || "N/A";
     const index = bloque?.index || "N/A";
 
-    // 🧠 Mostrar datos
-    contenido.innerHTML = `
-      <p><strong>📅 Fecha:</strong> ${fecha}</p>
-      <p><strong>👨‍⚕️ Médico:</strong> ${abreviarNombre(receta.medicoNombre)}</p>
-      <p><strong>🧪 Medicamentos:</strong></p>
-      <ul>
-        ${receta.medicamentos.map(m => `<li>${m.nombre} ${m.dosis} por ${m.duracion}</li>`).join("")}
-      </ul>
-      <p><strong>🔗 ID Blockchain:</strong> ${index}</p>
-      <p><strong>🧬 Hash:</strong> <code>${hash}</code></p>
-    `;
-
+    
       contenido.innerHTML = `
       <p><strong>📅 Fecha:</strong> ${fecha}</p>
       <p><strong>👨‍⚕️ Médico:</strong> ${abreviarNombre(receta.medicoNombre)}</p>
