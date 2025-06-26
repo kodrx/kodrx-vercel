@@ -56,19 +56,30 @@ document.addEventListener("DOMContentLoaded", async () => {
       <p><strong>🧬 Hash:</strong> <code>${hash}</code></p>
     `;
 
-   console.log("🔗 Generando QR para ID blockchain:", index);
-    if (index !== "N/A") {
-  new QRious({
-    element: document.getElementById("qr"),
-    value: `https://kodrx-blockchain.onrender.com/verificar.html?id=${index}`,
-    size: 200
-  });
+      contenido.innerHTML = `
+      <p><strong>📅 Fecha:</strong> ${fecha}</p>
+      <p><strong>👨‍⚕️ Médico:</strong> ${abreviarNombre(receta.medicoNombre)}</p>
+      <p><strong>🧪 Medicamentos:</strong></p>
+      <ul>
+        ${receta.medicamentos.map(m => `<li>${m.nombre} ${m.dosis} por ${m.duracion}</li>`).join("")}
+      </ul>
+      <p><strong>🔗 ID Blockchain:</strong> ${index}</p>
+      <p><strong>🧬 Hash:</strong> <code>${hash}</code></p>
+    `;
 
- catch (err) {
+    console.log("🔗 Generando QR para ID blockchain:", index);
+    if (index !== "N/A") {
+      new QRious({
+        element: document.getElementById("qr"),
+        value: `https://kodrx-blockchain.onrender.com/verificar.html?id=${index}`,
+        size: 200
+      });
+    }
+
+  } catch (err) {  // ← esta línea ya está bien ahora
     contenido.innerHTML = "<p>⚠️ Error al cargar receta.</p>";
     console.error(err);
   }
-});
 
 // ✂️ Función para acortar nombre del médico
 function abreviarNombre(nombreCompleto) {
