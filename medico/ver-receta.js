@@ -53,12 +53,14 @@ document.addEventListener("DOMContentLoaded", async () => {
       <p><strong>🧬 Hash:</strong> <code>${hash}</code></p>
     `;
 
-    // 🎯 Generar QR para validación pública
-    const qr = new QRious({
-      element: document.getElementById("qr"),
-      value: `https://kodrx-blockchain.onrender.com/verificar.html?id=${index}`,
-      size: 200
-    });
+   
+    if (index !== "N/A") {
+  new QRious({
+    element: document.getElementById("qr"),
+    value: `https://kodrx-blockchain.onrender.com/verificar.html?id=${index}`,
+    size: 200
+  });
+
 
   } catch (err) {
     contenido.innerHTML = "<p>⚠️ Error al cargar receta.</p>";
