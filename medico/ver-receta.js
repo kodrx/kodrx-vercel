@@ -13,56 +13,56 @@ const db = getFirestore(app);
 document.addEventListener("DOMContentLoaded", async () => {
   const params = new URLSearchParams(window.location.search);
   const recetaId = params.get("id");
-  const contenido = document.getElementById("contenido");
 
   if (!recetaId) {
-    contenido.innerHTML = "<p>❌ No se proporcionó ID de receta.</p>";
+    document.getElementById("fecha").textContent = "❌ No se proporcionó ID de receta";
     return;
   }
 
-try {
-  // 🔍 Obtener receta desde Firestore
-  const docRef = doc(db, "recetas", recetaId);
-  const docSnap = await getDoc(docRef);
+  try {
+    // Obtener receta
+    const docRef = doc(db, "recetas", recetaId);
+    const docSnap = await getDoc(docRef);
 
-  if (!docSnap.exists()) {
-    document.getElementById("fecha").textContent = "❌ Receta no encontrada";
-    return;
+    if (!docSnap.exists()) {
+      document.getElementById("fecha").textContent = "❌ Receta no encontrada";
+      return;
+    }
+
+    const receta = docSnap.data();
+    const fecha = receta.timestamp?.toDate().toLocaleString() || "Sin fecha";
+
+    // Buscar en blockchain
+    const resp = await fetch("https://kodrx-blockchain.onrender.com/blockchain");
+    const cadena = await resp.json();
+    const bloque = cadena.find(b => b.data?.receta?.includes(receta.medicamentos?.[0]?.nombre));
+
+    const hash = bloque?.hash || "N/A";
+    const index = bloque?.index || "N/A";
+
+    // Mostrar datos
+    document.getElementById("fecha").textContent = fecha;
+    document.getElementById("medico").textContent = abreviarNombre(receta.medicoNombre);
+    document.getElementById("index").textContent = index;
+    document.getElementById("hash").textContent = hash;
+    document.getElementById("listaMedicamentos").innerHTML =
+      receta.medicamentos.map(m => `<li>${m.nombre} ${m.dosis} por ${m.duracion}</li>`).join("");
+
+    // QR Blockchain
+    const canvas1 = document.createElement("canvas");
+    document.getElementById("qrBlockchain").appendChild(canvas1);
+    QRCode.toCanvas(canvas1, `https://kodrx-blockchain.onrender.com/verificar.html?id=${index}`, { width: 200 });
+
+    // QR Firebase
+    const canvas2 = document.createElement("canvas");
+    document.getElementById("qrFirebase").appendChild(canvas2);
+    QRCode.toCanvas(canvas2, `https://www.kodrx.app/verificar.html?id=${recetaId}`, { width: 200 });
+
+  } catch (error) {
+    console.error("❌ Error al cargar receta:", error);
+    document.getElementById("fecha").textContent = "⚠️ Error al conectar con base de datos";
   }
-
-  const receta = docSnap.data();
-  const fecha = receta.timestamp?.toDate().toLocaleString() || "Sin fecha";
-
-  // 🔗 Buscar bloque en blockchain
-  const resp = await fetch("https://kodrx-blockchain.onrender.com/blockchain");
-  const cadena = await resp.json();
-  const bloque = cadena.find(b => b.data?.receta?.includes(receta.medicamentos?.[0]?.nombre));
-
-  const hash = bloque?.hash || "N/A";
-  const index = bloque?.index || "N/A";
-
-  // Mostrar datos
-  document.getElementById("fecha").textContent = fecha;
-  document.getElementById("medico").textContent = abreviarNombre(receta.medicoNombre);
-  document.getElementById("index").textContent = index;
-  document.getElementById("hash").textContent = hash;
-  document.getElementById("listaMedicamentos").innerHTML =
-    receta.medicamentos.map(m => `<li>${m.nombre} ${m.dosis} por ${m.duracion}</li>`).join("");
-
-  // QR Blockchain
-  const canvas1 = document.createElement("canvas");
-  document.getElementById("qrBlockchain").appendChild(canvas1);
-  QRCode.toCanvas(canvas1, `https://kodrx-blockchain.onrender.com/verificar.html?id=${index}`, { width: 200 });
-
-  // QR Firebase
-  const canvas2 = document.createElement("canvas");
-  document.getElementById("qrFirebase").appendChild(canvas2);
-  QRCode.toCanvas(canvas2, `https://www.kodrx.app/verificar.html?id=${recetaId}`, { width: 200 });
-
-} catch (error) {
-  console.error("❌ Error al cargar receta:", error);
-  document.getElementById("fecha").textContent = "⚠️ Error al conectar con base de datos";
-}
+}); // ← Este es el cierre que te faltaba
 
 
 // ✂️ Función para acortar nombre del médico
