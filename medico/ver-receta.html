@@ -2,43 +2,111 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Ver receta KodRx</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Receta KodRx</title>
   <link rel="stylesheet" href="/estilos/global.css" />
+  <style>
+    body {
+      font-family: sans-serif;
+      margin: 2rem;
+      color: #222;
+    }
+    .receta-container {
+      max-width: 700px;
+      margin: auto;
+      padding: 2rem;
+      border: 1px solid #ddd;
+      border-radius: 12px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    }
+    .cabecera {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      margin-bottom: 2rem;
+    }
+    .qr-grande {
+      text-align: center;
+      margin: 2rem 0;
+    }
+    .qr-grande canvas {
+      border: 6px solid #1e88e5;
+      border-radius: 12px;
+    }
+    .hash {
+      font-size: 0.9rem;
+      word-break: break-all;
+      margin-top: 1rem;
+      background: #f7f7f7;
+      padding: 0.5rem;
+      border-radius: 8px;
+    }
+    .qr-verificacion {
+      text-align: right;
+      font-size: 0.8rem;
+      margin-top: 2rem;
+    }
+    footer {
+      margin-top: 3rem;
+      text-align: center;
+      font-size: 0.9rem;
+      color: #666;
+    }
+    .acciones {
+      display: flex;
+      justify-content: center;
+      gap: 1rem;
+      margin-top: 2rem;
+    }
+    button {
+      padding: 0.6rem 1.2rem;
+      font-size: 1rem;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      background: #1e88e5;
+      color: white;
+    }
+    button:hover {
+      background: #1565c0;
+    }
+  </style>
 </head>
 <body>
-  <main class="card">
-    <h1>🧾 Receta Médica KodRx</h1>
-
-    <section id="datos">
-      <p><strong>📅 Fecha:</strong> <span id="fecha"></span></p>
+  <div class="receta-container">
+    <div class="cabecera">
       <p><strong>👨‍⚕️ Médico:</strong> <span id="medico"></span></p>
-      <p><strong>🧪 Medicamentos:</strong></p>
-      <ul id="listaMedicamentos"></ul>
-    </section>
+      <p><strong>🎓 Cédula:</strong> <span id="cedula"></span></p>
+      <p><strong>🩺 Especialidad:</strong> <span id="especialidad"></span></p>
+      <p><strong>📅 Fecha:</strong> <span id="fecha"></span></p>
+    </div>
 
-    <section id="qrs" style="display: flex; gap: 20px; justify-content: center; flex-wrap: wrap;">
-      <div style="text-align: center;">
-        <p>🧱 Verificación Blockchain</p>
-        <div id="qrBlockchain"></div>
-      </div>
-      <div style="text-align: center;">
-        <p>💊 Validación y Surtido</p>
-        <div id="qrFirebase"></div>
-      </div>
-    </section>
+    <div class="qr-grande">
+      <canvas id="qrFirebase"></canvas>
+    </div>
 
-    <section id="hash" style="margin-top: 20px;">
-      <p><strong>🔗 ID Blockchain:</strong> <span id="index"></span></p>
-      <p><strong>🧬 Hash:</strong> <code id="hash"></code></p>
-    </section>
+    <div class="hash">
+      <strong>🔐 Hash único de receta:</strong>
+      <div id="hash"></div>
+    </div>
 
-    <a href="/medico/panel.html" class="volver">← Volver al panel</a>
-  </main>
+    <div class="qr-verificacion">
+      <p>Escanea para verificar en la cadena:</p>
+      <canvas id="qrBlockchain"></canvas>
+    </div>
 
-  <!-- Librería QR -->
-  <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
-  <!-- Script principal -->
+    <div class="acciones">
+      <button onclick="window.print()">🖨️ Imprimir</button>
+      <button id="descargar">⬇️ Descargar</button>
+    </div>
+
+    <footer>
+      🧠 Receta generada con <strong>KodRx</strong><br/>
+      Seguridad, trazabilidad y salud conectada.
+    </footer>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js"></script>
   <script type="module" src="ver-receta.js"></script>
 </body>
 </html>
