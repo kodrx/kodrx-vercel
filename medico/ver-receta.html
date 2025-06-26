@@ -1,26 +1,28 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Ver receta KodRx</title>
-  <link rel="stylesheet" href="/estilos/global.css" />
-</head>
-<body>
-  <main>
-    <div class="card">
-      <h1>🧾 Receta KodRx Verificada</h1>
-      <div id="contenido">Cargando datos...</div>
-      <div id="qr" style="margin-top: 20px;"></div>
+<main class="card">
+  <h1>🧾 Receta Médica KodRx</h1>
+
+  <section id="datos">
+    <p><strong>📅 Fecha:</strong> <span id="fecha"></span></p>
+    <p><strong>👨‍⚕️ Médico:</strong> <span id="medico"></span></p>
+    <p><strong>🧪 Medicamentos:</strong></p>
+    <ul id="listaMedicamentos"></ul>
+  </section>
+
+  <section id="qrs" style="display: flex; gap: 20px; justify-content: center; flex-wrap: wrap;">
+    <div style="text-align: center;">
+      <p>🧱 Verificación Blockchain</p>
+      <div id="qrBlockchain"></div>
     </div>
-    <a href="/medico/panel.html" class="volver">← Volver a KodRx</a>
-  </main>
+    <div style="text-align: center;">
+      <p>💊 Validación y Surtido</p>
+      <div id="qrFirebase"></div>
+    </div>
+  </section>
 
-  <!-- 📦 Librería QRious -->
- <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
+  <section id="hash" style="margin-top: 20px;">
+    <p><strong>🔗 ID Blockchain:</strong> <span id="index"></span></p>
+    <p><strong>🧬 Hash:</strong> <code id="hash"></code></p>
+  </section>
 
-
-  <!-- 🧠 Script principal -->
-  <script type="module" src="ver-receta.js"></script>
-</body>
-</html>
+  <a href="/medico/panel.html" class="volver">← Volver al panel</a>
+</main>
