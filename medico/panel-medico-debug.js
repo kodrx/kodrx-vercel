@@ -32,7 +32,7 @@ onAuthStateChanged(auth, async (user) => {
       const medicoSnap = await getDoc(medicoRef);
       const medicoNombre = medicoSnap.exists() ? medicoSnap.data().nombre : "Desconocido";
 
-      try {
+     try {
   const medicamentos = obtenerMedicamentos();
 
   const docRef = await addDoc(collection(db, "recetas"), {
@@ -47,7 +47,7 @@ onAuthStateChanged(auth, async (user) => {
 
   const recetaId = docRef.id;
 
-  // 🔗 Encadenamiento en blockchain
+  // Intentar encadenar en blockchain (pero no frenar si falla)
   try {
     const blockchainResp = await fetch("https://kodrx-blockchain.onrender.com/bloques", {
       method: "POST",
@@ -65,20 +65,22 @@ onAuthStateChanged(auth, async (user) => {
     const blockchainData = await blockchainResp.json();
 
     if (blockchainResp.ok) {
-      const idBlockchain = blockchainData.bloque.index;
-      console.log("✅ Receta registrada en blockchain. ID:", idBlockchain);
+      console.log("✅ Receta registrada en blockchain. ID:", blockchainData.bloque.index);
     } else {
-      console.warn("⚠️ No se pudo registrar en blockchain:", blockchainData.error);
+      console.warn("⚠️ Error en blockchain:", blockchainData.error);
     }
+
   } catch (error) {
     console.error("❌ Error al conectar con blockchain:", error.message);
   }
 
-  // ✅ Ahora sí, redirigimos después de todo
-  window.location.href = `/panel/ver-receta.html?id=${recetaId}`;
+  // Pase lo que pase, redirige a la receta
+  setTimeout(() => {
+    window.location.href = `/panel/ver-receta.html?id=${recetaId}`;
+  }, 500); // Delay leve para asegurar DOM liberado
 
 } catch (error) {
-  console.error("Error al guardar la receta:", error);
+  console.error("❌ Error al guardar la receta en Firebase:", error);
 }
 
 // Generador de QR
