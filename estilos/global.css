@@ -164,7 +164,11 @@ details.lab-card div {
   font-size: 14px;
   line-height: 1.6;
 }
-
+@media print {
+  .no-print {
+    display: none !important;
+  }
+}
 /* Responsive Celular */
 @media (max-width: 768px) {
   main {
