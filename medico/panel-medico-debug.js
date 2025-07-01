@@ -27,6 +27,19 @@ onAuthStateChanged(auth, async (user) => {
       const nombre = document.getElementById("nombre").value;
       const edad = document.getElementById("edad").value;
       const observaciones = document.getElementById("observaciones").value;
+      const sexo = document.getElementById("sexo").value;
+const peso = parseFloat(document.getElementById("peso").value);
+const talla = parseFloat(document.getElementById("talla").value);
+const temperatura = document.getElementById("temperatura").value;
+const presion = document.getElementById("presion").value;
+const diagnostico = document.getElementById("diagnostico").value;
+
+// Calculamos IMC si talla y peso válidos
+let imc = "-";
+if (peso > 0 && talla > 0) {
+  imc = (peso / Math.pow(talla / 100, 2)).toFixed(2);
+}
+
       const medicamentos = obtenerMedicamentos();
 
       // ✅ Obtener snapshot del médico desde Firebase
