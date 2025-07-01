@@ -1,4 +1,3 @@
-
 import { db, auth } from '../firebase-init.js';
 import { doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
@@ -7,12 +6,13 @@ let datosFarmacia = null;
 let recetaGlobal = null;
 let recetaIdActual = null;
 
-onAuthStateChanged(auth, async (user) => {
+onAuthStateChanged(auth, (user) => {
   if (user) {
-    const snap = await getDoc(doc(db, "farmacias", user.uid));
-    if (snap.exists()) {
-      datosFarmacia = snap.data();
-    }
+    getDoc(doc(db, "farmacias", user.uid)).then((snap) => {
+      if (snap.exists()) {
+        datosFarmacia = snap.data();
+      }
+    });
   }
 });
 
@@ -23,7 +23,9 @@ window.verificarManual = () => {
 
 window.iniciarEscaneo = () => {
   const qrReader = new Html5Qrcode("qr-reader");
-  qrReader.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 },
+  qrReader.start(
+    { facingMode: "environment" },
+    { fps: 10, qrbox: 250 },
     (decodedText) => {
       qrReader.stop();
       const id = new URL(decodedText).searchParams.get("id");
@@ -47,15 +49,24 @@ async function verificarReceta(id) {
 
   let html = `<h3>Paciente: ${recetaGlobal.nombrePaciente}</h3>`;
   html += `<p>Edad: ${recetaGlobal.edad}</p>`;
-  html += `<p>Observaciones: ${recetaGlobal.observaciones || 'Ninguna'}</p>`;
-  html += `<p>Médico: ${recetaGlobal.medicoNombre || 'Desconocido'}</p>`;
-  html += `<h4>Medicamentos:</h4>`;
+  html += `<p>Sexo: ${recetaGlobal.sexo || 'No registrado'}</p>`;
+  html += `<p>Peso: ${recetaGlobal.peso || '-'} kg</p>`;
+  html += `<p>Talla: ${recetaGlobal.talla || '-'} cm</p>`;
+  html += `<p>IMC: ${recetaGlobal.imc || '-'}</p>`;
+  html += `<p>Presión arterial: ${recetaGlobal.presion || '-'}</p>`;
+  html += `<p>Temperatura: ${recetaGlobal.temperatura || '-'}</p>`;
+  html += `<p><strong>Diagnóstico:</strong> ${recetaGlobal.diagnostico || '-'}</p>`;
+  html += `<p><strong>Fecha:</strong> ${recetaGlobal.timestamp?.toDate().toLocaleString() || '-'}</p>`;
+  html += `<p><strong>Médico:</strong> ${recetaGlobal.medicoNombre || 'Desconocido'}</p>`;
+  html += `<p><strong>Cédula del médico:</strong> ${recetaGlobal.medicoCedula || '-'}</p>`;
+  html += `<p><strong>Especialidad:</strong> ${recetaGlobal.medicoEspecialidad || '-'}</p>`;
 
+  html += `<h4>Medicamentos:</h4>`;
   recetaGlobal.medicamentos.forEach((med, idx) => {
     const ya = surtido.find(s => s.nombre === med.nombre);
     const disable = ya ? "checked disabled" : "";
     const extra = ya ? `<span class="surtido-info">Surtido por: ${ya.surtidoPor}, Tel: ${ya.telefono}</span>` : "";
-html += `<div class="medicamento"><label><input type="checkbox" data-index="${idx}" ${disable}> ${med.nombre} - ${med.dosis}, ${med.duracion}</label> ${extra}</div>`;
+    html += `<div class="medicamento"><label><input type="checkbox" data-index="${idx}" ${disable}> ${med.nombre} - ${med.dosis}, ${med.duracion}</label> ${extra}</div>`;
   });
 
   html += `<br><button onclick="surtirReceta()">Surtir</button>`;
@@ -89,3 +100,4 @@ window.surtirReceta = async () => {
   alert("Receta actualizada.");
   location.reload();
 };
+
