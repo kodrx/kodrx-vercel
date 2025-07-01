@@ -36,40 +36,53 @@
       <hr />
 <h3>🩺 Información clínica del paciente</h3>
 
-<div class="grupo">
+<div class="extra-info">
   <label for="sexo">Sexo:</label>
   <select id="sexo">
-    <option value="">Selecciona</option>
+    <option value="">Seleccionar</option>
     <option value="Masculino">Masculino</option>
     <option value="Femenino">Femenino</option>
     <option value="Otro">Otro</option>
   </select>
-</div>
 
-<div class="grupo">
   <label for="peso">Peso (kg):</label>
-  <input type="number" id="peso" placeholder="Ej. 70" min="0" step="0.1" />
-</div>
+  <input type="number" id="peso" min="0" step="0.1" />
 
-<div class="grupo">
   <label for="talla">Talla (cm):</label>
-  <input type="number" id="talla" placeholder="Ej. 170" min="0" />
-</div>
+  <input type="number" id="talla" min="0" step="0.1" />
 
-<div class="grupo">
-  <label for="temperatura">Temperatura (°C):</label>
-  <input type="number" id="temperatura" placeholder="Ej. 36.5" step="0.1" />
-</div>
+  <label for="imc">IMC:</label>
+  <input type="text" id="imc" placeholder="Ej. 24.7" />
 
-<div class="grupo">
   <label for="presion">Presión arterial:</label>
   <input type="text" id="presion" placeholder="Ej. 120/80" />
+
+  <label for="temperatura">Temperatura (°C):</label>
+  <input type="number" id="temperatura" step="0.1" />
+
+  <label for="diagnostico">Diagnóstico:</label>
+  <input type="text" id="diagnostico" placeholder="Ej. Hipertensión" />
 </div>
 
-<div class="grupo">
-  <label for="diagnostico">Diagnóstico médico:</label>
-  <textarea id="diagnostico" rows="3" placeholder="Diagnóstico clínico..."></textarea>
-</div>
+<script>
+  const pesoInput = document.getElementById("peso");
+  const tallaInput = document.getElementById("talla");
+  const imcInput = document.getElementById("imc");
+
+  function calcularIMC() {
+    const peso = parseFloat(pesoInput.value);
+    const tallaCm = parseFloat(tallaInput.value);
+    const tallaM = tallaCm / 100;
+
+    if (peso > 0 && tallaM > 0) {
+      const imc = (peso / (tallaM * tallaM)).toFixed(1);
+      imcInput.value = imc;
+    }
+  }
+
+  pesoInput.addEventListener("input", calcularIMC);
+  tallaInput.addEventListener("input", calcularIMC);
+</script>
 
 
       <h3>Medicamentos</h3>
