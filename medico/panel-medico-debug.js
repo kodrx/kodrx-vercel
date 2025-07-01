@@ -58,17 +58,25 @@ if (peso > 0 && talla > 0) {
       }
 
       try {
-        const docRef = await addDoc(collection(db, "recetas"), {
-          uid: user.uid,
-          medicoNombre,
-          medicoCedula,
-          medicoEspecialidad,
-          nombrePaciente: nombre,
-          edad,
-          observaciones,
-          medicamentos,
-          timestamp: serverTimestamp()
-        });
+   const docRef = await addDoc(collection(db, "recetas"), {
+  uid: user.uid,
+  medicoNombre,
+  medicoCedula,
+  medicoEspecialidad,
+  nombrePaciente: nombre,
+  edad,
+  sexo: document.getElementById("sexo")?.value || "No registrado",
+  peso: document.getElementById("peso")?.value || "-",
+  talla: document.getElementById("talla")?.value || "-",
+  imc: document.getElementById("imc")?.value || "-",
+  presion: document.getElementById("presion")?.value || "-",
+  temperatura: document.getElementById("temperatura")?.value || "-",
+  diagnostico: document.getElementById("diagnostico")?.value || "-",
+  observaciones,
+  medicamentos,
+  timestamp: serverTimestamp()
+});
+
 
         const recetaId = docRef.id;
 
