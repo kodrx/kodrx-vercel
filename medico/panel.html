@@ -33,6 +33,45 @@
       <label>Observaciones:</label>
       <textarea id="observaciones"></textarea>
 
+      <hr />
+<h3>🩺 Información clínica del paciente</h3>
+
+<div class="grupo">
+  <label for="sexo">Sexo:</label>
+  <select id="sexo">
+    <option value="">Selecciona</option>
+    <option value="Masculino">Masculino</option>
+    <option value="Femenino">Femenino</option>
+    <option value="Otro">Otro</option>
+  </select>
+</div>
+
+<div class="grupo">
+  <label for="peso">Peso (kg):</label>
+  <input type="number" id="peso" placeholder="Ej. 70" min="0" step="0.1" />
+</div>
+
+<div class="grupo">
+  <label for="talla">Talla (cm):</label>
+  <input type="number" id="talla" placeholder="Ej. 170" min="0" />
+</div>
+
+<div class="grupo">
+  <label for="temperatura">Temperatura (°C):</label>
+  <input type="number" id="temperatura" placeholder="Ej. 36.5" step="0.1" />
+</div>
+
+<div class="grupo">
+  <label for="presion">Presión arterial:</label>
+  <input type="text" id="presion" placeholder="Ej. 120/80" />
+</div>
+
+<div class="grupo">
+  <label for="diagnostico">Diagnóstico médico:</label>
+  <textarea id="diagnostico" rows="3" placeholder="Diagnóstico clínico..."></textarea>
+</div>
+
+
       <h3>Medicamentos</h3>
       <div id="medicamentos"></div>
       <button type="button" id="btnAgregar">+ Agregar medicamento</button>
