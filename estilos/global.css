@@ -15,6 +15,59 @@ body {
   background-color: var(--color-fondo);
   color: var(--color-texto);
 }
+.formulario-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 2rem;
+  background-color: #fff;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.formulario-container h2 {
+  margin-bottom: 1rem;
+  font-size: 1.5rem;
+  color: #333;
+}
+
+.formulario-container label {
+  font-weight: bold;
+  margin-top: 1rem;
+}
+
+.formulario-container input,
+.formulario-container select,
+.formulario-container textarea {
+  width: 100%;
+  max-width: 100%;
+  padding: 10px;
+  margin-top: 4px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+.formulario-clinico {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+.formulario-clinico label {
+  display: block;
+  margin-bottom: 4px;
+  font-weight: bold;
+}
+
+.formulario-clinico input,
+.formulario-clinico select {
+  width: 100%;
+}
 
 .card {
   background-color: var(--color-blanco);
