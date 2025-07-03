@@ -13,7 +13,12 @@ document.addEventListener("DOMContentLoaded", () => {
   btn.addEventListener("click", async (e) => {
     e.preventDefault();
 
-const campos = ["nombre", "especialidad", "correo", "telefono", "cedula", "calle", "numero", "colonia", "municipio", "estado", "password"];
+    const campos = [
+      "nombre", "especialidad", "correo", "telefono", "cedula",
+      "calle", "numero", "colonia", "municipio", "estado", "cp",
+      "password"
+    ];
+
     const datos = {};
 
     for (const campo of campos) {
@@ -25,7 +30,10 @@ const campos = ["nombre", "especialidad", "correo", "telefono", "cedula", "calle
       datos[campo] = input.value.trim();
     }
 
-    const { nombre, especialidad, correo, telefono, cedula, colonia, estado, password } = datos;
+    const {
+      nombre, especialidad, correo, telefono, cedula,
+      calle, numero, colonia, municipio, estado, cp, password
+    } = datos;
 
     if (Object.values(datos).some(v => !v)) {
       alert("Por favor completa todos los campos.");
@@ -36,21 +44,21 @@ const campos = ["nombre", "especialidad", "correo", "telefono", "cedula", "calle
       const credenciales = await createUserWithEmailAndPassword(auth, correo, password);
       const uid = credenciales.user.uid;
 
-   await setDoc(doc(db, "medicos", uid), {
-  nombre,
-  especialidad,
-  correo,
-  telefono,
-  cedula,
-  calle,
-  numero,
-  colonia,
-  municipio,
-  estado,
-  verificado: false,
-  fechaRegistro: serverTimestamp()
-});
-
+      await setDoc(doc(db, "medicos", uid), {
+        nombre,
+        especialidad,
+        correo,
+        telefono,
+        cedula,
+        calle,
+        numero,
+        colonia,
+        municipio,
+        estado,
+        cp,
+        verificado: false,
+        fechaRegistro: serverTimestamp()
+      });
 
       alert("Registro enviado correctamente.");
       window.location.href = "/medico/espera_verificacion.html";
