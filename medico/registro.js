@@ -13,7 +13,7 @@ document.addEventListener("DOMContentLoaded", () => {
   btn.addEventListener("click", async (e) => {
     e.preventDefault();
 
-    const campos = ["nombre", "especialidad", "correo", "telefono", "cedula", "colonia", "estado", "password"];
+const campos = ["nombre", "especialidad", "correo", "telefono", "cedula", "calle", "numero", "colonia", "municipio", "estado", "password"];
     const datos = {};
 
     for (const campo of campos) {
@@ -36,17 +36,21 @@ document.addEventListener("DOMContentLoaded", () => {
       const credenciales = await createUserWithEmailAndPassword(auth, correo, password);
       const uid = credenciales.user.uid;
 
-      await setDoc(doc(db, "medicos", uid), {
-        nombre,
-        especialidad,
-        correo,
-        telefono,
-        cedula,
-        colonia,
-        estado,
-        verificado: false,
-        fechaRegistro: serverTimestamp()
-      });
+   await setDoc(doc(db, "medicos", uid), {
+  nombre,
+  especialidad,
+  correo,
+  telefono,
+  cedula,
+  calle,
+  numero,
+  colonia,
+  municipio,
+  estado,
+  verificado: false,
+  fechaRegistro: serverTimestamp()
+});
+
 
       alert("Registro enviado correctamente.");
       window.location.href = "/medico/espera_verificacion.html";
