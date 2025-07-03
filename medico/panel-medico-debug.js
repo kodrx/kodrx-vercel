@@ -19,6 +19,27 @@ const auth = getAuth(app);
 
 onAuthStateChanged(auth, async (user) => {
   if (user) {
+    const medicoRef = doc(db, "medicos", user.uid);
+    const medicoSnap = await getDoc(medicoRef);
+
+    // 🚨 Verificación de cuenta
+    if (!medicoSnap.exists() || medicoSnap.data().verificado !== true) {
+      alert("Tu cuenta aún no ha sido verificada. Por favor espera la aprobación del administrador.");
+      window.location.href = "/medico/espera_verificacion.html";
+      return;
+    }
+
+    const data = medicoSnap.data();
+    let medicoNombre = data.nombre || "Desconocido";
+    let medicoCedula = data.cedula || "-";
+    let medicoEspecialidad = data.especialidad || "-";
+    let medicoCalle = data.calle || "-";
+    let medicoNumero = data.numero || "-";
+    let medicoColonia = data.colonia || "-";
+    let medicoMunicipio = data.municipio || "-";
+    let medicoEstado = data.estado || "-";
+    let medicoCP = data.cp || "-";
+
     document.getElementById("generarRecetaForm").addEventListener("submit", async (e) => {
       e.preventDefault();
 
@@ -38,34 +59,6 @@ onAuthStateChanged(auth, async (user) => {
       }
 
       const medicamentos = obtenerMedicamentos();
-
-      const medicoRef = doc(db, "medicos", user.uid);
-      const medicoSnap = await getDoc(medicoRef);
-
-      let medicoNombre = "Desconocido";
-      let medicoCedula = "-";
-      let medicoEspecialidad = "-";
-
-      // 📦 Datos de domicilio del médico
-      let medicoCalle = "-";
-      let medicoNumero = "-";
-      let medicoColonia = "-";
-      let medicoMunicipio = "-";
-      let medicoEstado = "-";
-      let medicoCP = "-";
-
-      if (medicoSnap.exists()) {
-        const data = medicoSnap.data();
-        medicoNombre = data.nombre || "Desconocido";
-        medicoCedula = data.cedula || "-";
-        medicoEspecialidad = data.especialidad || "-";
-        medicoCalle = data.calle || "-";
-        medicoNumero = data.numero || "-";
-        medicoColonia = data.colonia || "-";
-        medicoMunicipio = data.municipio || "-";
-        medicoEstado = data.estado || "-";
-        medicoCP = data.cp || "-";
-      }
 
       try {
         const docRef = await addDoc(collection(db, "recetas"), {
