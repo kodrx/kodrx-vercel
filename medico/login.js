@@ -19,6 +19,12 @@ document.addEventListener('DOMContentLoaded', () => {
       const medicoRef = doc(db, "medicos", uid);
       const medicoSnap = await getDoc(medicoRef);
 
+      if (!medicoSnap.exists() || medicoSnap.data().verificado !== true) {
+  alert("Tu cuenta aún no ha sido verificada. Por favor espera la aprobación del administrador.");
+  window.location.href = "/medico/espera_verificacion.html";
+  return;
+}
+
       if (medicoSnap.exists()) {
         const data = medicoSnap.data();
         if (data.verificado === true) {
