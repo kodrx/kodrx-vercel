@@ -1,4 +1,3 @@
-
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getFirestore, collection, addDoc, serverTimestamp, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
@@ -18,7 +17,6 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
 
-
 onAuthStateChanged(auth, async (user) => {
   if (user) {
     document.getElementById("generarRecetaForm").addEventListener("submit", async (e) => {
@@ -28,21 +26,19 @@ onAuthStateChanged(auth, async (user) => {
       const edad = document.getElementById("edad").value;
       const observaciones = document.getElementById("observaciones").value;
       const sexo = document.getElementById("sexo").value;
-const peso = parseFloat(document.getElementById("peso").value);
-const talla = parseFloat(document.getElementById("talla").value);
-const temperatura = document.getElementById("temperatura").value;
-const presion = document.getElementById("presion").value;
-const diagnostico = document.getElementById("diagnostico").value;
+      const peso = parseFloat(document.getElementById("peso").value);
+      const talla = parseFloat(document.getElementById("talla").value);
+      const temperatura = document.getElementById("temperatura").value;
+      const presion = document.getElementById("presion").value;
+      const diagnostico = document.getElementById("diagnostico").value;
 
-// Calculamos IMC si talla y peso válidos
-let imc = "-";
-if (peso > 0 && talla > 0) {
-  imc = (peso / Math.pow(talla / 100, 2)).toFixed(2);
-}
+      let imc = "-";
+      if (peso > 0 && talla > 0) {
+        imc = (peso / Math.pow(talla / 100, 2)).toFixed(2);
+      }
 
       const medicamentos = obtenerMedicamentos();
 
-      // ✅ Obtener snapshot del médico desde Firebase
       const medicoRef = doc(db, "medicos", user.uid);
       const medicoSnap = await getDoc(medicoRef);
 
@@ -50,33 +46,52 @@ if (peso > 0 && talla > 0) {
       let medicoCedula = "-";
       let medicoEspecialidad = "-";
 
+      // 📦 Datos de domicilio del médico
+      let medicoCalle = "-";
+      let medicoNumero = "-";
+      let medicoColonia = "-";
+      let medicoMunicipio = "-";
+      let medicoEstado = "-";
+      let medicoCP = "-";
+
       if (medicoSnap.exists()) {
         const data = medicoSnap.data();
         medicoNombre = data.nombre || "Desconocido";
         medicoCedula = data.cedula || "-";
         medicoEspecialidad = data.especialidad || "-";
+        medicoCalle = data.calle || "-";
+        medicoNumero = data.numero || "-";
+        medicoColonia = data.colonia || "-";
+        medicoMunicipio = data.municipio || "-";
+        medicoEstado = data.estado || "-";
+        medicoCP = data.cp || "-";
       }
 
       try {
-   const docRef = await addDoc(collection(db, "recetas"), {
-  uid: user.uid,
-  medicoNombre,
-  medicoCedula,
-  medicoEspecialidad,
-  nombrePaciente: nombre,
-  edad,
-  sexo: document.getElementById("sexo")?.value || "No registrado",
-  peso: document.getElementById("peso")?.value || "-",
-  talla: document.getElementById("talla")?.value || "-",
-  imc: document.getElementById("imc")?.value || "-",
-  presion: document.getElementById("presion")?.value || "-",
-  temperatura: document.getElementById("temperatura")?.value || "-",
-  diagnostico: document.getElementById("diagnostico")?.value || "-",
-  observaciones,
-  medicamentos,
-  timestamp: serverTimestamp()
-});
-
+        const docRef = await addDoc(collection(db, "recetas"), {
+          uid: user.uid,
+          medicoNombre,
+          medicoCedula,
+          medicoEspecialidad,
+          medicoCalle,
+          medicoNumero,
+          medicoColonia,
+          medicoMunicipio,
+          medicoEstado,
+          medicoCP,
+          nombrePaciente: nombre,
+          edad,
+          sexo: sexo || "No registrado",
+          peso: peso || "-",
+          talla: talla || "-",
+          imc: imc || "-",
+          presion: presion || "-",
+          temperatura: temperatura || "-",
+          diagnostico: diagnostico || "-",
+          observaciones,
+          medicamentos,
+          timestamp: serverTimestamp()
+        });
 
         const recetaId = docRef.id;
 
@@ -106,7 +121,6 @@ if (peso > 0 && talla > 0) {
           console.error("❌ Error de conexión con blockchain:", error.message);
         }
 
-        console.log("➡️ Redirigiendo a ver-receta...");
         window.location.href = `/medico/ver-receta.html?id=${recetaId}`;
 
       } catch (error) {
@@ -115,21 +129,6 @@ if (peso > 0 && talla > 0) {
     });
   }
 });
-
-
-
-// Generador de QR
-function generarQR(id) {
-  const url = `https://www.kodrx.app/verificar.html?id=${id}`;
-  const qrDiv = document.getElementById("qr");
-  qrDiv.innerHTML = "";
-  const canvas = document.createElement("canvas");
-  qrDiv.appendChild(canvas);
-  QRCode.toCanvas(canvas, url, { width: 200 }, function (error) {
-    if (error) console.error(error);
-    console.log("QR generado");
-  });
-}
 
 // Obtener medicamentos de campos dinámicos
 function obtenerMedicamentos() {
@@ -178,4 +177,3 @@ async function cargarMedicamentos() {
 document.getElementById("btnAgregar").addEventListener("click", agregarMedicamento);
 agregarMedicamento();
 cargarMedicamentos();
-
