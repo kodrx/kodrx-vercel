@@ -84,34 +84,48 @@
 </head>
 <body>
   <main class="seccion">
-    <h2>Registro de Médico</h2>
-    <form id="registroForm">
-      <label>Nombre completo</label>
-      <input type="text" id="nombre" required />
-      <label>Teléfono</label>
-      <input type="tel" id="telefono" required />
-      <label>Correo electrónico</label>
-      <input type="email" id="correo" required />
-      <label>Contraseña</label>
-      <input type="password" id="password" required />
-      <label>Especialidad</label>
-      <input type="text" id="especialidad" required />
-      <label>Cédula profesional</label>
-      <input type="text" id="cedula" required />
-      
-    <label for="colonia">Colonia:</label>
-    <input type="text" id="colonia" name="colonia" required />
+  <h2>Registro de Médico</h2>
+<form id="registroForm">
+  <label>Nombre completo</label>
+  <input type="text" id="nombre" required />
 
-    <label for="municipio">Municipio:</label>
-    <input type="text" id="municipio" name="municipio" required />
+  <label>Teléfono</label>
+  <input type="tel" id="telefono" required />
 
-    <label for="estado">Estado:</label>
-    <input type="text" id="estado" name="estado" required />
+  <label>Correo electrónico</label>
+  <input type="email" id="correo" required />
 
-    <button id="btnRegistro" type="submit">Registrar</button>
+  <label>Contraseña</label>
+  <input type="password" id="password" required />
 
-    
-    </form>
+  <label>Especialidad</label>
+  <input type="text" id="especialidad" required />
+
+  <label>Cédula profesional</label>
+  <input type="text" id="cedula" required />
+
+  <hr />
+  <h3 style="margin-top: 10px; color: #333;"> Información del consultorio / hospital</h3>
+
+  <label>Calle</label>
+  <input type="text" id="calle" required />
+
+  <label>Número</label>
+  <input type="text" id="numero" required />
+
+  <label>Colonia</label>
+  <input type="text" id="colonia" required />
+
+  <label>Municipio</label>
+  <input type="text" id="municipio" required />
+
+  <label>Estado</label>
+  <input type="text" id="estado" required />
+
+  <button id="btnRegistro" type="submit">Registrar</button>
+</form>
+<p class="volver"><a href="/medico/login.html">← Volver al inicio de sesión</a></p>
+
     <p class="volver"><a href="/medico/login.html">← Volver al inicio de sesión</a></p>
   </main>
   <script type="module" src="/firebase-init.js"></script>
