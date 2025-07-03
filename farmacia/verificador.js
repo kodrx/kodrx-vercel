@@ -60,6 +60,9 @@ async function verificarReceta(id) {
   html += `<p><strong>Médico:</strong> ${recetaGlobal.medicoNombre || 'Desconocido'}</p>`;
   html += `<p><strong>Cédula del médico:</strong> ${recetaGlobal.medicoCedula || '-'}</p>`;
   html += `<p><strong>Especialidad:</strong> ${recetaGlobal.medicoEspecialidad || '-'}</p>`;
+const direccion = `${recetaGlobal.medicoCalle || ''} ${recetaGlobal.medicoNumero || ''}, Col. ${recetaGlobal.medicoColonia || ''}, ${recetaGlobal.medicoMunicipio || ''}, ${recetaGlobal.medicoEstado || ''}, C.P. ${recetaGlobal.medicoCP || ''}`;
+html += `<p><strong>Domicilio del consultorio:</strong> ${direccion}</p>`;
+
 
   html += `<h4>Medicamentos:</h4>`;
   recetaGlobal.medicamentos.forEach((med, idx) => {
