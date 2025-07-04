@@ -42,6 +42,9 @@ onAuthStateChanged(auth, async (user) => {
 
     document.getElementById("generarRecetaForm").addEventListener("submit", async (e) => {
       e.preventDefault();
+        const boton = e.submitter;
+  boton.disabled = true;
+  boton.textContent = "Generando receta...";
 
       const nombre = document.getElementById("nombre").value;
       const edad = document.getElementById("edad").value;
