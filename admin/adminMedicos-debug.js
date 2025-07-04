@@ -4,13 +4,17 @@ import {
   collection,
   getDocs,
   updateDoc,
+  deleteDoc,
   doc
 } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
+
+console.log("[INICIO] adminMedicos-debug.js cargado");
 
 onAuthStateChanged(auth, (user) => {
   if (!user || user.email !== "admin@kodrx.app") {
     window.location.href = "/admin/login.html";
   } else {
+    console.log("[AUTH] Acceso permitido para admin");
     cargarMedicos();
     document.getElementById("buscador").addEventListener("input", filtrarMedicos);
   }
@@ -47,7 +51,7 @@ function renderizarMedicos(lista) {
   const verificados = lista.filter(m => m.verificado);
   const pendientes = lista.filter(m => !m.verificado);
 
-  const crearCard = (med, incluirBotonVerificar = false) => {
+  const crearCard = (med, incluirBoton = false) => {
     const card = document.createElement("details");
     card.className = "lab-card";
 
@@ -63,75 +67,49 @@ function renderizarMedicos(lista) {
       <p><strong>Fecha de registro:</strong> ${med.fechaRegistro?.toDate().toLocaleString() || "N/D"}</p>
     `;
 
-    // Etiquetas de estado
-    if (med.suspendido) {
-      const etiqueta = document.createElement("span");
-      etiqueta.innerText = "🚫 Suspendido";
-      etiqueta.style.color = "red";
-      etiqueta.style.fontWeight = "bold";
-      contenido.appendChild(etiqueta);
-    } else if (med.verificado) {
-      const etiqueta = document.createElement("span");
-      etiqueta.innerText = "✅ Verificado";
-      etiqueta.style.color = "green";
-      etiqueta.style.fontWeight = "bold";
-      contenido.appendChild(etiqueta);
-    }
-
-    // Botón de verificación
-    if (incluirBotonVerificar) {
+    if (incluirBoton) {
       const btnVerificar = document.createElement("button");
       btnVerificar.innerText = "Verificar médico";
       btnVerificar.onclick = async () => {
-        await updateDoc(doc(db, "medicos", med.id), { verificado: true });
+        await updateDoc(doc(db, "medicos", med.id), {
+          verificado: true
+        });
         alert("Médico verificado correctamente.");
         cargarMedicos();
       };
       contenido.appendChild(btnVerificar);
-    }
-
-    // Botón de suspender / reactivar
-    if (med.verificado) {
+    } else {
       const btnSuspender = document.createElement("button");
-      btnSuspender.innerText = med.suspendido ? "Reactivar médico" : "Suspender médico";
-      btnSuspender.style.marginLeft = "10px";
+      btnSuspender.innerText = med.suspendido ? "Reactivar médico" : "Suspender médico temporalmente";
       btnSuspender.onclick = async () => {
-        const confirmado = confirm(`¿Seguro que deseas ${med.suspendido ? "reactivar" : "suspender"} a este médico?`);
-        if (!confirmado) return;
-
         await updateDoc(doc(db, "medicos", med.id), {
           suspendido: !med.suspendido
         });
-        alert(`Médico ${med.suspendido ? "reactivado" : "suspendido"} correctamente.`);
+        alert(med.suspendido ? "Médico reactivado." : "Médico suspendido.");
         cargarMedicos();
       };
       contenido.appendChild(btnSuspender);
+
+      const btnEliminar = document.createElement("button");
+      btnEliminar.innerText = "❌ Eliminar médico";
+      btnEliminar.style.marginLeft = "10px";
+      btnEliminar.style.backgroundColor = "#e53935";
+      btnEliminar.style.color = "white";
+
+      btnEliminar.onclick = async () => {
+        const confirmado = confirm("¿Estás seguro de eliminar este médico permanentemente?");
+        if (!confirmado) return;
+
+        try {
+          await deleteDoc(doc(db, "medicos", med.id));
+          alert("Médico eliminado.");
+          cargarMedicos();
+        } catch (err) {
+          alert("Error al eliminar: " + err.message);
+        }
+      };
+      contenido.appendChild(btnEliminar);
     }
-// Botón de eliminar médico
-const btnEliminar = document.createElement("button");
-btnEliminar.innerText = "❌ Eliminar médico";
-btnEliminar.style.marginLeft = "10px";
-btnEliminar.style.backgroundColor = "#e53935";
-btnEliminar.style.color = "white";
-
-btnEliminar.onclick = async () => {
-  const confirmado = confirm("¿Estás seguro de eliminar este médico permanentemente?");
-  if (!confirmado) return;
-
-  try {
-    await updateDoc(doc(db, "medicos", med.id), {
-      eliminado: true // Marcar eliminado si prefieres lógica suave
-    });
-    // O eliminar completamente:
-    // await deleteDoc(doc(db, "medicos", med.id));
-
-    alert("Médico eliminado.");
-    cargarMedicos();
-  } catch (err) {
-    alert("Error al eliminar: " + err.message);
-  }
-};
-contenido.appendChild(btnEliminar);
 
     card.appendChild(contenido);
     return card;
