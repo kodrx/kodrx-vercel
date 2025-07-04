@@ -92,16 +92,56 @@ function renderizarLista(farmacias, contenedor) {
       etiqueta.style.fontWeight = "bold";
       contenido.appendChild(etiqueta);
     } else {
-      const btn = document.createElement("button");
-      btn.innerText = "Verificar ahora";
-      btn.onclick = async () => {
+      const btnVerificar = document.createElement("button");
+      btnVerificar.innerText = "Verificar ahora";
+      btnVerificar.onclick = async () => {
         await updateDoc(doc(db, "farmacias", f.id), { verificado: true });
         alert("Farmacia verificada");
         cargarFarmacias();
       };
-      contenido.appendChild(btn);
+      contenido.appendChild(btnVerificar);
     }
 
+    const btnSuspender = document.createElement("button");
+    btnSuspender.innerText = f.suspendido ? "Reactivar" : "Suspender";
+    btnSuspender.style.marginLeft = "10px";
+    btnSuspender.onclick = async () => {
+      const nuevoEstado = !f.suspendido;
+      await updateDoc(doc(db, "farmacias", f.id), { suspendido: nuevoEstado });
+      alert(nuevoEstado ? "Farmacia suspendida." : "Farmacia reactivada.");
+      cargarFarmacias();
+    };
+    contenido.appendChild(btnSuspender);
+
     const btnEliminar = document.createElement("button");
-    btnEliminar.innerText = "🗑️ Eliminar farmacia";
-    btnEliminar.
+    btnEliminar.innerText = "Eliminar";
+    btnEliminar.style.marginLeft = "10px";
+    btnEliminar.onclick = async () => {
+      const confirmacion = confirm("¿Estás seguro de eliminar esta farmacia?");
+      if (confirmacion) {
+        await deleteDoc(doc(db, "farmacias", f.id));
+        alert("Farmacia eliminada");
+        cargarFarmacias();
+      }
+    };
+    contenido.appendChild(btnEliminar);
+
+    card.appendChild(contenido);
+    contenedor.appendChild(card);
+  });
+}
+
+function filtrarFarmacias(e) {
+  const texto = e.target.value.toLowerCase();
+  const verificadas = listaGlobal.filter(f => f.verificado &&
+    ((f.nombreFarmacia || "").toLowerCase().includes(texto) ||
+     (f.colonia || "").toLowerCase().includes(texto)));
+
+  const pendientes = listaGlobal.filter(f => !f.verificado &&
+    ((f.nombreFarmacia || "").toLowerCase().includes(texto) ||
+     (f.colonia || "").toLowerCase().includes(texto)));
+
+  renderizarLista(verificadas, document.getElementById("farmaciasVerificadas"));
+  renderizarLista(pendientes, document.getElementById("farmaciasPendientes"));
+}
+
