@@ -2,187 +2,147 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <title>Panel Médico KodRx</title>
-  <style>
-    .sugerencias {
-      position: relative;
-      z-index: 999;
-    }
-    .sugerencia {
-      background: white;
-      border: 1px solid #ccc;
-      padding: 5px;
-      cursor: pointer;
-    }
-    .sugerencia:hover {
-      background: #eee;
-    }
-    .medicamento {
-      margin-bottom: 10px;
-    }
-  </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Panel Médico - KodRx</title>
+  <link rel="stylesheet" href="/estilos/global.css" />
+  <script src="/componentes/header.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
 </head>
 <body>
-  <h2>Panel del Médico</h2>
-  <button onclick="window.location.href='historial.html'">Ver historial</button>
-  <button onclick="cerrarSesion()">Cerrar sesión</button>
+  <main class="seccion">
+    <h2>Panel Médico</h2>
 
-  <form id="form-receta">
-    <h3>Datos del paciente</h3>
-    <input type="text" id="nombre" placeholder="Nombre del paciente" required><br>
-    <input type="number" id="edad" placeholder="Edad" required><br>
-    <input type="text" id="observaciones" placeholder="Observaciones"><br>
+    <div style="margin-bottom: 20px; display: flex; gap: 10px; flex-wrap: wrap;">
+      <button onclick="nuevaReceta()"> Nueva receta</button>
+      <button onclick="verHistorial()"> Historial</button>
+    
+      <button onclick="window.open('https://kodrx-blockchain.onrender.com/panel/verificar-receta.html', '_blank')">
+   Verificar receta en blockchain
+</button>
+<button onclick="cerrarSesion()"> Cerrar sesión</button>
+    </div>
+    
+<main class="formulario-container">
+  <h2>Generar nueva receta</h2>
+    <form id="generarRecetaForm" class="form-login">
+      <label>Nombre del paciente:</label>
+      <input type="text" id="nombre" required />
 
-    <h3>Medicamentos</h3>
-    <div id="medicamentos"></div>
-    <button type="button" onclick="agregarMedicamento()">+ Agregar medicamento</button><br><br>
-    <button type="submit">Generar receta</button>
-  </form>
+      <label>Edad:</label>
+      <input type="number" id="edad" required />
 
-  <div id="qr"></div>
+      <label>Observaciones:</label>
+      <textarea id="observaciones"></textarea>
 
+      <hr />
+<h3>🩺 Información clínica del paciente</h3>
+
+<div class="extra-info">
+  <label for="sexo">Sexo:</label>
+  <select id="sexo">
+    <option value="">Seleccionar</option>
+    <option value="Masculino">Masculino</option>
+    <option value="Femenino">Femenino</option>
+    <option value="Otro">Otro</option>
+  </select>
+
+  <label for="peso">Peso (kg):</label>
+  <input type="number" id="peso" min="0" step="0.1" />
+
+  <label for="talla">Talla (cm):</label>
+  <input type="number" id="talla" min="0" step="0.1" />
+
+  <label for="imc">IMC:</label>
+  <input type="text" id="imc" placeholder="Ej. 24.7" />
+
+  <label for="presion">Presión arterial:</label>
+  <input type="text" id="presion" placeholder="Ej. 120/80" />
+
+  <label for="temperatura">Temperatura (°C):</label>
+  <input type="number" id="temperatura" step="0.1" />
+
+  <label for="diagnostico">Diagnóstico:</label>
+  <input type="text" id="diagnostico" placeholder="Ej. Hipertensión" />
+</div>
+
+<script>
+  const pesoInput = document.getElementById("peso");
+  const tallaInput = document.getElementById("talla");
+  const imcInput = document.getElementById("imc");
+
+  function calcularIMC() {
+    const peso = parseFloat(pesoInput.value);
+    const tallaCm = parseFloat(tallaInput.value);
+    const tallaM = tallaCm / 100;
+
+    if (peso > 0 && tallaM > 0) {
+      const imc = (peso / (tallaM * tallaM)).toFixed(1);
+      imcInput.value = imc;
+    }
+  }
+
+  pesoInput.addEventListener("input", calcularIMC);
+  tallaInput.addEventListener("input", calcularIMC);
+</script>
+
+
+      <h3>Medicamentos</h3>
+      <div id="medicamentos"></div>
+      <button type="button" id="btnAgregar">+ Agregar medicamento</button>
+
+      <button type="submit">Generar receta</button>
+    </form>
+
+    <div class="card" style="margin-top: 30px;">
+      <h3>QR generado:</h3>
+      <div id="qr"></div>
+    </div>
+</main>
+    <div class="card" style="margin-top: 30px; opacity: 0.6; pointer-events: none;">
+      <h3>🔒 Diagnóstico asistido con IA</h3>
+      <p>Muy pronto podrás ingresar síntomas y obtener sugerencias clínicas con apoyo de inteligencia artificial.</p>
+    </div>
+  </main>
+
+  <datalist id="listaMedicamentos"></datalist>
+
+  <script type="module" src="/medico/panel-medico-debug.js"></script>
   <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-    import { getFirestore, collection, addDoc, serverTimestamp, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-    import QRCode from 'https://cdn.jsdelivr.net/npm/qrcode@1.5.3/+esm';
+    import { auth, signOut } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
+    import { db } from "/firebase-init.js";
+    import { doc, getDoc } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyBIjaOe4HcGNDk0xrqen8etBv0RyjyOJHw",
-      authDomain: "kodrx-105b9.firebaseapp.com",
-      databaseURL: "https://kodrx-105b9-default-rtdb.firebaseio.com",
-      projectId: "kodrx-105b9",
-      storageBucket: "kodrx-105b9.appspot.com",
-      messagingSenderId: "239675098141",
-      appId: "1:239675098141:web:152ae3741b0ac79db7f2f4"
-    };
-
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db = getFirestore(app);
-
-    let user;
-
-    onAuthStateChanged(auth, async (u) => {
-      if (u) {
-        user = u;
-        const snap = await getDoc(doc(db, "medicos", user.uid));
-        if (!snap.exists() || snap.data().suspendido === true) {
-          signOut(auth).then(() => window.location.href = "/suspendido.html");
-          return;
-        }
-      } else {
-        window.location.href = "login.html";
-      }
-    });
-
-    document.getElementById("form-receta").addEventListener("submit", async (e) => {
-      e.preventDefault();
-
-      const nombre = document.getElementById("nombre").value;
-      const edad = document.getElementById("edad").value;
-      const observaciones = document.getElementById("observaciones").value;
-
-      const medicamentos = Array.from(document.querySelectorAll(".medicamento")).map(div => ({
-        nombre: div.querySelector(".autocomplete-nombre").value,
-        dosis: div.querySelector(".dosis").value,
-        duracion: div.querySelector(".duracion").value
-      }));
-
-      try {
-        const docRef = await addDoc(collection(db, "recetas"), {
-          uid: user.uid,
-          nombrePaciente: nombre,
-          edad,
-          observaciones,
-          medicamentos,
-          timestamp: serverTimestamp()
-        });
-
-        const recetaID = docRef.id;
-        const url = `https://www.kodrx.app/verificar.html?id=${recetaID}`;
-        QRCode.toCanvas(document.getElementById("qr"), url, { width: 200 }, function (error) {
-          if (error) console.error(error);
-          console.log("QR generado");
-        });
-      } catch (err) {
-        console.error("Error al guardar la receta:", err);
-      }
-    });
-
-    function cerrarSesion() {
-      signOut(auth).then(() => window.location.href = "login.html");
-    }
-
-    let medicamentosDisponibles = [];
-
-    function iniciarAutocompletado(input) {
-      const contenedorSugerencias = document.createElement("div");
-      contenedorSugerencias.classList.add("sugerencias");
-      input.parentNode.appendChild(contenedorSugerencias);
-
-      input.addEventListener("input", () => {
-        const valor = input.value.toLowerCase();
-        contenedorSugerencias.innerHTML = "";
-
-        if (!valor) return;
-
-        const coincidencias = medicamentosDisponibles.filter(med =>
-          med.nombre.toLowerCase().includes(valor)
-        );
-
-        if (coincidencias.length === 0) return;
-
-        coincidencias.forEach(med => {
-          const item = document.createElement("div");
-          item.textContent = med.nombre;
-          item.classList.add("sugerencia");
-          item.onclick = () => {
-            input.value = med.nombre;
-            contenedorSugerencias.innerHTML = "";
-          };
-          contenedorSugerencias.appendChild(item);
-        });
-      });
-
-      document.addEventListener("click", (e) => {
-        if (!contenedorSugerencias.contains(e.target) && e.target !== input) {
-          contenedorSugerencias.innerHTML = "";
-        }
-      });
-    }
-
-    function agregarMedicamento() {
-      if (!medicamentosDisponibles || medicamentosDisponibles.length === 0) {
-        console.warn("Los medicamentos aún no están cargados.");
+    auth.onAuthStateChanged(async (user) => {
+      if (!user) {
+        window.location.href = "/medico/login.html";
         return;
       }
 
-      const div = document.createElement("div");
-      div.classList.add("medicamento");
-      div.innerHTML = `
-        <input type="text" class="autocomplete-nombre" placeholder="Nombre del medicamento" required>
-        <input type="text" class="dosis" placeholder="Dosis" required>
-        <input type="text" class="duracion" placeholder="Duración" required>
-      `;
-      document.getElementById("medicamentos").appendChild(div);
-      const nuevoInput = div.querySelector(".autocomplete-nombre");
-      iniciarAutocompletado(nuevoInput);
+      const snap = await getDoc(doc(db, "medicos", user.uid));
+      if (!snap.exists() || snap.data().suspendido === true) {
+        await signOut(auth);
+        window.location.href = "/suspendido.html";
+      }
+    });
+  </script>
+  <script>
+    function nuevaReceta() {
+      document.getElementById("generarRecetaForm").reset();
+      document.getElementById("medicamentos").innerHTML = "";
+      agregarMedicamento();
+      document.getElementById("qr").innerHTML = "";
     }
 
-    fetch('medicamentos_ext.json')
-      .then(response => response.json())
-      .then(data => {
-        medicamentosDisponibles = data.sort((a, b) => {
-          if (a.destacado === b.destacado) {
-            return a.nombre.localeCompare(b.nombre);
-          }
-          return b.destacado - a.destacado;
-        });
-        agregarMedicamento(); // Primer campo
-      })
-      .catch(err => console.error("Error al cargar medicamentos:", err));
+    function verHistorial() {
+      window.location.href = "/medico/historial.html";
+    }
+
+    function cerrarSesion() {
+      sessionStorage.clear();
+      localStorage.clear();
+      window.location.href = "/medico/login.html";
+    }
   </script>
 </body>
 </html>
