@@ -23,7 +23,13 @@ window.verificarManual = () => {
 };
 
 window.iniciarEscaneo = () => {
-  const qrReader = new Html5Qrcode("qr-reader");
+  const Html5QrcodeGlobal = window.Html5Qrcode || globalThis.Html5Qrcode;
+  if (!Html5QrcodeGlobal) {
+    alert("El lector QR no está disponible.");
+    return;
+  }
+
+  const qrReader = new Html5QrcodeGlobal("qr-reader");
   qrReader.start(
     { facingMode: "environment" },
     { fps: 10, qrbox: 250 },
