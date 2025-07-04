@@ -108,25 +108,6 @@
   <datalist id="listaMedicamentos"></datalist>
 
   <script type="module" src="/medico/panel-medico-debug.js"></script>
-  <script>
-    function nuevaReceta() {
-      document.getElementById("generarRecetaForm").reset();
-      document.getElementById("medicamentos").innerHTML = "";
-      agregarMedicamento();
-      document.getElementById("qr").innerHTML = "";
-    }
-
-    function verHistorial() {
-      window.location.href = "/medico/historial.html";
-    }
-
-    function cerrarSesion() {
-      sessionStorage.clear();
-      localStorage.clear();
-      window.location.href = "/medico/login.html";
-    }
-  </script>
-
   <script type="module">
     import { auth, signOut } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
     import { db } from "/firebase-init.js";
@@ -145,6 +126,24 @@
       }
     });
   </script>
-</body>
 
+  <script>
+    function nuevaReceta() {
+      document.getElementById("generarRecetaForm").reset();
+      document.getElementById("medicamentos").innerHTML = "";
+      agregarMedicamento();
+      document.getElementById("qr").innerHTML = "";
+    }
+
+    function verHistorial() {
+      window.location.href = "/medico/historial.html";
+    }
+
+    function cerrarSesion() {
+      sessionStorage.clear();
+      localStorage.clear();
+      window.location.href = "/medico/login.html";
+    }
+  </script>
+</body>
 </html>
