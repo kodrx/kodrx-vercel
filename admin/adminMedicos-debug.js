@@ -4,7 +4,6 @@ import {
   collection,
   getDocs,
   updateDoc,
-  deleteDoc,
   doc
 } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
 
@@ -68,22 +67,32 @@ function renderizarMedicos(lista) {
     `;
 
     if (incluirBoton) {
-      const btnVerificar = document.createElement("button");
-      btnVerificar.innerText = "Verificar médico";
-      btnVerificar.onclick = async () => {
-        await updateDoc(doc(db, "medicos", med.id), { verificado: true });
+      const btn = document.createElement("button");
+      btn.innerText = "Verificar médico";
+      btn.onclick = async () => {
+        await updateDoc(doc(db, "medicos", med.id), {
+          verificado: true
+        });
         alert("Médico verificado correctamente.");
         cargarMedicos();
       };
-      contenido.appendChild(btnVerificar);
+      contenido.appendChild(btn);
     }
 
-    const btnEliminar = document.createElement("button");
-    btnEliminar.style.marginTop = "10px";
-    btnEliminar.style.backgroundColor = "#d32f2f";
-    btnEliminar.innerText = "🗑️ Eliminar médico";
-    btnEliminar.onclick = () => eliminarMedico(med.id, med.nombre);
-    contenido.appendChild(btnEliminar);
+    const btnSuspender = document.createElement("button");
+    btnSuspender.innerText = med.suspendido ? "Reactivar médico" : "Suspender médico";
+    btnSuspender.style.marginTop = "10px";
+    btnSuspender.onclick = async () => {
+      const confirmar = confirm(`¿Estás seguro que deseas ${med.suspendido ? "reactivar" : "suspender"} al médico?`);
+      if (!confirmar) return;
+
+      await updateDoc(doc(db, "medicos", med.id), {
+        suspendido: !med.suspendido
+      });
+      alert(`Médico ${med.suspendido ? "reactivado" : "suspendido"} correctamente.`);
+      cargarMedicos();
+    };
+    contenido.appendChild(btnSuspender);
 
     card.appendChild(contenido);
     return card;
@@ -108,19 +117,5 @@ function filtrarMedicos(e) {
     (m.especialidad || "").toLowerCase().includes(texto)
   );
   renderizarMedicos(filtrados);
-}
-
-async function eliminarMedico(uid, nombre) {
-  const confirmacion = confirm(`¿Deseas eliminar al médico "${nombre}"? Esta acción es irreversible.`);
-  if (!confirmacion) return;
-
-  try {
-    await deleteDoc(doc(db, "medicos", uid));
-    alert("Médico eliminado correctamente.");
-    cargarMedicos();
-  } catch (error) {
-    alert("Error al eliminar médico.");
-    console.error("Error al eliminar:", error);
-  }
 }
 
