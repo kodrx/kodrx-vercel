@@ -6,7 +6,7 @@ let datosFarmacia = null;
 let recetaGlobal = null;
 let recetaIdActual = null;
 
-// Obtener datos de la farmacia logueada
+// Obtener datos de farmacia autenticada
 onAuthStateChanged(auth, (user) => {
   if (user) {
     getDoc(doc(db, "farmacias", user.uid)).then((snap) => {
@@ -22,6 +22,7 @@ window.verificarManual = () => {
   if (id) verificarReceta(id);
 };
 
+// ✅ Lector QR compatible con módulos
 window.iniciarEscaneo = () => {
   const Html5QrcodeGlobal = window.Html5Qrcode || globalThis.Html5Qrcode;
   if (!Html5QrcodeGlobal) {
@@ -58,4 +59,67 @@ async function verificarReceta(id) {
   html += `<p>Edad: ${recetaGlobal.edad}</p>`;
   html += `<p>Sexo: ${recetaGlobal.sexo || 'No registrado'}</p>`;
   html += `<p>Peso: ${recetaGlobal.peso || '-'} kg</p>`;
-  html += `<p>Talla: ${recetaGlobal.talla ||
+  html += `<p>Talla: ${recetaGlobal.talla || '-'} cm</p>`;
+  html += `<p>IMC: ${recetaGlobal.imc || '-'}</p>`;
+  html += `<p>Presión arterial: ${recetaGlobal.presion || '-'}</p>`;
+  html += `<p>Temperatura: ${recetaGlobal.temperatura || '-'}</p>`;
+  html += `<p><strong>Diagnóstico:</strong> ${recetaGlobal.diagnostico || '-'}</p>`;
+  html += `<p><strong>Fecha:</strong> ${recetaGlobal.timestamp?.toDate().toLocaleString() || '-'}</p>`;
+  html += `<p><strong>Médico:</strong> ${recetaGlobal.medicoNombre || 'Desconocido'}</p>`;
+  html += `<p><strong>Cédula del médico:</strong> ${recetaGlobal.medicoCedula || '-'}</p>`;
+  html += `<p><strong>Especialidad:</strong> ${recetaGlobal.medicoEspecialidad || '-'}</p>`;
+
+  const direccion = `${recetaGlobal.medicoCalle || ''} ${recetaGlobal.medicoNumero || ''}, Col. ${recetaGlobal.medicoColonia || ''}, ${recetaGlobal.medicoMunicipio || ''}, ${recetaGlobal.medicoEstado || ''}, C.P. ${recetaGlobal.medicoCP || ''}`;
+  html += `<p><strong>Domicilio del consultorio:</strong> ${direccion}</p>`;
+
+  html += `<h4>Medicamentos:</h4>`;
+  recetaGlobal.medicamentos.forEach((med, idx) => {
+    const ya = surtido.find(s => s.nombre === med.nombre);
+    const disable = ya ? "checked disabled" : "";
+    const extra = ya ? `<span class="surtido-info">Surtido por: ${ya.surtidoPor}, Tel: ${ya.telefono}</span>` : "";
+    html += `<div class="medicamento"><label><input type="checkbox" data-index="${idx}" ${disable}> ${med.nombre} - ${med.dosis}, ${med.duracion}</label> ${extra}</div>`;
+  });
+
+  html += `<br><button onclick="surtirReceta()">Surtir</button>`;
+  document.getElementById("resultado").innerHTML = html;
+}
+
+window.surtirReceta = async () => {
+  // Esperar hasta 2 segundos por datosFarmacia
+  let intentos = 0;
+  while (!datosFarmacia && intentos < 20) {
+    await new Promise(r => setTimeout(r, 100));
+    intentos++;
+  }
+
+  if (!recetaGlobal || !recetaIdActual || !datosFarmacia) {
+    return alert("Faltan datos para surtir.");
+  }
+
+  const checks = document.querySelectorAll('input[type="checkbox"]:not(:disabled):checked');
+  const seleccionados = Array.from(checks).map(c => recetaGlobal.medicamentos[c.dataset.index]);
+
+  if (seleccionados.length === 0) {
+    return alert("Selecciona al menos un medicamento.");
+  }
+
+  const nuevos = seleccionados.map(m => ({
+    ...m,
+    surtidoPor: datosFarmacia.nombreFarmacia,
+    telefono: datosFarmacia.telefono,
+    fecha: new Date().toISOString()
+  }));
+
+  const previos = recetaGlobal.surtidoParcial || [];
+  const actualizados = [...previos, ...nuevos];
+  const esTotal = actualizados.length === recetaGlobal.medicamentos.length;
+
+  await updateDoc(doc(db, "recetas", recetaIdActual), {
+    surtidoParcial: actualizados,
+    estado: esTotal ? "surtida" : "parcial"
+  });
+
+  alert("Receta actualizada.");
+  location.reload();
+};
+
