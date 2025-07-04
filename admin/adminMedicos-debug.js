@@ -4,6 +4,7 @@ import {
   collection,
   getDocs,
   updateDoc,
+  deleteDoc,
   doc
 } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
 
@@ -67,17 +68,22 @@ function renderizarMedicos(lista) {
     `;
 
     if (incluirBoton) {
-      const btn = document.createElement("button");
-      btn.innerText = "Verificar médico";
-      btn.onclick = async () => {
-        await updateDoc(doc(db, "medicos", med.id), {
-          verificado: true
-        });
+      const btnVerificar = document.createElement("button");
+      btnVerificar.innerText = "Verificar médico";
+      btnVerificar.onclick = async () => {
+        await updateDoc(doc(db, "medicos", med.id), { verificado: true });
         alert("Médico verificado correctamente.");
         cargarMedicos();
       };
-      contenido.appendChild(btn);
+      contenido.appendChild(btnVerificar);
     }
+
+    const btnEliminar = document.createElement("button");
+    btnEliminar.style.marginTop = "10px";
+    btnEliminar.style.backgroundColor = "#d32f2f";
+    btnEliminar.innerText = "🗑️ Eliminar médico";
+    btnEliminar.onclick = () => eliminarMedico(med.id, med.nombre);
+    contenido.appendChild(btnEliminar);
 
     card.appendChild(contenido);
     return card;
@@ -102,5 +108,19 @@ function filtrarMedicos(e) {
     (m.especialidad || "").toLowerCase().includes(texto)
   );
   renderizarMedicos(filtrados);
+}
+
+async function eliminarMedico(uid, nombre) {
+  const confirmacion = confirm(`¿Deseas eliminar al médico "${nombre}"? Esta acción es irreversible.`);
+  if (!confirmacion) return;
+
+  try {
+    await deleteDoc(doc(db, "medicos", uid));
+    alert("Médico eliminado correctamente.");
+    cargarMedicos();
+  } catch (error) {
+    alert("Error al eliminar médico.");
+    console.error("Error al eliminar:", error);
+  }
 }
 
