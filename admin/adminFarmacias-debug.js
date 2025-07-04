@@ -4,6 +4,7 @@ import {
   collection,
   getDocs,
   updateDoc,
+  deleteDoc,
   doc
 } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
 
@@ -101,22 +102,6 @@ function renderizarLista(farmacias, contenedor) {
       contenido.appendChild(btn);
     }
 
-    card.appendChild(contenido);
-    contenedor.appendChild(card);
-  });
-}
-
-function filtrarFarmacias(e) {
-  const texto = e.target.value.toLowerCase();
-  const verificadas = listaGlobal.filter(f => f.verificado &&
-    ((f.nombreFarmacia || "").toLowerCase().includes(texto) ||
-     (f.colonia || "").toLowerCase().includes(texto)));
-
-  const pendientes = listaGlobal.filter(f => !f.verificado &&
-    ((f.nombreFarmacia || "").toLowerCase().includes(texto) ||
-     (f.colonia || "").toLowerCase().includes(texto)));
-
-  renderizarLista(verificadas, document.getElementById("farmaciasVerificadas"));
-  renderizarLista(pendientes, document.getElementById("farmaciasPendientes"));
-}
-
+    const btnEliminar = document.createElement("button");
+    btnEliminar.innerText = "🗑️ Eliminar farmacia";
+    btnEliminar.
