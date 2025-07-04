@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getFirestore, collection, addDoc, serverTimestamp, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getFirestore, collection, addDoc, serverTimestamp, doc, getDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
 // Configuración Firebase
 const firebaseConfig = {
@@ -22,14 +22,26 @@ onAuthStateChanged(auth, async (user) => {
     const medicoRef = doc(db, "medicos", user.uid);
     const medicoSnap = await getDoc(medicoRef);
 
-    // 🚨 Verificación de cuenta
-    if (!medicoSnap.exists() || medicoSnap.data().verificado !== true) {
+    if (!medicoSnap.exists()) {
+      await signOut(auth);
+      window.location.href = "/suspendido.html";
+      return;
+    }
+
+    const data = medicoSnap.data();
+
+    if (data.suspendido === true) {
+      await signOut(auth);
+      window.location.href = "/suspendido.html";
+      return;
+    }
+
+    if (data.verificado !== true) {
       alert("Tu cuenta aún no ha sido verificada. Por favor espera la aprobación del administrador.");
       window.location.href = "/medico/espera_verificacion.html";
       return;
     }
 
-    const data = medicoSnap.data();
     let medicoNombre = data.nombre || "Desconocido";
     let medicoCedula = data.cedula || "-";
     let medicoEspecialidad = data.especialidad || "-";
@@ -42,9 +54,9 @@ onAuthStateChanged(auth, async (user) => {
 
     document.getElementById("generarRecetaForm").addEventListener("submit", async (e) => {
       e.preventDefault();
-        const boton = e.submitter;
-  boton.disabled = true;
-  boton.textContent = "Generando receta...";
+      const boton = e.submitter;
+      boton.disabled = true;
+      boton.textContent = "Generando receta...";
 
       const nombre = document.getElementById("nombre").value;
       const edad = document.getElementById("edad").value;
@@ -126,7 +138,6 @@ onAuthStateChanged(auth, async (user) => {
   }
 });
 
-// Obtener medicamentos de campos dinámicos
 function obtenerMedicamentos() {
   const medicamentos = [];
   const contenedores = document.querySelectorAll(".medicamento");
@@ -139,7 +150,6 @@ function obtenerMedicamentos() {
   return medicamentos;
 }
 
-// Agregar nuevo campo de medicamento
 window.agregarMedicamento = function () {
   const div = document.createElement("div");
   div.className = "medicamento";
@@ -152,7 +162,6 @@ window.agregarMedicamento = function () {
   cargarMedicamentos();
 };
 
-// Cargar medicamentos en datalist
 async function cargarMedicamentos() {
   try {
     const response = await fetch("medicamentos_ext.json");
@@ -169,7 +178,6 @@ async function cargarMedicamentos() {
   }
 }
 
-// Inicial
 document.getElementById("btnAgregar").addEventListener("click", agregarMedicamento);
 agregarMedicamento();
 cargarMedicamentos();
