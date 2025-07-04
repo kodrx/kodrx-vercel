@@ -13,7 +13,6 @@ const db = getFirestore(app);
 document.addEventListener("DOMContentLoaded", async () => {
   const params = new URLSearchParams(window.location.search);
   const recetaId = params.get("id");
-
   if (!recetaId) return;
 
   try {
@@ -22,26 +21,39 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (!docSnap.exists()) return;
 
     const receta = docSnap.data();
+
+    // Mostrar datos del médico
     document.getElementById("fecha").textContent = receta.timestamp?.toDate().toLocaleString() || "Sin fecha";
     document.getElementById("medico").textContent = receta.medicoNombre || "-";
     document.getElementById("cedula").textContent = receta.medicoCedula || "-";
     document.getElementById("especialidad").textContent = receta.medicoEspecialidad || "-";
 
+    // Construir dirección
+    const direccion = `${receta.medicoCalle || ''} ${receta.medicoNumero || ''}, Col. ${receta.medicoColonia || ''}, ${receta.medicoMunicipio || ''}, ${receta.medicoEstado || ''}, C.P. ${receta.medicoCP || ''}`;
 
+    // Insertar dirección debajo de los datos
+    const cabecera = document.querySelector(".cabecera");
+    const pDireccion = document.createElement("p");
+    pDireccion.innerHTML = `<strong>Domicilio:</strong> ${direccion}`;
+    cabecera.appendChild(pDireccion);
+
+    // Blockchain
     const cadenaResp = await fetch("https://kodrx-blockchain.onrender.com/blockchain");
     const cadena = await cadenaResp.json();
     const bloque = cadena.find(b => b.data?.receta?.includes(receta.medicamentos?.[0]?.nombre));
 
     const hash = bloque?.hash || "N/A";
     const index = bloque?.index || "N/A";
-    document.getElementById("hash").textContent = hash;
+    document.getElementById("hash").innerHTML = `#${index}<br>${hash}`;
 
+    // QR KodRx (Firebase)
     new QRious({
       element: document.getElementById("qrFirebase"),
       value: `https://www.kodrx.app/verificar.html?id=${recetaId}`,
       size: 220
     });
 
+    // QR Blockchain
     new QRious({
       element: document.getElementById("qrBlockchain"),
       value: `https://kodrx-blockchain.onrender.com/verificar.html?id=${index}`,
@@ -62,3 +74,4 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.body.innerHTML = "<p style='text-align:center;color:red;'>❌ Error al cargar la receta.</p>";
   }
 });
+
