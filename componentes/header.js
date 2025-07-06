@@ -3,7 +3,7 @@ document.addEventListener("DOMContentLoaded", () => {
   header.classList.add("site-header"); // ← ✅ Clase clave para ocultar en impresión
 
   // HTML inicial
-  header.innerHTML = `<a href="/index.html" class="logo-link"></a>`;
+  header.innerHTML = `<a href="/acceso.html" class="logo-link"></a>`;
   document.body.insertBefore(header, document.body.firstChild);
 
   // Obtener color de fondo
