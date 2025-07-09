@@ -43,6 +43,45 @@ body {
   font-weight: bold;
   margin-top: 1rem;
 }
+.acceso-directo {
+  background: #f0f4f8;
+  padding: 2rem;
+  max-width: 400px;
+  margin: 3rem auto;
+  border-radius: 12px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+  text-align: center;
+}
+
+.acceso-directo input {
+  width: 100%;
+  padding: 12px;
+  margin: 8px 0;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  font-size: 1rem;
+}
+
+.acceso-directo button {
+  width: 100%;
+  padding: 12px;
+  margin-top: 10px;
+  background: #1e88e5;
+  color: white;
+  font-weight: bold;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.acceso-directo button:hover {
+  background: #1565c0;
+}
+
+.acceso-directo .info-acceso {
+  margin-top: 1rem;
+  font-size: 0.9rem;
+}
 
 footer {
   background: #003366;
