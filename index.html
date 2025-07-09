@@ -1,28 +1,49 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>KodRx | La receta digital</title>
-  <link rel="stylesheet" href="estilos/landing.css" />
-  <link rel="icon" href="favicon.ico" type="image/x-icon" />
-</head>
-<body>
-  <header class="hero">
-    <img src="logo-kodrx.png" alt="KodRx Logo" class="logo" />
-    <h1>La receta médica ya no se imprime. <span class="highlight">Se escanea.</span></h1>
-    <p>Prescripción digital, validación QR y blockchain al servicio de la salud.</p>
-  </header>
+<section class="acceso-directo">
+  <h2>Acceso para usuarios autorizados</h2>
+  <p>Inicia sesión si ya cuentas con acceso a la plataforma.</p>
+  <form id="form-login" onsubmit="return false;">
+    <input type="email" id="correo" placeholder="Correo electrónico" required />
+    <input type="password" id="password" placeholder="Contraseña" required />
+    <button onclick="iniciarSesion()">Iniciar sesión</button>
+    <p class="info-acceso">¿No tienes cuenta? Solicita acceso a <a href="mailto:contacto@kodrx.app">contacto@kodrx.app</a></p>
+  </form>
+</section>
 
-  <section class="cta">
-    <h2>En fase piloto privada</h2>
-    <p>Estamos trabajando con médicos y farmacias seleccionadas.</p>
-    <a href="mailto:contacto@kodrx.app" class="boton">Solicitar acceso</a>
-  </section>
+<script type="module">
+  import { auth, db } from './firebase-init.js';
+  import { signInWithEmailAndPassword } from 'https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js';
+  import { doc, getDoc } from 'https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js';
 
-  <footer>
-    <p>Contacto: contacto@kodrx.app | Instagram: @kodrx.app</p>
-    <p>&copy; 2025 KodRx</p>
-  </footer>
-</body>
-</html>
+  window.iniciarSesion = async () => {
+    const correo = document.getElementById("correo").value;
+    const password = document.getElementById("password").value;
+
+    try {
+      const cred = await signInWithEmailAndPassword(auth, correo, password);
+      const uid = cred.user.uid;
+
+      const refMedico = await getDoc(doc(db, "medicos", uid));
+      const refFarmacia = await getDoc(doc(db, "farmacias", uid));
+
+      if (refMedico.exists()) {
+        const data = refMedico.data();
+        if (data.verificado && !data.suspendido) {
+          window.location.href = "/medico/panel.html";
+        } else {
+          alert("Tu cuenta de médico no está verificada o está suspendida.");
+        }
+      } else if (refFarmacia.exists()) {
+        const data = refFarmacia.data();
+        if (data.verificado && !data.suspendido) {
+          window.location.href = "/farmacia/panel.html";
+        } else {
+          alert("Tu cuenta de farmacia no está verificada o está suspendida.");
+        }
+      } else {
+        alert("No se encontró el usuario en la base de datos.");
+      }
+    } catch (err) {
+      alert("Error al iniciar sesión: " + err.message);
+    }
+  };
+</script>
