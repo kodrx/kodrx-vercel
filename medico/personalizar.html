@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Personalizar Receta - KodRx</title>
+  <link rel="stylesheet" href="/estilos/global.css" />
+  <script src="/componentes/header.js" defer></script>
+</head>
+<body>
+  <main class="seccion">
+    <h2>🎨 Personaliza tu receta</h2>
+
+    <form id="formPersonalizacion" class="formulario-container">
+      <label for="clinica">Nombre de clínica o consultorio</label>
+      <input type="text" id="clinica" placeholder="Ej. Consultorio Santa Clara" />
+
+      <label for="direccion">Dirección completa</label>
+      <input type="text" id="direccion" placeholder="Ej. Av. Salud 123, Col. Centro, CDMX" />
+
+      <label for="telefono">Teléfono de contacto</label>
+      <input type="tel" id="telefono" placeholder="Ej. 55 1234 5678" />
+
+      <label for="pie">Texto al pie de la receta</label>
+      <textarea id="pie" rows="3" placeholder="Ej. Gracias por confiar en su salud. KodRx."></textarea>
+
+      <label for="logo">Subir logotipo (opción premium)</label>
+      <input type="file" id="logo" disabled style="opacity: 0.5;" />
+      <small style="color: gray;">Funcionalidad disponible en planes premium</small>
+
+      <button type="submit">Guardar personalización</button>
+    </form>
+
+    <a href="/medico/panel.html" class="volver">← Volver al panel</a>
+  </main>
+
+  <script type="module" src="/firebase-init.js"></script>
+  <script type="module" src="personalizacion.js"></script>
+</body>
+</html>
