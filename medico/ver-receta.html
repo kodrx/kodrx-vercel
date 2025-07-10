@@ -8,6 +8,7 @@
   <title>Receta KodRx</title>
   <link rel="stylesheet" href="/estilos/global.css" />
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
 
   <style>
     body {
@@ -94,7 +95,10 @@
     <div class="qr-grande">
       <canvas id="qrFirebase"></canvas>
     </div>
-
+<div class="barcode-area" style="text-align:center; margin-top: 1.5rem;">
+  <p style="margin-bottom: 0.5rem;"><strong>ID de receta (para escáner físico):</strong></p>
+  <canvas id="barcodeCanvas" style="margin: auto;"></canvas>
+</div>
     <div class="hash">
       <strong> Hash único de receta:</strong>
       <div id="hash"></div>
