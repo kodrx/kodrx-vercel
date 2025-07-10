@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Generador de Código de Barras | KodRx</title>
+  <link rel="stylesheet" href="/estilos/global.css">
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      padding: 2rem;
+      background-color: #f5f5f5;
+      color: #222;
+    }
+    .contenedor {
+      max-width: 500px;
+      margin: auto;
+      background: white;
+      padding: 2rem;
+      border-radius: 12px;
+      box-shadow: 0 0 12px rgba(0,0,0,0.05);
+      text-align: center;
+    }
+    input {
+      width: 100%;
+      padding: 10px;
+      font-size: 16px;
+      margin-bottom: 1rem;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+    }
+    button {
+      background-color: #1e88e5;
+      color: white;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 6px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #1565c0;
+    }
+    canvas {
+      margin-top: 1.5rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="contenedor">
+    <h2>Generador de Código de Barras KodRx</h2>
+    <p>Ingresa el ID de receta para generar su código escaneable.</p>
+    <input type="text" id="recetaId" placeholder="ID de receta ej. 3T9fAxkK72kNtsqT">
+    <button onclick="generarCodigo()">Generar</button>
+    <canvas id="codigoBarras"></canvas>
+  </div>
+
+  <script>
+    function generarCodigo() {
+      const id = document.getElementById("recetaId").value.trim();
+      if (!id) return alert("Ingresa un ID de receta válido.");
+      JsBarcode("#codigoBarras", id, {
+        format: "CODE128",
+        displayValue: true,
+        fontSize: 18,
+        height: 80
+      });
+    }
+  </script>
+</body>
+</html>
