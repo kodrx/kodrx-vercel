@@ -15,6 +15,20 @@ document.addEventListener("DOMContentLoaded", async () => {
   const recetaId = params.get("id");
   if (!recetaId) return;
 
+  // ✅ Generar código de barras desde el ID
+  JsBarcode("#barcodeCanvas", recetaId, {
+    format: "CODE128",
+    lineColor: "#1e88e5",
+    width: 2,
+    height: 60,
+    displayValue: true,
+    fontSize: 16,
+    margin: 0
+  });
+
+  // ... aquí va el resto de tu lógica actual que obtiene la receta de Firebase
+
+
   try {
     const docRef = doc(db, "recetas", recetaId);
     const docSnap = await getDoc(docRef);
