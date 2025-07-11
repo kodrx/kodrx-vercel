@@ -13,15 +13,14 @@
   <main class="seccion">
     <h2>Panel Médico</h2>
 
-    <div style="margin-bottom: 20px; display: flex; gap: 10px; flex-wrap: wrap;">
-      <button onclick="nuevaReceta()"> Nueva receta</button>
-      <button onclick="verHistorial()"> Historial</button>
-    
-      <button onclick="window.open('https://kodrx-blockchain.onrender.com/panel/verificar-receta.html', '_blank')">
-   Verificar receta en blockchain
-</button>
-<button onclick="cerrarSesion()"> Cerrar sesión</button>
-    </div>
+    <<div style="margin-bottom: 20px; display: flex; gap: 10px; flex-wrap: wrap;">
+  <button onclick="nuevaReceta()">Nueva receta</button>
+  <button onclick="verHistorial()">Historial</button>
+  <button onclick="window.open('https://kodrx-blockchain.onrender.com/panel/verificar-receta.html', '_blank')">Verificar en blockchain</button>
+  <button onclick="window.location.href='/upgrade.html'"> Personalizar receta</button>
+  <button onclick="window.location.href='/upgrade.html'"> Acceder IA clínica</button>
+  <button onclick="cerrarSesion()">Cerrar sesión</button>
+</div>
     
 <main class="formulario-container">
   <h2>Generar nueva receta</h2>
