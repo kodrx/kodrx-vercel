@@ -1,3 +1,4 @@
+
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
@@ -26,9 +27,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     margin: 0
   });
 
-  // ... aquí va el resto de tu lógica actual que obtiene la receta de Firebase
-
-
   try {
     const docRef = doc(db, "recetas", recetaId);
     const docSnap = await getDoc(docRef);
@@ -36,49 +34,49 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     const receta = docSnap.data();
 
-    // Mostrar datos del médico
     document.getElementById("fecha").textContent = receta.timestamp?.toDate().toLocaleString() || "Sin fecha";
     document.getElementById("medico").textContent = receta.medicoNombre || "-";
     document.getElementById("cedula").textContent = receta.medicoCedula || "-";
     document.getElementById("especialidad").textContent = receta.medicoEspecialidad || "-";
 
-    // Construir dirección
-    const direccion = `${receta.medicoCalle || ''} ${receta.medicoNumero || ''}, Col. ${receta.medicoColonia || ''}, ${receta.medicoMunicipio || ''}, ${receta.medicoEstado || ''}, C.P. ${receta.medicoCP || ''}`;
+    const direccion = \`\${receta.medicoCalle || ''} \${receta.medicoNumero || ''}, Col. \${receta.medicoColonia || ''}, \${receta.medicoMunicipio || ''}, \${receta.medicoEstado || ''}, C.P. \${receta.medicoCP || ''}\`;
 
-    // Insertar dirección debajo de los datos
     const cabecera = document.querySelector(".cabecera");
     const pDireccion = document.createElement("p");
-    pDireccion.innerHTML = `<strong>Domicilio:</strong> ${direccion}`;
+    pDireccion.innerHTML = \`<strong>Domicilio:</strong> \${direccion}\`;
     cabecera.appendChild(pDireccion);
 
-    // Blockchain
     const cadenaResp = await fetch("https://kodrx-blockchain.onrender.com/blockchain");
     const cadena = await cadenaResp.json();
-    const bloque = cadena.find(b => b.data?.receta?.includes(receta.medicamentos?.[0]?.nombre));
+
+    const recetaTexto = receta.medicamentos.map(m => \`\${m.nombre} \${m.dosis} \${m.frecuencia} por \${m.duracion}\`).join(", ");
+
+    const bloque = cadena.find(b =>
+      b.data?.medico === receta.medicoNombre &&
+      b.data?.cedula === receta.medicoCedula &&
+      b.data?.receta?.trim() === recetaTexto.trim()
+    );
 
     const hash = bloque?.hash || "N/A";
     const index = bloque?.index || "N/A";
-    document.getElementById("hash").innerHTML = `#${index}<br>${hash}`;
+    document.getElementById("hash").innerHTML = \`#\${index}<br>\${hash}\`;
 
-    // QR KodRx (Firebase)
     new QRious({
       element: document.getElementById("qrFirebase"),
-      value: `https://www.kodrx.app/verificar.html?id=${recetaId}`,
+      value: \`https://www.kodrx.app/verificar.html?id=\${recetaId}\`,
       size: 220
     });
 
-    // QR Blockchain
     new QRious({
       element: document.getElementById("qrBlockchain"),
-      value: `https://kodrx-blockchain.onrender.com/verificar.html?id=${index}`,
+      value: \`https://kodrx-blockchain.onrender.com/verificar.html?id=\${index}\`,
       size: 120
     });
 
-    // Descargar como imagen
     document.getElementById("descargar").addEventListener("click", () => {
       html2canvas(document.querySelector(".receta-container"), { scale: 2 }).then(canvas => {
         const link = document.createElement("a");
-        link.download = `receta-kodrx-${recetaId}.png`;
+        link.download = \`receta-kodrx-\${recetaId}.png\`;
         link.href = canvas.toDataURL();
         link.click();
       });
@@ -88,4 +86,3 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.body.innerHTML = "<p style='text-align:center;color:red;'>❌ Error al cargar la receta.</p>";
   }
 });
-
