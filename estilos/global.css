@@ -287,3 +287,23 @@ details.lab-card div {
     padding: 16px;
   }
 }
+/* Código de barras responsivo */
+.barcode-container {
+  text-align: center;
+  margin-top: 1.5rem;
+  overflow-x: auto;
+}
+
+.barcode-container canvas {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Ajuste en pantallas pequeñas */
+@media (max-width: 600px) {
+  .barcode-container canvas {
+    max-width: 90%;
+    height: auto;
+  }
+}
+
