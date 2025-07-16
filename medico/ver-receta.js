@@ -16,14 +16,16 @@ document.addEventListener("DOMContentLoaded", async () => {
   const recetaId = params.get("id");
   if (!recetaId) return;
 
+  const isMobile = window.innerWidth <= 600;
+
   // ✅ Generar código de barras desde el ID
   JsBarcode("#barcodeCanvas", recetaId, {
     format: "CODE128",
     lineColor: "#1e88e5",
-    width: 2,
-    height: 40,
+    width: isMobile ? 1.5 : 2,
+    height: isMobile ? 40 : 60,
     displayValue: true,
-    fontSize: 14,
+    fontSize: isMobile ? 12 : 16,
     margin: 0
   });
 
@@ -48,7 +50,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     const cadenaResp = await fetch("https://kodrx-blockchain.onrender.com/blockchain");
     const cadena = await cadenaResp.json();
-    const bloque = cadena.find(b => b.data?.receta?.includes(receta.medicamentos?.[0]?.nombre) && b.data?.cedula === receta.medicoCedula);
+    const bloque = cadena.find(b => b.data?.medico === receta.medicoNombre && b.data?.cedula === receta.medicoCedula);
 
     const hash = bloque?.hash || "N/A";
     const index = bloque?.index || "N/A";
