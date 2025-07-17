@@ -23,6 +23,7 @@ async function cargarReceta() {
       <div><strong>Edad:</strong> ${receta.edad}</div>
       <div><strong>Observaciones:</strong> ${receta.observaciones || 'Ninguna'}</div>
       <div><strong>Médico responsable:</strong> ${receta.medicoNombre || 'No registrado'}</div>
+      <div><strong>Diagnóstico:</strong>${receta.diagnostico || 'Sin Diagnóstico'}</div>
       <div><strong>Medicamentos:</strong></div>
     `;
 
