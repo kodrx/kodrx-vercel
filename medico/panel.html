@@ -105,9 +105,8 @@
 
   <script type="module" src="/medico/panel-medico-debug.js"></script>
   <script type="module">
-    import { auth, signOut } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
-    import { db } from "/firebase-init.js";
-    import { doc, getDoc } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
+  import { auth, signOut, db } from "/firebase-init.js";
+  import { doc, getDoc } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
 
     auth.onAuthStateChanged(async (user) => {
       if (!user) {
