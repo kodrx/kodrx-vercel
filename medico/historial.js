@@ -1,5 +1,5 @@
 
-import { db } from '/firebase-init.js';
+import { db, auth } from '/firebase-init.js';
 import {
   collection,
   query,
@@ -11,17 +11,27 @@ import {
 const recetasContainer = document.getElementById('recetasContainer');
 let recetas = [];
 
-const userEmail = localStorage.getItem('kodrx_email');
-if (!userEmail) {
-  alert('Sesión no válida. Vuelve a iniciar sesión.');
-  window.location.href = '/acceso';
+function getEmailSesion() {
+  const email = localStorage.getItem('kodrx_email');
+  if (!email) {
+    console.warn("⚠️ No se encontró 'kodrx_email' en localStorage.");
+  }
+  return email;
 }
 
-async function cargarHistorial() {
+async function validarSesionYcargar() {
+  const email = getEmailSesion();
+
+  if (!email) {
+    alert("Sesión no válida o expirada. Vuelve a iniciar sesión.");
+    window.location.href = "/acceso";
+    return;
+  }
+
   try {
     const q = query(
       collection(db, 'recetas'),
-      where('medicoEmail', '==', userEmail),
+      where('medicoEmail', '==', email),
       orderBy('timestamp', 'desc')
     );
 
@@ -38,7 +48,7 @@ async function cargarHistorial() {
     mostrarRecetas(recetas);
   } catch (error) {
     console.error("❌ Error al cargar historial:", error);
-    alert("Error al cargar el historial. Verifica tu sesión.");
+    alert("Error al cargar el historial. Intenta nuevamente.");
   }
 }
 
@@ -58,7 +68,7 @@ function mostrarRecetas(lista) {
     const botonVer = document.createElement('button');
     botonVer.textContent = 'Ver receta completa';
     botonVer.onclick = () => {
-      window.location.href = `detalle-receta.html?id=${receta.id}`;
+      window.location.href = \`detalle-receta.html?id=\${receta.id}\`;
     };
 
     contenido.appendChild(botonVer);
@@ -80,4 +90,4 @@ window.filtrarRecetas = (texto) => {
   mostrarRecetas(filtradas);
 };
 
-cargarHistorial();
+validarSesionYcargar();
