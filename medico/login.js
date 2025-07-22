@@ -27,8 +27,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (data.verificado === true) {
-          window.location.href = "panel.html";
-        } else {
+  localStorage.setItem('kodrx_email', email);  // ← ESTA LÍNEA ES LA CLAVE
+  window.location.href = "panel.html";
+}
+ else {
           alert("Tu cuenta aún no ha sido verificada por el equipo de KodRx.");
         }
       } else {
