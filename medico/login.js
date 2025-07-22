@@ -28,7 +28,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (data.verificado === true) {
-          localStorage.setItem('kodrx_email', email); // ✅ Ahora sí guardamos el correo correctamente
+          localStorage.setItem('kodrx_email', email); 
+          console.log("✅ Guardado en localStorage:", localStorage.getItem('kodrx_email'));
           window.location.href = "panel.html";
         } else {
           alert("Tu cuenta aún no ha sido verificada.");
