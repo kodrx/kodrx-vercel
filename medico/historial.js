@@ -68,7 +68,7 @@ function mostrarRecetas(lista) {
     const botonVer = document.createElement('button');
     botonVer.textContent = 'Ver receta completa';
     botonVer.onclick = () => {
-      window.location.href = \`detalle-receta.html?id=\${receta.id}\`;
+      window.location.href = `detalle-receta.html?id=\${receta.id}\`;
     };
 
     contenido.appendChild(botonVer);
