@@ -39,6 +39,13 @@ async function validarSesionYcargar() {
     recetas = [];
     recetasContainer.innerHTML = '';
 
+    const regresarBtn = document.createElement('button');
+    regresarBtn.textContent = '⬅️ Regresar al panel';
+    regresarBtn.onclick = () => {
+      window.location.href = '/medico/panel.html';
+    };
+    recetasContainer.appendChild(regresarBtn);
+
     querySnapshot.forEach(doc => {
       const data = doc.data();
       data.id = doc.id;
@@ -53,7 +60,6 @@ async function validarSesionYcargar() {
 }
 
 function mostrarRecetas(lista) {
-  recetasContainer.innerHTML = '';
   lista.forEach(receta => {
     const card = document.createElement('div');
     card.className = 'acordeon';
@@ -68,7 +74,7 @@ function mostrarRecetas(lista) {
     const botonVer = document.createElement('button');
     botonVer.textContent = 'Ver receta completa';
     botonVer.onclick = () => {
-      window.location.href = `detalle-receta.html?id=\${receta.id}\`;
+      window.location.href = `detalle-receta.html?id=${receta.id}`;
     };
 
     contenido.appendChild(botonVer);
