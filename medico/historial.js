@@ -18,23 +18,28 @@ if (!userEmail) {
 }
 
 async function cargarHistorial() {
-  const q = query(
-    collection(db, 'recetas'),
-    where('medicoEmail', '==', userEmail),
-    orderBy('timestamp', 'desc')
-  );
+  try {
+    const q = query(
+      collection(db, 'recetas'),
+      where('medicoEmail', '==', userEmail),
+      orderBy('timestamp', 'desc')
+    );
 
-  const querySnapshot = await getDocs(q);
-  recetas = [];
-  recetasContainer.innerHTML = '';
+    const querySnapshot = await getDocs(q);
+    recetas = [];
+    recetasContainer.innerHTML = '';
 
-  querySnapshot.forEach(doc => {
-    const data = doc.data();
-    data.id = doc.id;
-    recetas.push(data);
-  });
+    querySnapshot.forEach(doc => {
+      const data = doc.data();
+      data.id = doc.id;
+      recetas.push(data);
+    });
 
-  mostrarRecetas(recetas);
+    mostrarRecetas(recetas);
+  } catch (error) {
+    console.error("❌ Error al cargar historial:", error);
+    alert("Error al cargar el historial. Verifica tu sesión.");
+  }
 }
 
 function mostrarRecetas(lista) {
