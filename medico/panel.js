@@ -54,15 +54,14 @@ document.getElementById('form-receta').addEventListener('submit', async (e) => {
 
   try {
     const docRef = await addDoc(collection(db, "recetas"), {
-  uid: user.uid,
-  nombrePaciente: nombre,
-  edad,
-  observaciones,
-  medicamentos,
-  timestamp: serverTimestamp(),
-  correo: localStorage.getItem("kodrx_email")
-});
-
+      uid: user.uid,
+      nombrePaciente: nombre,
+      edad,
+      observaciones,
+      medicamentos,
+      timestamp: serverTimestamp()
+      correo: localStorage.getItem("kodrx_email"),
+    });
 
     const recetaId = docRef.id;
     const qrDiv = document.getElementById('qr');
