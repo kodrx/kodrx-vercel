@@ -18,9 +18,11 @@ document.querySelector(".form-login").addEventListener("submit", async (e) => {
   const password = document.querySelector('input[type="password"]').value;
 
   try {
-    await signInWithEmailAndPassword(auth, email, password);
-    window.location.href = destino;
-  } catch (error) {
-    alert("Error al iniciar sesión: " + error.message);
-  }
+  await signInWithEmailAndPassword(auth, email, password);
+  localStorage.setItem("kodrx_email", email); // ✅ Guardamos sesión local para historial
+  window.location.href = destino;
+} catch (error) {
+  alert("Error al iniciar sesión: " + error.message);
+}
+
 });
