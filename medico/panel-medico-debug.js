@@ -1,3 +1,11 @@
+console.log("🚀 Script activo");
+document.addEventListener("DOMContentLoaded", () => {
+  console.log("🧩 DOM cargado");
+  const form = document.getElementById("generarRecetaForm");
+  console.log("📝 Formulario:", form);
+});
+
+
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getFirestore, collection, addDoc, serverTimestamp, doc, getDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
