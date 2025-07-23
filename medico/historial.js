@@ -37,6 +37,11 @@ async function validarSesionYcargar() {
     );
 
     const querySnapshot = await getDocs(q);
+    console.log("🔍 Resultados encontrados:", querySnapshot.size);
+querySnapshot.forEach((doc) => {
+  console.log("📄 Documento:", doc.data());
+});
+
     recetas = [];
     recetasContainer.innerHTML = '';
 
