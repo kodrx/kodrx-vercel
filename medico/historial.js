@@ -32,7 +32,7 @@ async function validarSesionYcargar() {
   try {
     const q = query(
       collection(db, 'recetas'),
-      where('medicoEmail', '==', email),
+      where('correo', '==', email),
       orderBy('timestamp', 'desc')
     );
 
