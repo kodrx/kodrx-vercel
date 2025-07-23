@@ -99,6 +99,7 @@ onAuthStateChanged(auth, async (user) => {
           observaciones,
           medicamentos,
           timestamp: serverTimestamp()
+      correo: localStorage.getItem("kodrx_email"),
         });
 
         const recetaId = docRef.id;
