@@ -99,7 +99,6 @@ onAuthStateChanged(auth, async (user) => {
           observaciones,
           medicamentos,
           timestamp: serverTimestamp()
-      correo: localStorage.getItem("kodrx_email"),
         });
 
         const recetaId = docRef.id;
@@ -182,3 +181,23 @@ async function cargarMedicamentos() {
 document.getElementById("btnAgregar").addEventListener("click", agregarMedicamento);
 agregarMedicamento();
 cargarMedicamentos();
+
+document.getElementById("generarRecetaForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+
+  const nombre = document.getElementById("nombre").value;
+  const edad = document.getElementById("edad").value;
+  const observaciones = document.getElementById("observaciones").value;
+  const medicamentos = obtenerMedicamentos(); // Asegúrate de tener esta función definida
+
+  const docRef = await addDoc(collection(db, "recetas"), {
+    nombrePaciente: nombre,
+    edad,
+    observaciones,
+    medicamentos,
+    timestamp: serverTimestamp(),
+    correo: localStorage.getItem("kodrx_email")
+  });
+
+  console.log("✅ Receta guardada:", docRef.id);
+});
