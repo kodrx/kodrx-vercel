@@ -1,13 +1,27 @@
 
-// panel-medico-master.js
 console.log("🚀 Script maestro activo");
 
 import { db } from '/firebase-init.js';
+import { collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 document.addEventListener("DOMContentLoaded", () => {
   console.log("🧩 DOM cargado");
 
   const form = document.getElementById("generarRecetaForm");
+  const botonAgregar = document.getElementById("agregarMedicamento");
+  const contenedorMedicamentos = document.getElementById("medicamentosContainer");
+
+  botonAgregar.addEventListener("click", () => {
+    const div = document.createElement("div");
+    div.classList.add("medicamento");
+    div.innerHTML = \`
+      <input class="nombre" placeholder="Nombre" />
+      <input class="dosis" placeholder="Dosis" />
+      <input class="duracion" placeholder="Duración" />
+    \`;
+    contenedorMedicamentos.appendChild(div);
+  });
+
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
 
@@ -46,13 +60,11 @@ document.addEventListener("DOMContentLoaded", () => {
         diagnostico,
         medicamentos,
         correo,
-        timestamp
+        timestamp: serverTimestamp()
       };
 
-      import { collection, addDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-const recetasRef = collection(db, "recetas");
-const docRef = await addDoc(recetasRef, receta);
-
+      const recetasRef = collection(db, "recetas");
+      const docRef = await addDoc(recetasRef, receta);
       console.log("✅ Receta guardada con ID:", docRef.id);
       window.location.href = `/medico/ver-receta.html?id=${docRef.id}`;
     } catch (error) {
@@ -80,14 +92,4 @@ const docRef = await addDoc(recetasRef, receta);
     });
     return lista;
   }
-});
-document.getElementById("agregarMedicamento").addEventListener("click", () => {
-  const cont = document.createElement("div");
-  cont.classList.add("medicamento");
-  cont.innerHTML = `
-    <input class="nombre" placeholder="Nombre" />
-    <input class="dosis" placeholder="Dosis" />
-    <input class="duracion" placeholder="Duración" />
-  `;
-  document.getElementById("medicamentosContainer").appendChild(cont);
 });

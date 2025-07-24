@@ -1,0 +1,35 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Generar Receta - KodRx</title>
+  <script type="module" src="/medico/panel-medico-master.js" defer></script>
+  <style>
+    body { font-family: Arial; padding: 2em; max-width: 800px; margin: auto; }
+    input, textarea { display: block; margin: 0.5em 0; width: 100%; padding: 0.5em; }
+    .medicamento { border: 1px solid #ccc; padding: 1em; margin-bottom: 1em; border-radius: 10px; }
+  </style>
+</head>
+<body>
+  <h1>Generar Receta</h1>
+  <form id="generarRecetaForm" class="form-login">
+    <input id="nombre" placeholder="Nombre del paciente" required />
+    <input id="edad" placeholder="Edad" required />
+    <input id="sexo" placeholder="Sexo" />
+    <input id="peso" placeholder="Peso (kg)" />
+    <input id="talla" placeholder="Talla (cm)" />
+    <input id="temperatura" placeholder="Temperatura (°C)" />
+    <input id="presion" placeholder="Presión arterial" />
+    <textarea id="observaciones" placeholder="Observaciones"></textarea>
+    <textarea id="diagnostico" placeholder="Diagnóstico"></textarea>
+
+    <h3>Medicamentos</h3>
+    <div id="medicamentosContainer"></div>
+    <button type="button" id="agregarMedicamento">➕ Agregar Medicamento</button>
+
+    <br/><br/>
+    <button type="submit">📝 Generar Receta</button>
+  </form>
+</body>
+</html>
