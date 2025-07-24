@@ -3,157 +3,49 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Panel Médico - KodRx</title>
   <link rel="stylesheet" href="/estilos/global.css" />
-  <script src="/componentes/header.js" defer></script>
-  <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
 </head>
 <body>
-  <main class="seccion">
-    <h2>Panel Médico</h2>
+  <header class="header">
+    <img src="/assets/logo.png" alt="KodRx Logo" class="logo" />
+    <h1 class="title">Panel Médico</h1>
+  </header>
 
-    <div style="margin-bottom: 20px; display: flex; gap: 10px; flex-wrap: wrap;">
-  <button onclick="nuevaReceta()">Nueva receta</button>
-  <button onclick="verHistorial()">Historial</button>
-  <button onclick="window.open('https://kodrx-blockchain.onrender.com/panel/verificar-receta.html', '_blank')">Verificar en blockchain</button>
-  <button onclick="window.location.href='/medico/upgrade.html'"> Personalizar receta</button>
-  <button onclick="window.location.href='/medico/upgrade.html'"> Acceder IA clínica</button>
-  <button onclick="cerrarSesion()">Cerrar sesión</button>
-</div>
-    
-<main class="formulario-container">
-  <h2>Generar nueva receta</h2>
+  <main class="container">
     <form id="generarRecetaForm" class="form-login">
-  <h2>Generar nueva receta</h2>
+      <div class="form-group">
+        <label for="nombrePaciente">Nombre del paciente:</label>
+        <input type="text" id="nombrePaciente" required />
+      </div>
 
-  <label for="nombrePaciente">Nombre del paciente:</label>
-  <input type="text" id="nombrePaciente" required>
+      <div class="form-group">
+        <label for="edad">Edad:</label>
+        <input type="number" id="edad" required />
+      </div>
 
-  <label for="edad">Edad:</label>
-  <input type="number" id="edad" required>
+      <div class="form-group">
+        <label for="diagnostico">Diagnóstico:</label>
+        <input type="text" id="diagnostico" placeholder="Ej. Hipertensión" required />
+      </div>
 
-  <label for="diagnostico">Diagnóstico:</label>
-  <textarea id="diagnostico" placeholder="Ej. Infección de vías respiratorias..." required></textarea>
+      <div class="form-group">
+        <label for="observaciones">Signos Vitales y Observaciones:</label>
+        <textarea id="observaciones"></textarea>
+      </div>
 
-  <label for="observaciones">Observaciones:</label>
-  <textarea id="observaciones" placeholder="Instrucciones adicionales, reacciones, etc."></textarea>
+      <div class="form-group">
+        <label>Medicamentos:</label>
+        <div id="medicamentosContainer"></div>
+        <button type="button" id="agregarMedicamentoBtn">Agregar Medicamento</button>
+      </div>
 
-  <div id="medicamentosContainer">
-    <!-- Aquí se agregan los medicamentos dinámicamente -->
-  </div>
-
-  <button type="button" onclick="agregarMedicamento()">+ Agregar medicamento</button>
-  <br><br>
-
-  <button type="submit">Generar receta</button>
-</form>
-
-      <hr />
-<h3>🩺 Información clínica del paciente</h3>
-
-<div class="extra-info">
-  <label for="sexo">Sexo:</label>
-  <select id="sexo">
-    <option value="">Seleccionar</option>
-    <option value="Masculino">Masculino</option>
-    <option value="Femenino">Femenino</option>
-    <option value="Otro">Otro</option>
-  </select>
-
-  <label for="peso">Peso (kg):</label>
-  <input type="number" id="peso" min="0" step="0.1" />
-
-  <label for="talla">Talla (cm):</label>
-  <input type="number" id="talla" min="0" step="0.1" />
-
-  <label for="imc">IMC:</label>
-  <input type="text" id="imc" placeholder="Ej. 24.7" />
-
-  <label for="presion">Presión arterial:</label>
-  <input type="text" id="presion" placeholder="Ej. 120/80" />
-
-  <label for="temperatura">Temperatura (°C):</label>
-  <input type="number" id="temperatura" step="0.1" />
-
-  <label for="diagnostico">Diagnóstico:</label>
-  <input type="text" id="diagnostico" placeholder="Ej. Hipertensión" />
-</div>
-
-<script>
-  const pesoInput = document.getElementById("peso");
-  const tallaInput = document.getElementById("talla");
-  const imcInput = document.getElementById("imc");
-
-  function calcularIMC() {
-    const peso = parseFloat(pesoInput.value);
-    const tallaCm = parseFloat(tallaInput.value);
-    const tallaM = tallaCm / 100;
-
-    if (peso > 0 && tallaM > 0) {
-      const imc = (peso / (tallaM * tallaM)).toFixed(1);
-      imcInput.value = imc;
-    }
-  }
-
-  pesoInput.addEventListener("input", calcularIMC);
-  tallaInput.addEventListener("input", calcularIMC);
-</script>
-
-
-      <h3>Medicamentos</h3>
-      <div id="medicamentosContainer"></div>
-      <button type="button" id="agregarMedicamento">+ Agregar medicamento</button>
-
-      <button type="submit">Generar receta</button>
+      <button type="submit">Generar Receta</button>
     </form>
+  </main>
 
-    <div class="card" style="margin-top: 30px;">
-      <h3>QR generado:</h3>
-      <div id="qr"></div>
-    </div>
-</main>
-    
-
-
-  <datalist id="listaMedicamentos"></datalist>
-
+  <script type="module" src="/firebase-init.js"></script>
   <script type="module" src="/medico/panel-medico-master.js"></script>
-  <script type="module">
-  import { auth, signOut, db } from "/firebase-init.js";
-  import { doc, getDoc } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
-
-    auth.onAuthStateChanged(async (user) => {
-      if (!user) {
-        window.location.href = "/medico/login.html";
-        return;
-      }
-
-      const snap = await getDoc(doc(db, "medicos", user.uid));
-      if (!snap.exists() || snap.data().suspendido === true) {
-        await signOut(auth);
-        window.location.href = "/suspendido.html";
-      }
-    });
-  </script>
-
-  <script>
-    function nuevaReceta() {
-      document.getElementById("generarRecetaForm").reset();
-      document.getElementById("medicamentos").innerHTML = "";
-      agregarMedicamento();
-      document.getElementById("qr").innerHTML = "";
-    }
-
-    function verHistorial() {
-      window.location.href = "/medico/historial.html";
-    }
-
-    function cerrarSesion() {
-      sessionStorage.clear();
-      localStorage.clear();
-      window.location.href = "/medico/login.html";
-    }
-  </script>
 </body>
 </html>
