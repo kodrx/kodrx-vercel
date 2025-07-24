@@ -25,14 +25,29 @@
 <main class="formulario-container">
   <h2>Generar nueva receta</h2>
     <form id="generarRecetaForm" class="form-login">
-      <label>Nombre del paciente:</label>
-      <input type="text" id="nombre" required />
+  <h2>Generar nueva receta</h2>
 
-      <label>Edad:</label>
-      <input type="number" id="edad" required />
+  <label for="nombrePaciente">Nombre del paciente:</label>
+  <input type="text" id="nombrePaciente" required>
 
-      <label>Observaciones:</label>
-      <textarea id="observaciones"></textarea>
+  <label for="edad">Edad:</label>
+  <input type="number" id="edad" required>
+
+  <label for="diagnostico">Diagnóstico:</label>
+  <textarea id="diagnostico" placeholder="Ej. Infección de vías respiratorias..." required></textarea>
+
+  <label for="observaciones">Observaciones:</label>
+  <textarea id="observaciones" placeholder="Instrucciones adicionales, reacciones, etc."></textarea>
+
+  <div id="medicamentosContainer">
+    <!-- Aquí se agregan los medicamentos dinámicamente -->
+  </div>
+
+  <button type="button" onclick="agregarMedicamento()">+ Agregar medicamento</button>
+  <br><br>
+
+  <button type="submit">Generar receta</button>
+</form>
 
       <hr />
 <h3>🩺 Información clínica del paciente</h3>
