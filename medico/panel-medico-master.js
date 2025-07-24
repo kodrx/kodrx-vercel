@@ -14,11 +14,11 @@ document.addEventListener("DOMContentLoaded", () => {
   botonAgregar.addEventListener("click", () => {
     const div = document.createElement("div");
     div.classList.add("medicamento");
-    div.innerHTML = \`
+    div.innerHTML = `
       <input class="nombre" placeholder="Nombre" />
       <input class="dosis" placeholder="Dosis" />
       <input class="duracion" placeholder="Duración" />
-    \`;
+    `;
     contenedorMedicamentos.appendChild(div);
   });
 
