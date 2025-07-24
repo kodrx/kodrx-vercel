@@ -81,3 +81,13 @@ const docRef = await addDoc(recetasRef, receta);
     return lista;
   }
 });
+document.getElementById("agregarMedicamento").addEventListener("click", () => {
+  const cont = document.createElement("div");
+  cont.classList.add("medicamento");
+  cont.innerHTML = `
+    <input class="nombre" placeholder="Nombre" />
+    <input class="dosis" placeholder="Dosis" />
+    <input class="duracion" placeholder="Duración" />
+  `;
+  document.getElementById("medicamentosContainer").appendChild(cont);
+});
