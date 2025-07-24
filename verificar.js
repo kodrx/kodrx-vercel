@@ -1,7 +1,7 @@
 
 // verificar.js
 import { db } from './firebase-init.js';
-import { doc, getDoc } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
+import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 const urlParams = new URLSearchParams(window.location.search);
 const recetaId = urlParams.get('id');
