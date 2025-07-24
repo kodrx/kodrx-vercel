@@ -2,69 +2,111 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <title>Receta Médica - KodRx</title>
-  <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
-  <script type="module" src="/medico/ver-receta.js" defer></script>
+  <meta charset="UTF-8">
+  <title>Receta KodRx</title>
+  <link rel="stylesheet" href="/css/global.css">
   <style>
-    body { font-family: Arial, sans-serif; margin: 2em; }
-    .contenedor { max-width: 800px; margin: auto; border: 1px solid #ccc; padding: 20px; border-radius: 12px; }
-    .seccion { margin-bottom: 20px; }
-    .titulo { font-weight: bold; margin-bottom: 10px; font-size: 1.2em; }
-    ul { padding-left: 1.5em; }
-    .qr { margin-top: 10px; }
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      margin: 2rem;
+      background-color: #f9f9f9;
+      color: #333;
+    }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 2px solid #007bff;
+      padding-bottom: 1rem;
+      margin-bottom: 2rem;
+    }
+    header img {
+      height: 50px;
+    }
+    header h1 {
+      font-size: 1.4rem;
+      color: #007bff;
+    }
+    .qr-container {
+      text-align: center;
+      margin: 2rem 0;
+    }
+    .qr-container img {
+      width: 200px;
+      height: 200px;
+      border: 3px solid #007bff;
+      padding: 10px;
+      border-radius: 8px;
+    }
+    .seccion {
+      margin-bottom: 1.5rem;
+    }
+    .seccion h2 {
+      font-size: 1.1rem;
+      color: #555;
+      border-bottom: 1px solid #ccc;
+      padding-bottom: 0.3rem;
+    }
+    footer {
+      margin-top: 3rem;
+      border-top: 1px solid #ccc;
+      padding-top: 1rem;
+      text-align: center;
+      font-size: 0.9rem;
+      color: #666;
+    }
   </style>
 </head>
 <body>
-  <div class="contenedor">
-    <h1>Receta Médica</h1>
 
-    <div class="seccion">
-      <div class="titulo">Datos del Paciente</div>
-      <p><strong>Nombre:</strong> <span id="nombrePaciente"></span></p>
-      <p><strong>Edad:</strong> <span id="edadPaciente"></span></p>
-      <p><strong>Sexo:</strong> <span id="sexoPaciente"></span></p>
-      <p><strong>Peso:</strong> <span id="pesoPaciente"></span> kg</p>
-      <p><strong>Talla:</strong> <span id="tallaPaciente"></span> cm</p>
-      <p><strong>IMC:</strong> <span id="imcPaciente"></span></p>
-      <p><strong>Temperatura:</strong> <span id="temperaturaPaciente"></span> °C</p>
-      <p><strong>Presión arterial:</strong> <span id="presionPaciente"></span></p>
-    </div>
+  <header>
+    <h1>Receta Digital KodRx</h1>
+    <img src="/img/logo-kodrx-cubos.png" alt="KodRx Logo">
+  </header>
 
-    <div class="seccion">
-      <div class="titulo">Diagnóstico</div>
-      <p id="diagnosticoPaciente"></p>
-    </div>
-
-    <div class="seccion">
-      <div class="titulo">Observaciones</div>
-      <p id="observacionesPaciente"></p>
-    </div>
-
-    <div class="seccion">
-      <div class="titulo">Medicamentos Recetados</div>
-      <ul id="listaMedicamentos"></ul>
-    </div>
-
-    <div class="seccion">
-      <div class="titulo">Código QR de Verificación</div>
-      <div class="qr" id="qrReceta"></div>
-    </div>
-
-    <div class="seccion">
-      <div class="titulo">Hash de Seguridad</div>
-      <p><span id="hashReceta"></span></p>
-    </div>
-
-    <div class="seccion">
-      <div class="titulo">Verificación en Blockchain</div>
-      <div class="qr" id="qrBlockchain"></div>
-    </div>
-
-    <div class="seccion">
-      <button onclick="window.print()">🖨️ Imprimir</button>
-      <button onclick="window.location.href='panel.html'">⬅️ Regresar al Panel</button>
-    </div>
+  <div class="seccion" id="info-medico">
+    <h2>Médico Responsable</h2>
+    <p id="medicoNombre">Cargando...</p>
+    <p id="medicoCedula"></p>
+    <p id="medicoEspecialidad"></p>
   </div>
+
+  <div class="seccion">
+    <h2>Datos del Paciente</h2>
+    <p id="datosPaciente">Cargando...</p>
+  </div>
+
+  <div class="seccion">
+    <h2>Signos Vitales y Observaciones</h2>
+    <p id="signosObservaciones">Cargando...</p>
+  </div>
+
+  <div class="seccion">
+    <h2>Diagnóstico</h2>
+    <p id="diagnostico">Cargando...</p>
+  </div>
+
+  <div class="seccion">
+    <h2>Tratamiento</h2>
+    <ul id="listaMedicamentos">Cargando...</ul>
+  </div>
+
+  <div class="qr-container">
+    <h2>Código QR de Verificación</h2>
+    <img id="qrReceta" src="" alt="QR KodRx">
+  </div>
+
+  <div class="seccion">
+    <h2>Bloque de Seguridad</h2>
+    <p>ID de Bloque: <span id="bloqueId">Cargando...</span></p>
+    <p>Hash de Bloque: <span id="hashValor">Cargando...</span></p>
+    <small>Este código forma parte de nuestra trazabilidad tipo blockchain.</small>
+  </div>
+
+  <footer>
+    Receta digital generada con <strong>KodRx</strong> — Tecnología que verifica, salud que protege.
+  </footer>
+
+  <script type="module" src="/medico/ver-receta.js"></script>
 </body>
 </html>

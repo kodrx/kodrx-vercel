@@ -1,13 +1,21 @@
 
 import { db } from "/firebase-init.js";
-import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import {
+  doc,
+  getDoc
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+function getQueryParam(param) {
+  const urlParams = new URLSearchParams(window.location.search);
+  return urlParams.get(param);
+}
 
 document.addEventListener("DOMContentLoaded", async () => {
-  const params = new URLSearchParams(window.location.search);
-  const recetaId = params.get("id");
+  console.log("📄 Cargando receta...");
 
+  const recetaId = getQueryParam("id");
   if (!recetaId) {
-    alert("ID de receta no especificado.");
+    alert("ID de receta no proporcionado.");
     return;
   }
 
@@ -16,55 +24,49 @@ document.addEventListener("DOMContentLoaded", async () => {
     const docSnap = await getDoc(docRef);
 
     if (!docSnap.exists()) {
-      alert("La receta no fue encontrada.");
+      alert("Receta no encontrada.");
       return;
     }
 
-    const receta = docSnap.data();
+    const data = docSnap.data();
 
-    // Mostrar datos en la vista
-    document.getElementById("nombrePaciente").textContent = receta.nombrePaciente || "Sin nombre";
-    document.getElementById("edadPaciente").textContent = receta.edad || "-";
-    document.getElementById("sexoPaciente").textContent = receta.sexo || "-";
-    document.getElementById("pesoPaciente").textContent = receta.peso || "-";
-    document.getElementById("tallaPaciente").textContent = receta.talla || "-";
-    document.getElementById("temperaturaPaciente").textContent = receta.temperatura || "-";
-    document.getElementById("presionPaciente").textContent = receta.presion || "-";
-    document.getElementById("imcPaciente").textContent = receta.imc || "-";
-    document.getElementById("diagnosticoPaciente").textContent = receta.diagnostico || "-";
-    document.getElementById("observacionesPaciente").textContent = receta.observaciones || "-";
+    // Médicos
+    document.getElementById("medicoNombre").textContent = "Dr. " + (data.medicoNombre || "No disponible");
+    document.getElementById("medicoCedula").textContent = "Cédula: " + (data.medicoCedula || "No disponible");
+    document.getElementById("medicoEspecialidad").textContent = data.medicoEspecialidad ? "Especialidad: " + data.medicoEspecialidad : "";
 
-    // Mostrar medicamentos
+    // Paciente
+    document.getElementById("datosPaciente").textContent = `${data.nombre} — Edad: ${data.edad || "N/D"}`;
+
+    // Signos y observaciones
+    document.getElementById("signosObservaciones").textContent = data.observaciones || "Sin observaciones registradas.";
+
+    // Diagnóstico
+    document.getElementById("diagnostico").textContent = data.diagnostico || "Sin diagnóstico.";
+
+    // Tratamiento
     const lista = document.getElementById("listaMedicamentos");
-    receta.medicamentos.forEach((med, i) => {
-      const li = document.createElement("li");
-      li.textContent = `${i + 1}. ${med.nombre} - ${med.dosis}, por ${med.duracion}`;
-      lista.appendChild(li);
-    });
+    lista.innerHTML = "";
+    if (Array.isArray(data.medicamentos)) {
+      data.medicamentos.forEach((med) => {
+        const li = document.createElement("li");
+        li.textContent = `${med.nombre} — ${med.dosis}, ${med.duracion}`;
+        lista.appendChild(li);
+      });
+    } else {
+      lista.innerHTML = "<li>No hay medicamentos registrados.</li>";
+    }
 
-    // Generar hash único
-    const encoder = new TextEncoder();
-    const hashBuffer = await crypto.subtle.digest("SHA-256", encoder.encode(JSON.stringify(receta)));
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    const hashHex = hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
-    document.getElementById("hashReceta").textContent = hashHex;
+    // QR principal
+    const qr = document.getElementById("qrReceta");
+    qr.src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=https://www.kodrx.app/public/verificar.html?id=${recetaId}`;
 
-    // QR receta
-    new QRCode(document.getElementById("qrReceta"), {
-      text: window.location.href,
-      width: 180,
-      height: 180
-    });
-
-    // QR blockchain
-    new QRCode(document.getElementById("qrBlockchain"), {
-      text: `https://kodrx.app/public/consulta.html?id=${recetaId}`,
-      width: 100,
-      height: 100
-    });
+    // Blockchain
+    document.getElementById("bloqueId").textContent = data.hash?.bloque || "No disponible";
+    document.getElementById("hashValor").textContent = data.hash?.hash || "No disponible";
 
   } catch (error) {
-    console.error("❌ Error al cargar receta:", error);
-    alert("Ocurrió un error al cargar la receta.");
+    console.error("❌ Error al cargar la receta:", error);
+    alert("Ocurrió un error al obtener la receta.");
   }
 });
