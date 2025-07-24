@@ -49,7 +49,10 @@ document.addEventListener("DOMContentLoaded", () => {
         timestamp
       };
 
-      const docRef = await db.collection("recetas").add(receta);
+      import { collection, addDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+const recetasRef = collection(db, "recetas");
+const docRef = await addDoc(recetasRef, receta);
+
       console.log("✅ Receta guardada con ID:", docRef.id);
       window.location.href = `/medico/ver-receta.html?id=${docRef.id}`;
     } catch (error) {
