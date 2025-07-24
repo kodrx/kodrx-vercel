@@ -1,95 +1,69 @@
 
 console.log("🚀 Script maestro activo");
 
-import { db } from '/firebase-init.js';
-import { collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { db, auth } from '/firebase-init.js';
+import { collection, addDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
 document.addEventListener("DOMContentLoaded", () => {
   console.log("🧩 DOM cargado");
 
-  const form = document.getElementById("generarRecetaForm");
-  const botonAgregar = document.getElementById("agregarMedicamento");
-  const contenedorMedicamentos = document.getElementById("medicamentosContainer");
-
-  botonAgregar.addEventListener("click", () => {
-    const div = document.createElement("div");
-    div.classList.add("medicamento");
-    div.innerHTML = `
-      <input class="nombre" placeholder="Nombre" />
-      <input class="dosis" placeholder="Dosis" />
-      <input class="duracion" placeholder="Duración" />
-    `;
-    contenedorMedicamentos.appendChild(div);
-  });
+  const form = document.querySelector("#generarRecetaForm");
+  if (!form) {
+    console.error("❌ No se encontró el formulario con id generarRecetaForm");
+    return;
+  }
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
+    console.log("📤 Enviando receta...");
+
+    const nombrePaciente = document.getElementById("nombrePaciente").value;
+    const edad = document.getElementById("edad").value;
+    const observaciones = document.getElementById("observaciones").value;
+    const diagnostico = document.getElementById("diagnostico").value;
+
+    // Datos del médico desde localStorage
+    const medicoNombre = localStorage.getItem("kodrx_nombre") || "No disponible";
+    const medicoCedula = localStorage.getItem("kodrx_cedula") || "No disponible";
+    const medicoEspecialidad = localStorage.getItem("kodrx_especialidad") || "";
+    const medicoEmail = localStorage.getItem("kodrx_email") || "";
+
+    // Simulación de datos de blockchain
+    const idBloque = localStorage.getItem("kodrx_bloque") || "0";
+    const hashBloque = localStorage.getItem("kodrx_hash") || "N/A";
+
+    // Captura medicamentos
+    const medicamentos = [];
+    document.querySelectorAll(".medicamento-item").forEach(item => {
+      const nombre = item.querySelector(".nombre").value;
+      const dosis = item.querySelector(".dosis").value;
+      const duracion = item.querySelector(".duracion").value;
+      if (nombre && dosis && duracion) {
+        medicamentos.push({ nombre, dosis, duracion });
+      }
+    });
 
     try {
-      const nombrePaciente = document.getElementById("nombre").value;
-      const edad = document.getElementById("edad").value;
-      const sexo = document.getElementById("sexo").value;
-      const peso = document.getElementById("peso").value;
-      const talla = document.getElementById("talla").value;
-      const temperatura = document.getElementById("temperatura").value;
-      const presion = document.getElementById("presion").value;
-      const observaciones = document.getElementById("observaciones").value;
-      const diagnostico = document.getElementById("diagnostico").value;
-
-      const correo = localStorage.getItem("kodrx_email") || "";
-      const timestamp = new Date();
-
-      if (!correo) {
-        alert("Sesión inválida. Inicia sesión nuevamente.");
-        return;
-      }
-
-      const imc = calcularIMC(peso, talla);
-      const medicamentos = obtenerMedicamentos();
-
-      const receta = {
+      const docRef = await addDoc(collection(db, "recetas"), {
         nombrePaciente,
         edad,
-        sexo,
-        peso,
-        talla,
-        imc,
-        temperatura,
-        presion,
         observaciones,
         diagnostico,
+        medicoNombre,
+        medicoCedula,
+        medicoEspecialidad,
+        medicoEmail,
+        idBloque,
+        hashBloque,
         medicamentos,
-        correo,
         timestamp: serverTimestamp()
-      };
+      });
 
-      const recetasRef = collection(db, "recetas");
-      const docRef = await addDoc(recetasRef, receta);
       console.log("✅ Receta guardada con ID:", docRef.id);
       window.location.href = `/medico/ver-receta.html?id=${docRef.id}`;
     } catch (error) {
       console.error("❌ Error al guardar receta:", error);
-      alert("Error al guardar la receta.");
+      alert("Hubo un error al guardar la receta.");
     }
   });
-
-  function calcularIMC(peso, talla) {
-    const p = parseFloat(peso);
-    const t = parseFloat(talla) / 100;
-    if (isNaN(p) || isNaN(t) || t <= 0) return "";
-    return (p / (t * t)).toFixed(2);
-  }
-
-  function obtenerMedicamentos() {
-    const lista = [];
-    document.querySelectorAll(".medicamento").forEach((med) => {
-      const nombre = med.querySelector(".nombre")?.value || "";
-      const dosis = med.querySelector(".dosis")?.value || "";
-      const duracion = med.querySelector(".duracion")?.value || "";
-      if (nombre && dosis && duracion) {
-        lista.push({ nombre, dosis, duracion });
-      }
-    });
-    return lista;
-  }
 });
