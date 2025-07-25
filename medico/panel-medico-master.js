@@ -95,14 +95,15 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  function agregarMedicamento() {
-    const div = document.createElement("div");
-    div.classList.add("medicamento");
-    div.innerHTML = `
-      <input type="text" class="nombre" placeholder="Nombre del medicamento">
-      <input type="text" class="dosis" placeholder="Dosis">
-      <input type="text" class="duracion" placeholder="Duración">
-    `;
-    medicamentosContainer.appendChild(div);
-  }
+ function agregarMedicamento() {
+  const div = document.createElement("div");
+  div.classList.add("medicamento");
+  div.innerHTML = `
+    <input type="text" class="nombre" placeholder="Nombre del medicamento" />
+    <input type="text" class="dosis" placeholder="Dosis" />
+    <input type="text" class="duracion" placeholder="Duración" />
+  `.trim();
+  medicamentosContainer.appendChild(div);
+}
+
 });
