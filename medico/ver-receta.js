@@ -1,79 +1,79 @@
-
 // 🧾 Script para mostrar receta KodRx
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import QRCode from "https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js";
 
-// Inicializar Firebase
 const firebaseConfig = {
-  apiKey: "AIzaSyD-...",
+  apiKey: "AIzaSyBIjaOe4HcGNDk0xrqen8etBv0RyjyOJHw",
   authDomain: "kodrx-105b9.firebaseapp.com",
   projectId: "kodrx-105b9",
   storageBucket: "kodrx-105b9.appspot.com",
-  messagingSenderId: "1234567890",
-  appId: "1:1234567890:web:abcd1234"
+  messagingSenderId: "239675098141",
+  appId: "1:239675098141:web:152ae3741b0ac79db7f2f4"
 };
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-// Obtener ID desde la URL
-const params = new URLSearchParams(window.location.search);
-const recetaId = params.get("id");
+const recetaId = new URLSearchParams(window.location.search).get("id");
 
-const mostrarTexto = (id, texto) => {
-  document.getElementById(id).textContent = texto || "No disponible";
-};
+function mostrar(id, texto) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = texto || "No disponible";
+}
 
 async function cargarReceta() {
   if (!recetaId) return;
 
   const docRef = doc(db, "recetas", recetaId);
   const docSnap = await getDoc(docRef);
+  if (!docSnap.exists()) return alert("Receta no encontrada");
 
-  if (!docSnap.exists()) {
-    alert("Receta no encontrada");
-    return;
-  }
+  const r = docSnap.data();
 
-  const receta = docSnap.data();
+  // Médico
+  mostrar("medicoNombre", r.medicoNombre);
+  mostrar("medicoCedula", r.medicoCedula);
+  mostrar("medicoEspecialidad", r.medicoEspecialidad);
+  mostrar("medicoDomicilio", r.medicoDomicilio);
+  mostrar("medicoTelefono", r.medicoTelefono);
 
-  // Datos del médico
-  mostrarTexto("medicoNombre", "Dr. " + (receta.medicoNombre || "No disponible"));
-  mostrarTexto("medicoCedula", receta.medicoCedula);
-  mostrarTexto("medicoEspecialidad", receta.medicoEspecialidad || "General");
+  // Paciente
+  mostrar("pacienteNombre", r.nombrePaciente);
+  mostrar("pacienteEdad", r.edad);
+  mostrar("sexo", r.sexo);
+  mostrar("alergias", r.alergias);
+  mostrar("talla", r.talla);
+  mostrar("peso", r.peso);
+  mostrar("imc", r.imc);
+  mostrar("temperatura", r.temperatura);
+  mostrar("presion", r.presion);
 
-  // Datos del paciente
-  mostrarTexto("pacienteNombreEdad", \`\${receta.nombrePaciente || "Sin nombre"} — Edad: \${receta.edad || "?"}\`);
+  // Clínico
+  mostrar("diagnostico", r.diagnostico);
+  mostrar("observaciones", r.observaciones);
 
-  // Datos clínicos
-  mostrarTexto("signosObservaciones", receta.observaciones || "No registrado");
-  mostrarTexto("diagnostico", receta.diagnostico || "Sin diagnóstico");
-
-  // Tratamiento
-  const tratamiento = document.getElementById("tratamientoLista");
-  tratamiento.innerHTML = "";
-  if (receta.medicamentos && receta.medicamentos.length) {
-    receta.medicamentos.forEach(med => {
+  // Medicamentos
+  const ul = document.getElementById("tratamientoLista");
+  ul.innerHTML = "";
+  if (Array.isArray(r.medicamentos)) {
+    r.medicamentos.forEach(m => {
       const li = document.createElement("li");
-      li.textContent = \`\${med.nombre} — \${med.dosis}, \${med.duracion}\`;
-      tratamiento.appendChild(li);
+      li.textContent = `${m.nombre} — ${m.dosis} — ${m.duracion}`;
+      ul.appendChild(li);
     });
   } else {
-    tratamiento.innerHTML = "<li>No se registraron medicamentos.</li>";
+    ul.innerHTML = "<li>No se registraron medicamentos.</li>";
   }
 
-  // QR
-  const qrDiv = document.getElementById("qrReceta");
-  QRCode.toCanvas(qrDiv, \`https://kodrx.app/public/verificar.html?id=\${recetaId}\`, { width: 150 }, function (error) {
-    if (error) console.error(error);
-  });
+  // QR pública
+  QRCode.toCanvas(document.getElementById("qrReceta"), `https://kodrx.app/public/verificar.html?id=${recetaId}`, { width: 128 });
 
-  // Bloque
-  mostrarTexto("bloqueId", receta.bloque || "No disponible");
-  mostrarTexto("bloqueHash", receta.hash || "No disponible");
+  // QR blockchain
+  QRCode.toCanvas(document.getElementById("qrBlockchain"), `https://kodrx-blockchain.onrender.com/public/consulta.html?id=${recetaId}`, { width: 128 });
+
+  // Blockchain
+  mostrar("bloqueId", r.bloque);
+  mostrar("bloqueHash", r.hash);
 }
 
-document.addEventListener("DOMContentLoaded", () => {
-  console.log("📄 Ver receta activo");
-  cargarReceta();
-});
+document.addEventListener("DOMContentLoaded", cargarReceta);
