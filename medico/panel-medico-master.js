@@ -1,17 +1,14 @@
 
 // 🚀 Script maestro activo
-import { db } from "/firebase-init.js";
-import {
-  collection,
-  addDoc,
-  serverTimestamp
-} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { db } from '/firebase-init.js';
+import { collection, addDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
 document.addEventListener("DOMContentLoaded", () => {
   console.log("🧩 DOM cargado");
 
   const form = document.querySelector("#generarRecetaForm");
   const medicamentosContainer = document.getElementById("medicamentosContainer");
+  const qrContainer = document.getElementById("qrContainer");
 
   document.getElementById("agregarMedicamentoBtn").addEventListener("click", agregarMedicamento);
 
@@ -19,37 +16,46 @@ document.addEventListener("DOMContentLoaded", () => {
     e.preventDefault();
     console.log("📤 Enviando receta...");
 
-    const nombrePaciente = document.getElementById("nombrePaciente").value;
-    const edad = document.getElementById("edad").value;
-    const observaciones = document.getElementById("observaciones").value;
-
-    const medicamentos = [];
-    document.querySelectorAll(".medicamento").forEach(med => {
-      const nombre = med.querySelector(".nombre").value;
-      const dosis = med.querySelector(".dosis").value;
-      const duracion = med.querySelector(".duracion").value;
-      medicamentos.push({ nombre, dosis, duracion });
-    });
-
     try {
-      const recetaData = {
+      const nombrePaciente = document.getElementById("nombrePaciente").value;
+      const edad = document.getElementById("edad").value;
+      const observaciones = document.getElementById("observaciones").value;
+
+      const medicamentos = [];
+      document.querySelectorAll(".medicamento").forEach(med => {
+        const nombre = med.querySelector(".nombre").value;
+        const dosis = med.querySelector(".dosis").value;
+        const duracion = med.querySelector(".duracion").value;
+        medicamentos.push({ nombre, dosis, duracion });
+      });
+
+      const medicoEmail = localStorage.getItem("kodrx_email") || "desconocido";
+
+      const receta = {
         nombrePaciente,
         edad,
         observaciones,
         medicamentos,
+        medicoEmail,
         timestamp: serverTimestamp()
       };
 
-      const docRef = await addDoc(collection(db, "recetas"), recetaData);
+      const docRef = await addDoc(collection(db, "recetas"), receta);
       console.log("✅ Receta guardada con ID:", docRef.id);
 
       const qrUrl = `/medico/ver-receta.html?id=${docRef.id}`;
       console.log("✅ QR generado para:", qrUrl);
 
-      // Redirigir a la receta generada
+      qrContainer.innerHTML = "";
+      new QRCode(qrContainer, {
+        text: qrUrl,
+        width: 128,
+        height: 128
+      });
+
       setTimeout(() => {
         window.location.href = qrUrl;
-      }, 2000);
+      }, 1500);
 
     } catch (error) {
       console.error("❌ Error al guardar receta:", error);
