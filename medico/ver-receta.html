@@ -1,54 +1,68 @@
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <title>Receta Digital KodRx</title>
-    <link rel="stylesheet" href="/estilos/global.css">
+  <meta charset="UTF-8" />
+  <title>Receta Digital KodRx</title>
+  <link rel="stylesheet" href="/estilos/global.css" />
 </head>
 <body>
-    <header>
-        <img src="/assets/logo.png" alt="KodRx Logo" />
-        <h1>Receta Digital KodRx</h1>
-    </header>
-    <main>
-        <section>
-            <h2>Médico Responsable</h2>
-            <p id="medico-info">Cargando...</p>
-        </section>
-        <section>
-            <h2>Datos del Paciente</h2>
-            <p id="paciente-info">Cargando...</p>
-        </section>
-        <section>
-            <h2>Signos Vitales y Observaciones</h2>
-            <p id="observaciones">Cargando...</p>
-        </section>
-        <section>
-            <h2>Diagnóstico</h2>
-            <p id="diagnostico">Cargando...</p>
-        </section>
-        <section>
-            <h2>Tratamiento</h2>
-            <ul id="medicamentos">
-                <li>Cargando...</li>
-            </ul>
-        </section>
-        <section>
-            <h2>Código QR de Verificación</h2>
-            <div id="qrContainer">
-                <img src="/assets/logo.png" alt="QR KodRx" />
-            </div>
-        </section>
-        <section>
-            <h2>Bloque de Seguridad</h2>
-            <p id="bloque-id">ID de Bloque: Cargando...</p>
-            <p id="bloque-hash">Hash de Bloque: Cargando...</p>
-            <p>Este código forma parte de nuestra trazabilidad tipo blockchain.</p>
-        </section>
-    </main>
-    <footer>
-        <p>Receta digital generada con <strong>KodRx</strong> — Tecnología que verifica, salud que protege.</p>
-    </footer>
+  <header>
+    <img src="/assets/logo.png" alt="KodRx Logo" />
+    <h1>Receta Digital KodRx</h1>
+  </header>
+
+  <main>
+    <section>
+      <h2>Médico Responsable</h2>
+      <p><strong>Nombre:</strong> <span id="medicoNombre">...</span></p>
+      <p><strong>Cédula:</strong> <span id="medicoCedula">...</span></p>
+      <p><strong>Especialidad:</strong> <span id="medicoEspecialidad">...</span></p>
+      <p><strong>Domicilio del consultorio:</strong> <span id="medicoDomicilio">...</span></p>
+      <p><strong>Teléfono:</strong> <span id="medicoTelefono">...</span></p>
+      <p><strong>Firma:</strong> ____________________________</p>
+    </section>
+
+    <section>
+      <h2>Datos del Paciente</h2>
+      <p><strong>Nombre:</strong> <span id="pacienteNombre">...</span></p>
+      <p><strong>Edad:</strong> <span id="pacienteEdad">...</span></p>
+      <p><strong>Sexo:</strong> <span id="sexo">...</span></p>
+      <p><strong>Alergias:</strong> <span id="alergias">...</span></p>
+      <p><strong>Talla:</strong> <span id="talla">...</span></p>
+      <p><strong>Peso:</strong> <span id="peso">...</span></p>
+      <p><strong>IMC:</strong> <span id="imc">...</span></p>
+      <p><strong>Temperatura:</strong> <span id="temperatura">...</span></p>
+      <p><strong>Presión arterial:</strong> <span id="presion">...</span></p>
+    </section>
+
+    <section>
+      <h2>Diagnóstico Médico</h2>
+      <p id="diagnostico">Cargando...</p>
+    </section>
+
+    <section>
+      <h2>Tratamiento</h2>
+      <ul id="tratamientoLista"><li>Cargando...</li></ul>
+    </section>
+
+    <section>
+      <h2>Código QR de Verificación</h2>
+      <div id="qrReceta"></div>
+    </section>
+
+    <section>
+      <h2>Bloque de Seguridad</h2>
+      <p><strong>ID de Bloque:</strong> <span id="bloqueId">...</span></p>
+      <p><strong>Hash:</strong> <span id="bloqueHash">...</span></p>
+      <div id="qrBlockchain"></div>
+    </section>
+  </main>
+
+  <footer>
+    <p>Receta digital generada con <strong>KodRx</strong> — Plataforma digital de recetas verificadas con trazabilidad tecnológica.</p>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+  <script type="module" src="/medico/ver-receta.js"></script>
 </body>
 </html>
