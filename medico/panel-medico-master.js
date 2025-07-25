@@ -56,6 +56,8 @@ document.addEventListener("DOMContentLoaded", () => {
       console.log("✅ Receta guardada con ID:", docRef.id);
 
       const qrUrl = `/medico/ver-receta.html?id=${docRef.id}`;
+      console.log("✅ QR generado para:", qrUrl);
+
       const qrContainer = document.getElementById("qrContainer");
       qrContainer.innerHTML = "";
       new QRCode(qrContainer, {
@@ -71,4 +73,3 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 });
 
-console.log("✅ QR generado para:", qrUrl);
