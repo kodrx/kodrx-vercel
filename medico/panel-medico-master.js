@@ -63,6 +63,8 @@ document.addEventListener("DOMContentLoaded", () => {
         width: 128,
         height: 128
       });
+      console.log("🔎 Buscando qrContainer:", document.getElementById("qrContainer"));
+
     } catch (error) {
       console.error("❌ Error al guardar receta:", error);
     }
