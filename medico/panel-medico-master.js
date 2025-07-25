@@ -28,11 +28,14 @@ document.addEventListener("DOMContentLoaded", () => {
       const presion = document.getElementById("presion")?.value || "";
       const temperatura = document.getElementById("temperatura")?.value || "";
       const sexo = document.getElementById("sexo")?.value || "";
+      const alergias = document.getElementById("alergias")?.value || "";
 
       // Datos del médico
-      const medicoNombre = localStorage.getItem("medicoNombre") || "Desconocido";
-      const medicoCedula = localStorage.getItem("medicoCedula") || "Desconocida";
-      const medicoEspecialidad = localStorage.getItem("medicoEspecialidad") || "General";
+      const medicoNombre = document.getElementById("medicoNombre") || "Desconocido";
+      const medicoCedula = document.getElementById("medicoCedula") || "Desconocida";
+      const medicoEspecialidad = document.getElementById("medicoEspecialidad") || "General";
+      const medicoDomicilio = document.getElementById("medicoDomicilio")?.value || "";
+      const medicoTelefono = document.getElementById("medicoTelefono")?.value || "";
 
       // Tratamiento
       const medicamentos = [];
@@ -70,6 +73,11 @@ document.addEventListener("DOMContentLoaded", () => {
         bloque,
         hash,
         correo,
+         alergias,
+  medicoDomicilio,
+  medicoTelefono,
+  bloque,
+  hash,
         timestamp: Timestamp.now()
       });
 
