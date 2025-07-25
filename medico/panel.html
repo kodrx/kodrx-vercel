@@ -1,1 +1,49 @@
-<!-- HTML corregido irá aquí -->
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Panel Médico | KodRx</title>
+  <link rel="stylesheet" href="/estilos/global.css" />
+</head>
+<body>
+  <header class="header">
+    <img src="/assets/logo.png" alt="KodRx Logo" class="logo" />
+    <h1>Panel Médico</h1>
+  </header>
+
+  <main>
+    <section>
+      <button onclick="nuevaReceta()">➕ Nueva receta</button>
+      <button onclick="window.location.href='historial.html'">📋 Historial</button>
+      <button onclick="window.location.href='https://kodrx.app/public/verificar.html'">✅ Verificar en blockchain</button>
+      <button onclick="window.location.href='#'">🧠 Acceder IA clínica</button>
+      <button onclick="cerrarSesion()">🔒 Cerrar sesión</button>
+    </section>
+
+    <form id="generarRecetaForm" class="form-login">
+      <h2>Generar nueva receta</h2>
+
+      <label for="nombrePaciente">Nombre del paciente:</label>
+      <input type="text" id="nombrePaciente" required>
+
+      <label for="edad">Edad:</label>
+      <input type="number" id="edad" required>
+
+      <label for="observaciones">Observaciones:</label>
+      <textarea id="observaciones"></textarea>
+
+      <div id="medicamentosContainer">
+        <!-- Contenedor para medicamentos dinámicos -->
+      </div>
+
+      <button type="button" onclick="agregarMedicamento()">+ Agregar medicamento</button>
+      <button type="submit">Generar receta</button>
+    </form>
+  </main>
+
+  <script type="module" src="/firebase-init.js"></script>
+  <script type="module" src="/medico/panel-medico-master.js"></script>
+</body>
+</html>

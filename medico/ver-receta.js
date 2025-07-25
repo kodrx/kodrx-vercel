@@ -1,1 +1,1 @@
-// ver-receta.js corregido irá aquí
+// ver-receta.js reconstruido

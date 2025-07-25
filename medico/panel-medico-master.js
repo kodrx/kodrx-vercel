@@ -1,1 +1,1 @@
-// JS corregido irá aquí
+// panel-medico-master.js reconstruido
