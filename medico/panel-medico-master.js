@@ -70,3 +70,5 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 });
+
+console.log("✅ QR generado para:", qrUrl);
