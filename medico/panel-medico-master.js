@@ -1,6 +1,11 @@
 
 // 🚀 Script maestro activo
-import { db } from '/firebase-init.js';
+import { db } from "/firebase-init.js";
+import {
+  collection,
+  addDoc,
+  serverTimestamp
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 document.addEventListener("DOMContentLoaded", () => {
   console.log("🧩 DOM cargado");
@@ -27,30 +32,24 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     try {
-      const receta = {
+      const recetaData = {
         nombrePaciente,
         edad,
         observaciones,
         medicamentos,
-        timestamp: new Date()
+        timestamp: serverTimestamp()
       };
 
-      const docRef = await db.collection("recetas").add(receta);
+      const docRef = await addDoc(collection(db, "recetas"), recetaData);
       console.log("✅ Receta guardada con ID:", docRef.id);
 
       const qrUrl = `/medico/ver-receta.html?id=${docRef.id}`;
-      const qrContainer = document.getElementById("qrContainer");
-      qrContainer.innerHTML = "";
-      new QRCode(qrContainer, {
-        text: qrUrl,
-        width: 128,
-        height: 128
-      });
       console.log("✅ QR generado para:", qrUrl);
 
+      // Redirigir a la receta generada
       setTimeout(() => {
-        window.open(qrUrl, "_blank");
-      }, 1000);
+        window.location.href = qrUrl;
+      }, 2000);
 
     } catch (error) {
       console.error("❌ Error al guardar receta:", error);
