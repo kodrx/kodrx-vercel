@@ -102,7 +102,7 @@ document.addEventListener("DOMContentLoaded", () => {
       <input type="text" class="nombre" placeholder="Nombre del medicamento">
       <input type="text" class="dosis" placeholder="Dosis">
       <input type="text" class="duracion" placeholder="Duración">
-    \`;
+    `;
     medicamentosContainer.appendChild(div);
   }
 });
