@@ -1,63 +1,44 @@
+
 // 🚀 Script maestro activo
 import { db } from '/firebase-init.js';
-import { collection, addDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 document.addEventListener("DOMContentLoaded", () => {
   console.log("🧩 DOM cargado");
 
   const form = document.querySelector("#generarRecetaForm");
   const medicamentosContainer = document.getElementById("medicamentosContainer");
-  const agregarMedicamentoBtn = document.getElementById("agregarMedicamentoBtn");
 
-  if (!form || !medicamentosContainer || !agregarMedicamentoBtn) {
-    console.error("❌ Elementos clave no encontrados en el DOM");
-    return;
-  }
-
-  agregarMedicamentoBtn.addEventListener("click", () => {
-    const div = document.createElement("div");
-    div.classList.add("medicamento");
-    div.innerHTML = `
-      <input type="text" class="nombre" placeholder="Nombre del medicamento" required>
-      <input type="text" class="dosis" placeholder="Dosis" required>
-      <input type="text" class="duracion" placeholder="Duración" required>
-    `;
-    medicamentosContainer.appendChild(div);
-  });
+  document.getElementById("agregarMedicamentoBtn").addEventListener("click", agregarMedicamento);
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
     console.log("📤 Enviando receta...");
 
-    const nombrePaciente = document.getElementById("nombrePaciente")?.value || "";
-    const edad = document.getElementById("edad")?.value || "";
-    const observaciones = document.getElementById("observaciones")?.value || "";
-    const correo = localStorage.getItem("kodrx_email") || "desconocido";
+    const nombrePaciente = document.getElementById("nombrePaciente").value;
+    const edad = document.getElementById("edad").value;
+    const observaciones = document.getElementById("observaciones").value;
 
     const medicamentos = [];
     document.querySelectorAll(".medicamento").forEach(med => {
-      const nombre = med.querySelector(".nombre")?.value || "";
-      const dosis = med.querySelector(".dosis")?.value || "";
-      const duracion = med.querySelector(".duracion")?.value || "";
+      const nombre = med.querySelector(".nombre").value;
+      const dosis = med.querySelector(".dosis").value;
+      const duracion = med.querySelector(".duracion").value;
       medicamentos.push({ nombre, dosis, duracion });
     });
 
-    const receta = {
-      nombrePaciente,
-      edad,
-      observaciones,
-      correo,
-      medicamentos,
-      timestamp: new Date()
-    };
-
     try {
-      const docRef = await addDoc(collection(db, "recetas"), receta);
+      const receta = {
+        nombrePaciente,
+        edad,
+        observaciones,
+        medicamentos,
+        timestamp: new Date()
+      };
+
+      const docRef = await db.collection("recetas").add(receta);
       console.log("✅ Receta guardada con ID:", docRef.id);
 
       const qrUrl = `/medico/ver-receta.html?id=${docRef.id}`;
-      console.log("✅ QR generado para:", qrUrl);
-
       const qrContainer = document.getElementById("qrContainer");
       qrContainer.innerHTML = "";
       new QRCode(qrContainer, {
@@ -65,11 +46,25 @@ document.addEventListener("DOMContentLoaded", () => {
         width: 128,
         height: 128
       });
-      console.log("🔎 Buscando qrContainer:", document.getElementById("qrContainer"));
+      console.log("✅ QR generado para:", qrUrl);
+
+      setTimeout(() => {
+        window.open(qrUrl, "_blank");
+      }, 1000);
 
     } catch (error) {
-     
+      console.error("❌ Error al guardar receta:", error);
     }
   });
-});
 
+  function agregarMedicamento() {
+    const div = document.createElement("div");
+    div.classList.add("medicamento");
+    div.innerHTML = `
+      <input type="text" class="nombre" placeholder="Nombre del medicamento">
+      <input type="text" class="dosis" placeholder="Dosis">
+      <input type="text" class="duracion" placeholder="Duración">
+    `;
+    medicamentosContainer.appendChild(div);
+  }
+});
