@@ -82,7 +82,7 @@ document.addEventListener("DOMContentLoaded", () => {
             "Authorization": "Bearer kodrx-secret-2025"
           },
           body: JSON.stringify({
-            receta: medicamentos.map(m => `${m.nombre} ${m.dosis} por ${m.duracion}`).join(', '),
+receta: medicamentos.map(m => `${m.nombre} ${m.dosis} por ${m.duracion}`).join(", "),
 
             medico: medico.nombre,
             cedula: medico.cedula
