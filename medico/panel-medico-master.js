@@ -1,12 +1,14 @@
-// 🚀 Script maestro para panel médico con UID
+
+// 🚀 Script maestro activo para panel médico
 import { db, auth } from "/firebase-init.js";
-import { collection, addDoc, Timestamp, getDoc, doc, query, orderBy, limit, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { collection, addDoc, updateDoc, doc, Timestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 document.addEventListener("DOMContentLoaded", () => {
   console.log("🧩 DOM cargado");
 
   const form = document.querySelector("#generarRecetaForm");
   const medicamentosContainer = document.getElementById("medicamentosContainer");
+
   document.getElementById("agregarMedicamentoBtn").addEventListener("click", agregarMedicamento);
 
   form.addEventListener("submit", async (e) => {
@@ -14,21 +16,11 @@ document.addEventListener("DOMContentLoaded", () => {
     console.log("📤 Enviando receta...");
 
     try {
-      const user = auth.currentUser;
-      if (!user) throw new Error("Usuario no autenticado");
-
-      const uid = user.uid;
-      const medicoRef = doc(db, "medicos", uid);
-      const medicoSnap = await getDoc(medicoRef);
-      if (!medicoSnap.exists()) throw new Error("Datos del médico no encontrados");
-
-      const medico = medicoSnap.data();
-
+      // Datos del paciente
       const nombrePaciente = document.getElementById("nombrePaciente").value;
       const edad = document.getElementById("edad").value;
       const observaciones = document.getElementById("observaciones").value;
       const diagnostico = document.getElementById("diagnostico")?.value || "";
-
       const peso = document.getElementById("peso")?.value || "";
       const talla = document.getElementById("talla")?.value || "";
       const imc = document.getElementById("imc")?.value || "";
@@ -36,6 +28,19 @@ document.addEventListener("DOMContentLoaded", () => {
       const temperatura = document.getElementById("temperatura")?.value || "";
       const sexo = document.getElementById("sexo")?.value || "";
 
+      // Datos del médico
+      const user = auth.currentUser;
+      const uid = user.uid;
+      const medicoDoc = await doc(db, "medicos", uid);
+      const medicoSnap = await getDoc(medicoDoc);
+
+      if (!medicoSnap.exists()) {
+        throw new Error("Médico no encontrado en base de datos.");
+      }
+
+      const medico = medicoSnap.data();
+
+      // Tratamiento
       const medicamentos = [];
       document.querySelectorAll(".medicamento").forEach(med => {
         const nombre = med.querySelector(".nombre").value;
@@ -44,20 +49,8 @@ document.addEventListener("DOMContentLoaded", () => {
         medicamentos.push({ nombre, dosis, duracion });
       });
 
-      // Obtener el último bloque
-      const recetasRef = collection(db, "recetas");
-      const q = query(recetasRef, orderBy("bloque", "desc"), limit(1));
-      const snapshot = await getDocs(q);
-      let ultimoBloque = 0;
-      snapshot.forEach(doc => {
-        const data = doc.data();
-        if (data.bloque) ultimoBloque = data.bloque;
-      });
-
-      const bloque = ultimoBloque + 1;
-      const hash = self.crypto?.randomUUID?.() || `HASH-${Date.now()}`;
-
-      const recetaDoc = await addDoc(recetasRef, {
+      // Receta base
+      const recetaRef = await addDoc(collection(db, "recetas"), {
         nombrePaciente,
         edad,
         observaciones,
@@ -75,62 +68,68 @@ document.addEventListener("DOMContentLoaded", () => {
         medicoTelefono: medico.telefono || "",
         medicoDomicilio: `${medico.calle || ""} ${medico.numero || ""}, ${medico.colonia || ""}, ${medico.municipio || ""}, ${medico.estado || ""}, CP ${medico.cp || ""}`,
         correo: user.email,
-        bloque,
-        hash,
         timestamp: Timestamp.now()
       });
 
-      console.log("✅ Receta guardada con ID:", recetaDoc.id);
+      console.log("✅ Receta guardada con ID:", recetaRef.id);
+
+      // Enviar receta a blockchain
       try {
-  const blockchainResp = await fetch("https://kodrx-blockchain.onrender.com/bloques", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": "Bearer kodrx-secret-2025"
-    },
-    body: JSON.stringify({
-      receta: medicamentos.map(m => `${m.nombre} ${m.dosis} por ${m.duracion}`).join(', '),
-      medico: medicoNombre,
-      cedula: medicoCedula
-    })
-  });
+        const blockchainResp = await fetch("https://kodrx-blockchain.onrender.com/bloques", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer kodrx-secret-2025"
+          },
+          body: JSON.stringify({
+            receta: medicamentos.map(m => \`\${m.nombre} \${m.dosis} por \${m.duracion}\`).join(", "),
+            medico: medico.nombre,
+            cedula: medico.cedula
+          })
+        });
 
-  const blockchainData = await blockchainResp.json();
+        const blockchainData = await blockchainResp.json();
 
-  if (blockchainResp.ok) {
-    console.log("✅ Receta registrada en blockchain. ID:", blockchainData.bloque.index);
+        if (blockchainResp.ok) {
+          const recetaDocRef = doc(db, "recetas", recetaRef.id);
+          await updateDoc(recetaDocRef, {
+            bloque: blockchainData.bloque.index,
+            hash: blockchainData.bloque.hash
+          });
+          console.log("✅ Blockchain actualizado:", blockchainData.bloque);
+        } else {
+          console.warn("⚠️ Blockchain falló:", blockchainData.error);
+        }
+      } catch (blockErr) {
+        console.error("❌ Error de conexión con blockchain:", blockErr.message);
+      }
 
-    await updateDoc(doc(db, "recetas", docRef.id), {
-      bloque: blockchainData.bloque.index,
-      hash: blockchainData.bloque.hash
-    });
-
-  } else {
-    console.warn("⚠️ Blockchain falló:", blockchainData.error);
-  }
-
-} catch (error) {
-  console.error("❌ Error de conexión con blockchain:", error.message);
-}
-
+      const qrUrl = `/ver-receta.html?id=${recetaRef.id}`;
+      const qrContainer = document.getElementById("qrContainer");
+      qrContainer.innerHTML = "";
+      new QRCode(qrContainer, {
+        text: qrUrl,
+        width: 128,
+        height: 128
+      });
 
       setTimeout(() => {
-        window.location.href = `/medico/ver-receta.html?id=${recetaDoc.id}`;
+        window.location.href = qrUrl;
       }, 3000);
 
     } catch (error) {
-      console.error("❌ Error al guardar receta:", error);
+      console.error("❌ Error al guardar la receta:", error);
     }
   });
 
   function agregarMedicamento() {
     const div = document.createElement("div");
     div.classList.add("medicamento");
-    div.innerHTML = `
+    div.innerHTML = \`
       <input type="text" class="nombre" placeholder="Nombre del medicamento">
       <input type="text" class="dosis" placeholder="Dosis">
       <input type="text" class="duracion" placeholder="Duración">
-    `;
+    \`;
     medicamentosContainer.appendChild(div);
   }
 });
