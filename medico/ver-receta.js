@@ -24,6 +24,14 @@ document.addEventListener("DOMContentLoaded", async () => {
     alert("Receta no encontrada");
     return;
   }
+function setText(id, texto) {
+  const el = document.getElementById(id);
+  if (!el) {
+    console.error(`❌ Elemento con id="${id}" no encontrado en el HTML`);
+    return;
+  }
+  el.textContent = texto || "—";
+}
 
   const receta = docSnap.data();
   const setText = (id, text) => document.getElementById(id).textContent = text || "No disponible";
