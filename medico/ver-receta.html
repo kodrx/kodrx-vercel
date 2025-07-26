@@ -11,55 +11,57 @@
       background: white;
       color: #1e1e1e;
       margin: 0;
-      padding: 2rem;
+      padding: 1rem;
     }
     .receta {
       width: 100%;
       max-width: 800px;
       margin: auto;
       border: 1px solid #ccc;
-      padding: 2rem;
+      padding: 1rem;
       border-radius: 10px;
+      page-break-inside: avoid;
     }
     h1, h2 {
       color: #123f91;
       border-bottom: 1px solid #d6d6d6;
       padding-bottom: 0.25rem;
+      font-size: 1.1rem;
     }
     p, li {
-      font-size: 0.95rem;
-      margin: 0.25rem 0;
+      font-size: 0.85rem;
+      margin: 0.15rem 0;
     }
     .qr-main {
       display: flex;
       justify-content: center;
-      margin: 1rem 0;
+      margin: 0.8rem 0;
     }
     .qr-box {
-      padding: 10px;
+      padding: 6px;
       background: #e6f0ff;
       border: 2px solid #2e6fd6;
-      border-radius: 10px;
+      border-radius: 8px;
     }
     .footer {
       text-align: center;
-      font-size: 0.85rem;
-      margin-top: 2rem;
+      font-size: 0.75rem;
+      margin-top: 1rem;
       color: #555;
     }
     .botones {
       display: flex;
       justify-content: space-between;
-      margin-bottom: 1rem;
+      margin-bottom: 0.5rem;
     }
     .botones button {
       background: #123f91;
       color: white;
-      padding: 0.5rem 1rem;
+      padding: 0.4rem 0.8rem;
       border: none;
-      border-radius: 5px;
+      border-radius: 4px;
       cursor: pointer;
-      font-size: 0.9rem;
+      font-size: 0.8rem;
     }
     ul {
       padding-left: 1.2rem;
@@ -67,12 +69,12 @@
     .qr-blockchain {
       display: flex;
       justify-content: flex-end;
-      margin-top: 1rem;
+      margin-top: 0.5rem;
     }
     @media print {
       .botones { display: none; }
       body { padding: 0; }
-      .receta { border: none; }
+      .receta { border: none; padding: 0.5rem; }
     }
   </style>
 </head>
@@ -90,7 +92,7 @@
     <p><strong>Cédula:</strong> <span id="medicoCedula">...</span></p>
     <p><strong>Especialidad:</strong> <span id="medicoEspecialidad">...</span></p>
     <p><strong>Teléfono:</strong> <span id="medicoTelefono">...</span></p>
-    <p><strong>Domicilio del consultorio:</strong> <span id="medicoDomicilio">...</span></p>
+    <p><strong>Consultorio:</strong> <span id="medicoDomicilio">...</span></p>
 
     <h2>Datos del Paciente</h2>
     <p><strong>Nombre:</strong> <span id="nombrePaciente">...</span></p>
@@ -114,16 +116,16 @@
     <div class="qr-main">
       <div id="qrReceta" class="qr-box"></div>
     </div>
-    <p style="text-align:center; font-size:0.85rem;">Escanear en farmacia para verificar receta digital</p>
+    <p style="text-align:center; font-size:0.75rem;">Escanear en farmacia para verificar receta digital</p>
 
     <h2>Información Técnica</h2>
     <p><strong>ID de Bloque:</strong> <span id="bloque">...</span></p>
     <p><strong>Hash:</strong> <span id="hash">...</span></p>
 
     <div class="qr-blockchain">
-      <div id="qrBlockchain" class="qr-box"></div>
+      <div id="qrBlockchain" class="qr-box" style="transform: scale(0.8);"></div>
     </div>
-    <p style="text-align:right; font-size:0.8rem;">Verificar en KodRx Blockchain</p>
+    <p style="text-align:right; font-size:0.75rem;">Verificar en KodRx Blockchain</p>
   </div>
 
   <div class="footer">
@@ -134,4 +136,3 @@
   <script type="module" src="/medico/ver-receta.js"></script>
 </body>
 </html>
-
