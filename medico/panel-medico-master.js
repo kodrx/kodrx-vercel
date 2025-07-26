@@ -2,6 +2,7 @@
 // 🚀 Script maestro activo para panel médico
 import { db, auth } from "/firebase-init.js";
 import { collection, addDoc, updateDoc, doc, Timestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getDoc, doc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 document.addEventListener("DOMContentLoaded", () => {
   console.log("🧩 DOM cargado");
