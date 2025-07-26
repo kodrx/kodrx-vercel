@@ -5,8 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Panel Médico | KodRx</title>
   <link rel="stylesheet" href="/estilos/global.css" />
-  <script src="/medico/qrcode.min.js"></script>
-
 </head>
 <body>
   <header class="header">
@@ -16,9 +14,9 @@
 
   <main>
     <section>
-      <button onclick="nuevaReceta()">➕ Nueva receta</button>
+      <button onclick="location.reload()">➕ Nueva receta</button>
       <button onclick="window.location.href='historial.html'">📋 Historial</button>
-      <button onclick="window.location.href='https://kodrx.app/public/verificar.html'">✅ Verificar en blockchain</button>
+      <button onclick="window.location.href='https://kodrx.app/verificar.html'">✅ Verificar en blockchain</button>
       <button onclick="window.location.href='#'">🧠 Acceder IA clínica</button>
       <button onclick="cerrarSesion()">🔒 Cerrar sesión</button>
     </section>
@@ -34,26 +32,25 @@
 
       <label for="sexo">Sexo:</label>
       <select id="sexo">
-        <option value="">Seleccionar</option>
         <option value="Masculino">Masculino</option>
         <option value="Femenino">Femenino</option>
         <option value="Otro">Otro</option>
       </select>
 
-      <label for="peso">Peso (kg):</label>
-      <input type="number" id="peso" step="0.1">
+      <label for="talla">Talla (cm):</label>
+      <input type="number" id="talla">
 
-      <label for="talla">Talla (m):</label>
-      <input type="number" id="talla" step="0.01">
+      <label for="peso">Peso (kg):</label>
+      <input type="number" id="peso">
 
       <label for="imc">IMC:</label>
-      <input type="text" id="imc" readonly>
+      <input type="text" id="imc" disabled>
+
+      <label for="temperatura">Temperatura (°C):</label>
+      <input type="text" id="temperatura">
 
       <label for="presion">Presión arterial:</label>
       <input type="text" id="presion">
-
-      <label for="temperatura">Temperatura (°C):</label>
-      <input type="number" id="temperatura" step="0.1">
 
       <label for="observaciones">Observaciones:</label>
       <textarea id="observaciones"></textarea>
@@ -61,6 +58,7 @@
       <label for="diagnostico">Diagnóstico:</label>
       <textarea id="diagnostico"></textarea>
 
+      <h3>Medicamentos</h3>
       <div id="medicamentosContainer"></div>
       <button id="agregarMedicamentoBtn" type="button">+ Agregar medicamento</button>
 
@@ -70,32 +68,24 @@
     <div id="qrContainer" style="margin-top: 20px;"></div>
   </main>
 
-
-  
-
-  <!-- Firebase y script -->
+  <!-- Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
   <script type="module" src="/firebase-init.js"></script>
   <script type="module" src="/medico/panel-medico-master.js"></script>
-
-  <!-- Cálculo automático de IMC -->
   <script>
-    document.addEventListener("DOMContentLoaded", () => {
-      const peso = document.getElementById("peso");
-      const talla = document.getElementById("talla");
-      const imc = document.getElementById("imc");
+    // Cálculo automático de IMC
+    document.getElementById("peso").addEventListener("input", calcularIMC);
+    document.getElementById("talla").addEventListener("input", calcularIMC);
 
-      function calcularIMC() {
-        const p = parseFloat(peso.value);
-        const t = parseFloat(talla.value);
-        if (p > 0 && t > 0) {
-          imc.value = (p / (t * t)).toFixed(2);
-        }
+    function calcularIMC() {
+      const peso = parseFloat(document.getElementById("peso").value);
+      const talla = parseFloat(document.getElementById("talla").value) / 100;
+      if (!isNaN(peso) && !isNaN(talla) && talla > 0) {
+        const imc = peso / (talla * talla);
+        document.getElementById("imc").value = imc.toFixed(2);
       }
-
-      peso.addEventListener("input", calcularIMC);
-      talla.addEventListener("input", calcularIMC);
-    });
+    }
   </script>
-
 </body>
 </html>
+
