@@ -81,14 +81,38 @@ document.addEventListener("DOMContentLoaded", () => {
       });
 
       console.log("✅ Receta guardada con ID:", recetaDoc.id);
-      const qrUrl = `/verificar.html?id=${recetaDoc.id}`;
-      const qrContainer = document.getElementById("qrContainer");
-      qrContainer.innerHTML = "";
-      new QRCode(qrContainer, {
-        text: qrUrl,
-        width: 128,
-        height: 128
-      });
+      try {
+  const blockchainResp = await fetch("https://kodrx-blockchain.onrender.com/bloques", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer kodrx-secret-2025"
+    },
+    body: JSON.stringify({
+      receta: medicamentos.map(m => `${m.nombre} ${m.dosis} por ${m.duracion}`).join(', '),
+      medico: medicoNombre,
+      cedula: medicoCedula
+    })
+  });
+
+  const blockchainData = await blockchainResp.json();
+
+  if (blockchainResp.ok) {
+    console.log("✅ Receta registrada en blockchain. ID:", blockchainData.bloque.index);
+
+    await updateDoc(doc(db, "recetas", docRef.id), {
+      bloque: blockchainData.bloque.index,
+      hash: blockchainData.bloque.hash
+    });
+
+  } else {
+    console.warn("⚠️ Blockchain falló:", blockchainData.error);
+  }
+
+} catch (error) {
+  console.error("❌ Error de conexión con blockchain:", error.message);
+}
+
 
       setTimeout(() => {
         window.location.href = `/medico/ver-receta.html?id=${recetaDoc.id}`;
