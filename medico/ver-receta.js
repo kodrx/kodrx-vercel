@@ -72,9 +72,10 @@ const qr2 = document.getElementById("qrBlockchain");
     width: 120,
     height: 120
   });
-  new QRCode(document.getElementById("qrBlockchain"), {
-    text: `https://kodrx.app/public/consulta.html?id=${recetaId}`,
-    width: 100,
-    height: 100
-  });
+new QRCode(document.getElementById("qrBlockchain"), {
+  text: `https://kodrx-blockchain.onrender.com/verificar.html?id=${receta.bloque}`,
+  width: 100,
+  height: 100
+});
+
 });
