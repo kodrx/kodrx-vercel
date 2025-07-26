@@ -4,13 +4,91 @@
   <meta charset="UTF-8" />
   <title>Receta Digital KodRx</title>
   <link rel="stylesheet" href="/estilos/global.css" />
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f9f9f9;
+      color: #222;
+      margin: 0;
+    }
+    header {
+      background: #003366;
+      color: white;
+      padding: 1rem;
+      display: flex;
+      align-items: center;
+    }
+    header img {
+      height: 50px;
+      margin-right: 1rem;
+    }
+    h1 {
+      font-size: 1.8rem;
+    }
+    main {
+      padding: 2rem;
+      max-width: 800px;
+      margin: auto;
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    section {
+      margin-bottom: 2rem;
+      border-bottom: 1px solid #ddd;
+      padding-bottom: 1rem;
+    }
+    h2 {
+      color: #003366;
+      margin-bottom: 0.5rem;
+    }
+    p, li {
+      font-size: 1rem;
+      margin: 0.25rem 0;
+    }
+    strong {
+      font-weight: 600;
+    }
+    #qrReceta, #qrBlockchain {
+      margin: 1rem auto;
+      text-align: center;
+    }
+    footer {
+      background: #003366;
+      color: white;
+      text-align: center;
+      padding: 1rem;
+      font-size: 0.9rem;
+    }
+    .qr-box {
+      display: inline-block;
+      padding: 10px;
+      background: #e6f0ff;
+      border: 2px solid #003366;
+      border-radius: 10px;
+      box-shadow: 0 0 6px rgba(0,0,0,0.2);
+    }
+    .botones {
+      text-align: center;
+      margin-top: 2rem;
+    }
+    .botones button {
+      background: #003366;
+      color: white;
+      padding: 0.5rem 1.2rem;
+      border: none;
+      border-radius: 6px;
+      margin: 0 10px;
+      cursor: pointer;
+      font-size: 1rem;
+    }
+  </style>
 </head>
 <body>
   <header>
     <img src="/assets/logo.png" alt="KodRx Logo" />
     <h1>Receta Digital KodRx</h1>
   </header>
-
   <main>
     <section>
       <h2>Médico Responsable</h2>
@@ -33,10 +111,11 @@
       <p><strong>Temperatura:</strong> <span id="temperatura">...</span></p>
       <p><strong>Presión arterial:</strong> <span id="presion">...</span></p>
     </section>
-<section>
-  <h2>Signos Vitales y Observaciones</h2>
-  <p><strong>Observaciones:</strong> <span id="observaciones">...</span></p>
-</section>
+
+    <section>
+      <h2>Signos Vitales y Observaciones</h2>
+      <p><strong>Observaciones:</strong> <span id="observaciones">...</span></p>
+    </section>
 
     <section>
       <h2>Diagnóstico Médico</h2>
@@ -50,23 +129,30 @@
 
     <section>
       <h2>Código QR de Verificación</h2>
-      <div id="qrReceta"></div>
+      <div id="qrReceta" class="qr-box"></div>
+      <p style="text-align:center; font-size:0.9rem;">Escanear en farmacia para validar</p>
     </section>
 
     <section>
       <h2>Bloque de Seguridad</h2>
       <p><strong>ID de Bloque:</strong> <span id="bloque">...</span></p>
       <p><strong>Hash:</strong> <span id="hash">...</span></p>
-
-      <div id="qrBlockchain"></div>
+      <div id="qrBlockchain" class="qr-box"></div>
+      <p style="text-align:center; font-size:0.9rem;">Ver trazabilidad en KodRx blockchain</p>
     </section>
+
+    <div class="botones">
+      <button onclick="window.print()">🖨 Imprimir</button>
+      <button onclick="window.location.href='/medico/panel.html'">⬅ Volver</button>
+    </div>
   </main>
 
   <footer>
-    <p>Receta digital generada con <strong>KodRx</strong> — Plataforma digital de recetas verificadas con trazabilidad tecnológica.</p>
+    Receta digital generada con <strong>KodRx</strong> — Tecnología que verifica, salud que protege.
   </footer>
 
- <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <script type="module" src="/medico/ver-receta.js"></script>
 </body>
 </html>
+
