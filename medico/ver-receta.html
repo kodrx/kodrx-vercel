@@ -72,10 +72,14 @@
       justify-content: flex-end;
       margin-top: 0.5rem;
     }
-    .qr-plano {
-      display: flex;
-      justify-content: flex-start;
+    .barcode-section {
       margin-top: 1rem;
+      text-align: left;
+    }
+    svg#codigoBarrasPlano {
+      width: 100%;
+      max-width: 300px;
+      height: 60px;
     }
     @media print {
       .botones { display: none; }
@@ -133,10 +137,10 @@
     </div>
     <p style="text-align:right; font-size:0.75rem;">Verificar en KodRx Blockchain</p>
 
-    <div class="qr-plano">
-      <div id="qrPlano" class="qr-box"></div>
+    <div class="barcode-section">
+      <svg id="codigoBarrasPlano"></svg>
+      <p style="font-size:0.75rem; margin-top:0.2rem;">Código para integración con sistemas de farmacia</p>
     </div>
-    <p style="font-size:0.75rem; margin-top:0.2rem;">QR plano para uso digital o integración con sistemas</p>
   </div>
 
   <div class="footer">
@@ -144,6 +148,7 @@
   </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
@@ -211,13 +216,12 @@
         height: 100
       });
 
-      new QRCode(document.getElementById("qrPlano"), {
-        text: `https://kodrx.app/public/verificar.html?id=${recetaId}`,
-        width: 100,
-        height: 100,
-        colorDark: "#000000",
-        colorLight: "#ffffff",
-        correctLevel: QRCode.CorrectLevel.H
+      JsBarcode("#codigoBarrasPlano", recetaId, {
+        format: "CODE128",
+        lineColor: "#000",
+        width: 2,
+        height: 50,
+        displayValue: true
       });
     });
   </script>
