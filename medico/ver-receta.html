@@ -21,6 +21,7 @@
       padding: 1rem;
       border-radius: 10px;
       page-break-inside: avoid;
+      position: relative;
     }
     h1, h2 {
       color: #123f91;
@@ -70,6 +71,11 @@
       display: flex;
       justify-content: flex-end;
       margin-top: 0.5rem;
+    }
+    .qr-plano {
+      display: flex;
+      justify-content: flex-start;
+      margin-top: 1rem;
     }
     @media print {
       .botones { display: none; }
@@ -126,6 +132,11 @@
       <div id="qrBlockchain" class="qr-box" style="transform: scale(0.8);"></div>
     </div>
     <p style="text-align:right; font-size:0.75rem;">Verificar en KodRx Blockchain</p>
+
+    <div class="qr-plano">
+      <div id="qrPlano" class="qr-box"></div>
+    </div>
+    <p style="font-size:0.75rem; margin-top:0.2rem;">QR plano para uso digital o integración con sistemas</p>
   </div>
 
   <div class="footer">
@@ -133,6 +144,82 @@
   </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-  <script type="module" src="/medico/ver-receta.js"></script>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBIjaOe4HcGNDk0xrqen8etBv0RyjyOJHw",
+      authDomain: "kodrx-105b9.firebaseapp.com",
+      projectId: "kodrx-105b9"
+    };
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    const params = new URLSearchParams(window.location.search);
+    const recetaId = params.get("id");
+
+    document.addEventListener("DOMContentLoaded", async () => {
+      if (!recetaId) return;
+
+      const docRef = doc(db, "recetas", recetaId);
+      const docSnap = await getDoc(docRef);
+      if (!docSnap.exists()) return;
+
+      const receta = docSnap.data();
+
+      const setText = (id, texto) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = texto || "—";
+      };
+
+      setText("medicoNombre", `Dr. ${receta.medicoNombre}`);
+      setText("medicoCedula", receta.medicoCedula);
+      setText("medicoEspecialidad", receta.medicoEspecialidad);
+      setText("medicoTelefono", receta.medicoTelefono);
+      setText("medicoDomicilio", receta.medicoDomicilio);
+      setText("nombrePaciente", receta.nombrePaciente);
+      setText("edad", receta.edad);
+      setText("sexo", receta.sexo);
+      setText("peso", receta.peso);
+      setText("talla", receta.talla);
+      setText("imc", receta.imc);
+      setText("presion", receta.presion);
+      setText("temperatura", receta.temperatura);
+      setText("observaciones", receta.observaciones);
+      setText("diagnostico", receta.diagnostico);
+      setText("bloque", receta.bloque);
+      setText("hash", receta.hash);
+
+      const lista = document.getElementById("tratamientoLista");
+      lista.innerHTML = "";
+      receta.medicamentos.forEach(med => {
+        const li = document.createElement("li");
+        li.textContent = `${med.nombre} — ${med.dosis} — ${med.duracion}`;
+        lista.appendChild(li);
+      });
+
+      new QRCode(document.getElementById("qrReceta"), {
+        text: `https://kodrx.app/verificar.html?id=${recetaId}`,
+        width: 120,
+        height: 120
+      });
+
+      new QRCode(document.getElementById("qrBlockchain"), {
+        text: `https://kodrx-blockchain.onrender.com/verificar.html?id=${receta.bloque}`,
+        width: 100,
+        height: 100
+      });
+
+      new QRCode(document.getElementById("qrPlano"), {
+        text: `https://kodrx.app/public/verificar.html?id=${recetaId}`,
+        width: 100,
+        height: 100,
+        colorDark: "#000000",
+        colorLight: "#ffffff",
+        correctLevel: QRCode.CorrectLevel.H
+      });
+    });
+  </script>
 </body>
 </html>
