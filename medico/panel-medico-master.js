@@ -73,7 +73,7 @@ document.addEventListener("DOMContentLoaded", () => {
         medicoCedula: medico.cedula,
         medicoEspecialidad: medico.especialidad || "General",
         medicoTelefono: medico.telefono || "",
-        medicoDomicilio: medico.domicilio || "",
+        medicoDomicilio: `${medico.calle || ""} ${medico.numero || ""}, ${medico.colonia || ""}, ${medico.municipio || ""}, ${medico.estado || ""}, CP ${medico.cp || ""}`,
         correo: user.email,
         bloque,
         hash,
