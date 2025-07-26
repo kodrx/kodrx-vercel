@@ -34,14 +34,15 @@ function setText(id, texto) {
 }
 
   const receta = docSnap.data();
-  const setText = (id, text) => document.getElementById(id).textContent = text || "No disponible";
+
 
   setText("medicoNombre", `Dr. ${receta.medicoNombre}`);
   setText("medicoCedula", receta.medicoCedula);
   setText("medicoEspecialidad", receta.medicoEspecialidad);
   setText("medicoTelefono", receta.medicoTelefono);
   setText("medicoDomicilio", receta.medicoDomicilio);
-  setText("paciente", `${receta.nombrePaciente} — Edad: ${receta.edad}`);
+  setText("nombrePaciente", receta.nombrePaciente);
+  setText("edad", receta.edad);
   setText("sexo", receta.sexo);
   setText("peso", receta.peso);
   setText("talla", receta.talla);
@@ -60,6 +61,24 @@ function setText(id, texto) {
     li.textContent = `${med.nombre} — ${med.dosis} — ${med.duracion}`;
     tratamientoLista.appendChild(li);
   });
+const qr1 = document.getElementById("qrReceta");
+const qr2 = document.getElementById("qrBlockchain");
+
+if (qr1) {
+  new QRCode(qr1, {
+    text: `https://kodrx.app/verificar.html?id=${recetaId}`,
+    width: 120,
+    height: 120
+  });
+}
+
+if (qr2) {
+  new QRCode(qr2, {
+    text: `https://kodrx.app/public/consulta.html?id=${recetaId}`,
+    width: 100,
+    height: 100
+  });
+}
 
   // QRs
   new QRCode(document.getElementById("qrReceta"), {
