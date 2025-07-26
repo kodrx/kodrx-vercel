@@ -64,21 +64,7 @@ function setText(id, texto) {
 const qr1 = document.getElementById("qrReceta");
 const qr2 = document.getElementById("qrBlockchain");
 
-if (qr1) {
-  new QRCode(qr1, {
-    text: `https://kodrx.app/verificar.html?id=${recetaId}`,
-    width: 120,
-    height: 120
-  });
-}
 
-if (qr2) {
-  new QRCode(qr2, {
-    text: `https://kodrx.app/public/consulta.html?id=${recetaId}`,
-    width: 100,
-    height: 100
-  });
-}
 
   // QRs
   new QRCode(document.getElementById("qrReceta"), {
