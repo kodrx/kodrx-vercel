@@ -1,162 +1,134 @@
 <!DOCTYPE html>
 <html lang="es">
-<html lang="es">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-  <title>Receta Digital</title>
-  <link rel="stylesheet" href="/estilos/global.css" />
-  <script src="/componentes/header.js" defer></script>
-<head>
-  <meta charset="UTF-8" />
   <title>Receta Digital KodRx</title>
-  <link rel="stylesheet" href="/estilos/global.css" />
+  <link rel="stylesheet" href="/estilos/global.css">
   <style>
     body {
-      font-family: 'Segoe UI', sans-serif;
-      background: #f9f9f9;
-      color: #222;
+      font-family: 'Poppins', sans-serif;
+      background: white;
+      color: #1e1e1e;
       margin: 0;
-    }
-    header {
-      background: #003366;
-      color: white;
-      padding: 1rem;
-      display: flex;
-      align-items: center;
-    }
-    header img {
-      height: 50px;
-      margin-right: 1rem;
-    }
-    h1 {
-      font-size: 1.8rem;
-    }
-    main {
       padding: 2rem;
+    }
+    .receta {
+      width: 100%;
       max-width: 800px;
       margin: auto;
-      background: white;
+      border: 1px solid #ccc;
+      padding: 2rem;
       border-radius: 10px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
     }
-    section {
-      margin-bottom: 2rem;
-      border-bottom: 1px solid #ddd;
-      padding-bottom: 1rem;
-    }
-    h2 {
-      color: #003366;
-      margin-bottom: 0.5rem;
+    h1, h2 {
+      color: #123f91;
+      border-bottom: 1px solid #d6d6d6;
+      padding-bottom: 0.25rem;
     }
     p, li {
-      font-size: 1rem;
+      font-size: 0.95rem;
       margin: 0.25rem 0;
     }
-    strong {
-      font-weight: 600;
-    }
-    #qrReceta, #qrBlockchain {
-      margin: 1rem auto;
-      text-align: center;
-    }
-    footer {
-      background: #003366;
-      color: white;
-      text-align: center;
-      padding: 1rem;
-      font-size: 0.9rem;
+    .qr-main {
+      display: flex;
+      justify-content: center;
+      margin: 1rem 0;
     }
     .qr-box {
-      display: inline-block;
       padding: 10px;
       background: #e6f0ff;
-      border: 2px solid #003366;
+      border: 2px solid #2e6fd6;
       border-radius: 10px;
-      box-shadow: 0 0 6px rgba(0,0,0,0.2);
+    }
+    .footer {
+      text-align: center;
+      font-size: 0.85rem;
+      margin-top: 2rem;
+      color: #555;
     }
     .botones {
-      text-align: center;
-      margin-top: 2rem;
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 1rem;
     }
     .botones button {
-      background: #003366;
+      background: #123f91;
       color: white;
-      padding: 0.5rem 1.2rem;
+      padding: 0.5rem 1rem;
       border: none;
-      border-radius: 6px;
-      margin: 0 10px;
+      border-radius: 5px;
       cursor: pointer;
-      font-size: 1rem;
+      font-size: 0.9rem;
+    }
+    ul {
+      padding-left: 1.2rem;
+    }
+    .qr-blockchain {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 1rem;
+    }
+    @media print {
+      .botones { display: none; }
+      body { padding: 0; }
+      .receta { border: none; }
     }
   </style>
 </head>
-
-</head>
 <body>
+  <div class="botones">
+    <button onclick="window.print()">🖨 Imprimir</button>
+    <button onclick="window.location.href='/medico/panel.html'">⬅ Volver</button>
+  </div>
 
-  <main>
-    <section>
-      <h2>Médico Responsable</h2>
-      <p><strong>Nombre:</strong> <span id="medicoNombre">...</span></p>
-      <p><strong>Cédula:</strong> <span id="medicoCedula">...</span></p>
-      <p><strong>Especialidad:</strong> <span id="medicoEspecialidad">...</span></p>
-      <p><strong>Domicilio del consultorio:</strong> <span id="medicoDomicilio">...</span></p>
-      <p><strong>Teléfono:</strong> <span id="medicoTelefono">...</span></p>
-      <p><strong>Firma:</strong> ____________________________</p>
-    </section>
+  <div class="receta">
+    <h1>Receta Médica Digital</h1>
 
-    <section>
-      <h2>Datos del Paciente</h2>
-      <p><strong>Nombre:</strong> <span id="nombrePaciente">...</span></p>
-      <p><strong>Edad:</strong> <span id="edad">...</span></p>
-      <p><strong>Sexo:</strong> <span id="sexo">...</span></p>
-      <p><strong>Talla:</strong> <span id="talla">...</span></p>
-      <p><strong>Peso:</strong> <span id="peso">...</span></p>
-      <p><strong>IMC:</strong> <span id="imc">...</span></p>
-      <p><strong>Temperatura:</strong> <span id="temperatura">...</span></p>
-      <p><strong>Presión arterial:</strong> <span id="presion">...</span></p>
-    </section>
+    <h2>Médico Responsable</h2>
+    <p><strong>Nombre:</strong> <span id="medicoNombre">...</span></p>
+    <p><strong>Cédula:</strong> <span id="medicoCedula">...</span></p>
+    <p><strong>Especialidad:</strong> <span id="medicoEspecialidad">...</span></p>
+    <p><strong>Teléfono:</strong> <span id="medicoTelefono">...</span></p>
+    <p><strong>Domicilio del consultorio:</strong> <span id="medicoDomicilio">...</span></p>
 
-    <section>
-      <h2>Signos Vitales y Observaciones</h2>
-      <p><strong>Observaciones:</strong> <span id="observaciones">...</span></p>
-    </section>
+    <h2>Datos del Paciente</h2>
+    <p><strong>Nombre:</strong> <span id="nombrePaciente">...</span></p>
+    <p><strong>Edad:</strong> <span id="edad">...</span></p>
+    <p><strong>Sexo:</strong> <span id="sexo">...</span></p>
+    <p><strong>Peso:</strong> <span id="peso">...</span> kg</p>
+    <p><strong>Talla:</strong> <span id="talla">...</span> cm</p>
+    <p><strong>IMC:</strong> <span id="imc">...</span></p>
+    <p><strong>Temperatura:</strong> <span id="temperatura">...</span> °C</p>
+    <p><strong>Presión Arterial:</strong> <span id="presion">...</span></p>
 
-    <section>
-      <h2>Diagnóstico Médico</h2>
-      <p id="diagnostico">Cargando...</p>
-    </section>
+    <h2>Signos y Observaciones</h2>
+    <p><strong>Observaciones:</strong> <span id="observaciones">...</span></p>
 
-    <section>
-      <h2>Tratamiento</h2>
-      <ul id="tratamientoLista"><li>Cargando...</li></ul>
-    </section>
+    <h2>Diagnóstico</h2>
+    <p id="diagnostico">Cargando...</p>
 
-    <section>
-      <h2>Código QR de Verificación</h2>
+    <h2>Tratamiento</h2>
+    <ul id="tratamientoLista"><li>Cargando...</li></ul>
+
+    <div class="qr-main">
       <div id="qrReceta" class="qr-box"></div>
-      <p style="text-align:center; font-size:0.9rem;">Escanear en farmacia para validar</p>
-    </section>
-
-    <section>
-      <h2>Bloque de Seguridad</h2>
-      <p><strong>ID de Bloque:</strong> <span id="bloque">...</span></p>
-      <p><strong>Hash:</strong> <span id="hash">...</span></p>
-      <div id="qrBlockchain" class="qr-box"></div>
-      <p style="text-align:center; font-size:0.9rem;">Ver trazabilidad en KodRx blockchain</p>
-    </section>
-
-    <div class="botones">
-      <button onclick="window.print()">🖨 Imprimir</button>
-      <button onclick="window.location.href='/medico/panel.html'">⬅ Volver</button>
     </div>
-  </main>
+    <p style="text-align:center; font-size:0.85rem;">Escanear en farmacia para verificar receta digital</p>
 
-  <footer>
-    Receta digital generada con <strong>KodRx</strong> — Tecnología que verifica, salud que protege.
-  </footer>
+    <h2>Información Técnica</h2>
+    <p><strong>ID de Bloque:</strong> <span id="bloque">...</span></p>
+    <p><strong>Hash:</strong> <span id="hash">...</span></p>
+
+    <div class="qr-blockchain">
+      <div id="qrBlockchain" class="qr-box"></div>
+    </div>
+    <p style="text-align:right; font-size:0.8rem;">Verificar en KodRx Blockchain</p>
+  </div>
+
+  <div class="footer">
+    Receta digital emitida mediante <strong>KodRx</strong> — Tecnología que verifica, salud que protege.
+  </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <script type="module" src="/medico/ver-receta.js"></script>
