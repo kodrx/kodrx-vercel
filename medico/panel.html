@@ -2,15 +2,15 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Panel Médico | KodRx</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Login Médico</title>
   <link rel="stylesheet" href="/estilos/global.css" />
+  <script src="/componentes/header.js" defer></script>
+
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+
 </head>
-<body>
-  <header class="header">
-    <img src="/assets/logo.png" alt="KodRx Logo" class="logo" />
-    <h1>Panel Médico</h1>
-  </header>
 
   <main>
     <section>
@@ -69,7 +69,6 @@
   </main>
 
   <!-- Scripts -->
-  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
   <script type="module" src="/firebase-init.js"></script>
   <script type="module" src="/medico/panel-medico-master.js"></script>
   <script>
