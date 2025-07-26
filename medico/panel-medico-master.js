@@ -107,7 +107,7 @@ receta: medicamentos.map(m => `${m.nombre} ${m.dosis} por ${m.duracion}`).join("
         console.error("❌ Error de conexión con blockchain:", blockErr.message);
       }
 
-      const qrUrl = `/ver-receta.html?id=${recetaRef.id}`;
+      const qrUrl = `/medico/ver-receta.html?id=${recetaRef.id}`;
       const qrContainer = document.getElementById("qrContainer");
       qrContainer.innerHTML = "";
       new QRCode(qrContainer, {
