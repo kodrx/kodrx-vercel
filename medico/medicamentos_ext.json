@@ -1,22 +1,162 @@
 [
-  "Paracetamol 500mg",
-  "Ibuprofeno 400mg",
-  "Amoxicilina 500mg",
-  "Diclofenaco sódico 50mg",
-  "Omeprazol 20mg",
-  "Loratadina 10mg",
-  "Metformina 850mg",
-  "Ácido fólico 5mg",
-  "Losartán potásico 50mg",
-  "Simvastatina 20mg",
-  "Ketorolaco 10mg",
-  "Ciprofloxacino 500mg",
-  "Metronidazol 500mg",
-  "Clonazepam 2mg",
-  "Salbutamol inhalador",
-  "Insulina glargina 100UI/mL",
-  "Enalapril 10mg",
-  "Trimetoprima con sulfametoxazol",
-  "Prednisona 5mg",
-  "Ranitidina 150mg"
+  {
+    "nombre": "Paracetamol 500mg",
+    "destacado": 1
+  },
+  {
+    "nombre": "Ibuprofeno 400mg",
+    "destacado": 1
+  },
+  {
+    "nombre": "Amoxicilina 500mg",
+    "destacado": 1
+  },
+  {
+    "nombre": "Diclofenaco s\u00f3dico 50mg",
+    "destacado": 1
+  },
+  {
+    "nombre": "Omeprazol 20mg",
+    "destacado": 1
+  },
+  {
+    "nombre": "Loratadina 10mg",
+    "destacado": 0
+  },
+  {
+    "nombre": "Metformina 850mg",
+    "destacado": 0
+  },
+  {
+    "nombre": "\u00c1cido f\u00f3lico 5mg",
+    "destacado": 0
+  },
+  {
+    "nombre": "Losart\u00e1n pot\u00e1sico 50mg",
+    "destacado": 0
+  },
+  {
+    "nombre": "Simvastatina 20mg",
+    "destacado": 0
+  },
+  {
+    "nombre": "Ketorolaco 10mg",
+    "destacado": 0
+  },
+  {
+    "nombre": "Ciprofloxacino 500mg",
+    "destacado": 0
+  },
+  {
+    "nombre": "Metronidazol 500mg",
+    "destacado": 0
+  },
+  {
+    "nombre": "Clonazepam 2mg",
+    "destacado": 0
+  },
+  {
+    "nombre": "Salbutamol inhalador",
+    "destacado": 0
+  },
+  {
+    "nombre": "Insulina glargina 100UI/mL",
+    "destacado": 0
+  },
+  {
+    "nombre": "Enalapril 10mg",
+    "destacado": 0
+  },
+  {
+    "nombre": "Trimetoprima con sulfametoxazol",
+    "destacado": 0
+  },
+  {
+    "nombre": "Prednisona 5mg",
+    "destacado": 0
+  },
+  {
+    "nombre": "Ranitidina 150mg",
+    "destacado": 0
+  },
+  {
+    "nombre": "Atenolol 50mg",
+    "destacado": 1
+  },
+  {
+    "nombre": "Bisoprolol 5mg",
+    "destacado": 1
+  },
+  {
+    "nombre": "Clopidogrel 75mg",
+    "destacado": 1
+  },
+  {
+    "nombre": "\u00c1cido acetilsalic\u00edlico 100mg",
+    "destacado": 1
+  },
+  {
+    "nombre": "Furosemida 40mg",
+    "destacado": 1
+  },
+  {
+    "nombre": "Hidroclorotiazida 25mg",
+    "destacado": 0
+  },
+  {
+    "nombre": "Atorvastatina 40mg",
+    "destacado": 0
+  },
+  {
+    "nombre": "Rosuvastatina 20mg",
+    "destacado": 0
+  },
+  {
+    "nombre": "Captopril 25mg",
+    "destacado": 0
+  },
+  {
+    "nombre": "Espironolactona 25mg",
+    "destacado": 0
+  },
+  {
+    "nombre": "Digoxina 0.25mg",
+    "destacado": 0
+  },
+  {
+    "nombre": "Amiodarona 200mg",
+    "destacado": 0
+  },
+  {
+    "nombre": "Carvedilol 12.5mg",
+    "destacado": 0
+  },
+  {
+    "nombre": "Verapamilo 120mg",
+    "destacado": 0
+  },
+  {
+    "nombre": "Diltiazem 60mg",
+    "destacado": 0
+  },
+  {
+    "nombre": "Ivabradina 5mg",
+    "destacado": 0
+  },
+  {
+    "nombre": "Nitroglicerina sublingual 0.4mg",
+    "destacado": 0
+  },
+  {
+    "nombre": "Warfarina 5mg",
+    "destacado": 0
+  },
+  {
+    "nombre": "Rivaroxab\u00e1n 20mg",
+    "destacado": 0
+  },
+  {
+    "nombre": "Dabigatr\u00e1n 150mg",
+    "destacado": 0
+  }
 ]
