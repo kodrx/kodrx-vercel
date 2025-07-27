@@ -132,33 +132,41 @@ receta: medicamentos.map(m => `${m.nombre} ${m.dosis} por ${m.duracion}`).join("
 
   
   function agregarMedicamento() {
-    const div = document.createElement("div");
-    div.classList.add("medicamento");
+  const div = document.createElement("div");
+  div.classList.add("medicamento");
+  div.style.position = "relative";
 
-    const inputNombre = document.createElement("input");
-    inputNombre.type = "text";
-    inputNombre.classList.add("nombre");
-    inputNombre.placeholder = "Nombre del medicamento";
+  const inputNombre = document.createElement("input");
+  inputNombre.type = "text";
+  inputNombre.classList.add("nombre");
+  inputNombre.placeholder = "Nombre del medicamento";
+
+  const inputDosis = document.createElement("input");
+  inputDosis.type = "text";
+  inputDosis.classList.add("dosis");
+  inputDosis.placeholder = "Dosis";
+
+  const inputDuracion = document.createElement("input");
+  inputDuracion.type = "text";
+  inputDuracion.classList.add("duracion");
+  inputDuracion.placeholder = "Duración";
+
+  const btnEliminar = document.createElement("button");
+  btnEliminar.textContent = "🗑️";
+  btnEliminar.style.marginLeft = "8px";
+  btnEliminar.onclick = () => div.remove();
+
+  div.appendChild(inputNombre);
+  div.appendChild(inputDosis);
+  div.appendChild(inputDuracion);
+  div.appendChild(btnEliminar);
+
+  medicamentosContainer.appendChild(div);
+
+  // 🧠 Esperamos un frame completo para insertar el autocompletado
+  setTimeout(() => {
     iniciarAutocompletado(inputNombre);
-
-    const inputDosis = document.createElement("input");
-    inputDosis.type = "text";
-    inputDosis.classList.add("dosis");
-    inputDosis.placeholder = "Dosis";
-
-    const inputDuracion = document.createElement("input");
-    inputDuracion.type = "text";
-    inputDuracion.classList.add("duracion");
-    inputDuracion.placeholder = "Duración";
-
-    div.appendChild(inputNombre);
-    div.appendChild(inputDosis);
-    div.appendChild(inputDuracion);
-
-    medicamentosContainer.appendChild(div);
-    setTimeout(() => {
-    iniciarAutocompletado(inputNombre);
-  }, 0);
-  }
+  }, 100);
+}
 
 });
