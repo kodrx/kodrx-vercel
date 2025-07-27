@@ -6,7 +6,12 @@ fetch('medicamentos_ext.json')
   .then(response => response.json())
   .then(data => {
     // Ordenar: primero destacados
-    medicamentosDisponibles = data.sort((a, b) => {
+    data.forEach((m, i) => {
+      if (!m.nombre) console.warn(`⚠️ Medicamento sin nombre en la posición ${i}:`, m);
+    });
+    medicamentosDisponibles = data
+      .filter(m => m.nombre)
+      .sort((a, b) => {
       if (a.destacado === b.destacado) {
         return a.nombre.localeCompare(b.nombre);
       }
