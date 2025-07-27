@@ -1,6 +1,6 @@
-// historialMedico.js
-import { db, auth } from "/firebase-init.js";
-import { collection, query, where, getDocs, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { db, auth, onAuthStateChanged } from "/firebase-init.js";
+
+
 
 document.addEventListener("DOMContentLoaded", async () => {
   const historialDiv = document.getElementById("historial");
