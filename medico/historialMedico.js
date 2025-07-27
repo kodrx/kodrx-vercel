@@ -121,4 +121,4 @@ historialDiv.appendChild(buscador);
       card.style.display = "none";
     }
   });
-});
+
