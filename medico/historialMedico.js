@@ -122,6 +122,3 @@ historialDiv.appendChild(buscador);
     }
   });
 });
-    });
-  });
-});
