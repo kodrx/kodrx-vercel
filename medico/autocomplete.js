@@ -23,7 +23,11 @@ fetch('medicamentos_ext.json')
 function iniciarAutocompletado(input) {
   const contenedorSugerencias = document.createElement("div");
   contenedorSugerencias.classList.add("sugerencias");
-  input.parentNode.appendChild(contenedorSugerencias);
+  if (!input || !input.parentElement) {
+  console.warn("❌ No se pudo aplicar autocompletado: input sin padre.", input);
+  return;
+}
+input.parentElement.appendChild(contenedorSugerencias);
 
   input.addEventListener("input", () => {
     const valor = input.value.toLowerCase();
