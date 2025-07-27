@@ -1,3 +1,4 @@
+// historialMedico.js PRO
 import { db, auth, onAuthStateChanged } from "/firebase-init.js";
 import {
   collection,
@@ -7,64 +8,21 @@ import {
   orderBy
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-
-
-document.addEventListener("DOMContentLoaded", async () => {
-  const historialDiv = document.getElementById("historial");
-
-  const user = auth.currentUser;
-  if (!user) {
-    historialDiv.innerHTML = "<p>No has iniciado sesión.</p>";
-    return;
-  }
-
-  const q = query(
-    collection(db, "recetas"),
-    where("correo", "==", user.email),
-    orderBy("timestamp", "desc")
-  );
-
-  const snapshot = await getDocs(q);
-  if (snapshot.empty) {
-    historialDiv.innerHTML = "<p>No has emitido recetas todavía.</p>";
-    return;
-  }
-
-  snapshot.forEach(doc => {
-    const receta = doc.data();
-    const fecha = receta.timestamp.toDate().toLocaleString();
-
-    const card = document.createElement("div");
-    card.classList.add("acordeon");
-
-    const header = document.createElement("div");
-    header.classList.add("acordeon-header");
-    header.textContent = `${receta.nombrePaciente} - ${fecha}`;
-
-    const body = document.createElement("div");
-    body.classList.add("acordeon-body");
-
-    body.innerHTML = `
-      <p><strong>Edad:</strong> ${receta.edad || "—"}</p>
-      <p><strong>Diagnóstico:</strong> ${receta.diagnostico || "—"}</p>
-      <p><strong>Medicamentos:</strong> ${receta.medicamentos?.map(m => `${m.nombre} (${m.dosis} / ${m.duracion})`).join(", ")}</p>
-      <a class="boton-ver" href="/medico/ver-receta.html?id=${doc.id}" target="_blank">Ver receta</a>
-    `;
-
-    header.addEventListener("click", () => {
-      card.classList.toggle("open");
-    });
-
-    card.appendChild(header);
-    card.appendChild(body);
-    historialDiv.appendChild(card);
-  });
-});
-
-
-
 document.addEventListener("DOMContentLoaded", () => {
   const historialDiv = document.getElementById("historial");
+
+  // 🧠 Campo de búsqueda
+  const buscador = document.createElement("input");
+  buscador.type = "text";
+  buscador.id = "buscador";
+  buscador.placeholder = "Buscar paciente...";
+  buscador.style.marginBottom = "1rem";
+  buscador.style.padding = "0.5rem";
+  buscador.style.width = "100%";
+  historialDiv.appendChild(buscador);
+
+  const contenedorGrupos = document.createElement("div");
+  historialDiv.appendChild(contenedorGrupos);
 
   onAuthStateChanged(auth, async (user) => {
     if (!user) {
@@ -84,34 +42,70 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
+    const gruposPorFecha = {};
+
     snapshot.forEach(doc => {
       const receta = doc.data();
-      const fecha = receta.timestamp.toDate().toLocaleString();
+      const fechaObj = receta.timestamp.toDate();
+      const fechaClave = fechaObj.toLocaleDateString();
 
-      const card = document.createElement("div");
-      card.classList.add("acordeon");
+      if (!gruposPorFecha[fechaClave]) gruposPorFecha[fechaClave] = [];
+
+      gruposPorFecha[fechaClave].push({ id: doc.id, receta, hora: fechaObj.toLocaleTimeString() });
+    });
+
+    Object.entries(gruposPorFecha).forEach(([fecha, recetas]) => {
+      const grupo = document.createElement("div");
+      grupo.classList.add("acordeon");
 
       const header = document.createElement("div");
       header.classList.add("acordeon-header");
-      header.textContent = `${receta.nombrePaciente} - ${fecha}`;
+      header.textContent = `📅 ${fecha} (${recetas.length})`;
 
       const body = document.createElement("div");
       body.classList.add("acordeon-body");
 
-      body.innerHTML = `
-        <p><strong>Edad:</strong> ${receta.edad || "—"}</p>
-        <p><strong>Diagnóstico:</strong> ${receta.diagnostico || "—"}</p>
-        <p><strong>Medicamentos:</strong> ${receta.medicamentos?.map(m => `${m.nombre} (${m.dosis} / ${m.duracion})`).join(", ")}</p>
-        <a class="boton-ver" href="/medico/ver-receta.html?id=${doc.id}" target="_blank">Ver receta</a>
-      `;
+      recetas.forEach(({ id, receta, hora }) => {
+        const sub = document.createElement("div");
+        sub.classList.add("acordeon");
 
-      header.addEventListener("click", () => {
-        card.classList.toggle("open");
+        const h2 = document.createElement("div");
+        h2.classList.add("acordeon-header");
+        h2.textContent = `${receta.nombrePaciente} – ${hora}`;
+
+        const inner = document.createElement("div");
+        inner.classList.add("acordeon-body");
+        inner.innerHTML = `
+          <p><strong>Edad:</strong> ${receta.edad || "—"}</p>
+          <p><strong>Diagnóstico:</strong> ${receta.diagnostico || "—"}</p>
+          <p><strong>Medicamentos:</strong> ${receta.medicamentos?.map(m => `${m.nombre} (${m.dosis} / ${m.duracion})`).join(", ")}</p>
+          <a class="boton-ver" href="/medico/ver-receta.html?id=${id}">Ver receta</a>
+        `;
+
+        h2.addEventListener("click", () => {
+          sub.classList.toggle("open");
+        });
+
+        sub.appendChild(h2);
+        sub.appendChild(inner);
+        body.appendChild(sub);
       });
 
-      card.appendChild(header);
-      card.appendChild(body);
-      historialDiv.appendChild(card);
+      header.addEventListener("click", () => {
+        grupo.classList.toggle("open");
+      });
+
+      grupo.appendChild(header);
+      grupo.appendChild(body);
+      contenedorGrupos.appendChild(grupo);
+    });
+
+    buscador.addEventListener("input", (e) => {
+      const termino = e.target.value.toLowerCase();
+      document.querySelectorAll(".acordeon-body .acordeon").forEach(card => {
+        const texto = card.querySelector(".acordeon-header").textContent.toLowerCase();
+        card.style.display = texto.includes(termino) ? "block" : "none";
+      });
     });
   });
 });
