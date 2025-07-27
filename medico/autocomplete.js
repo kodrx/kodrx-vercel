@@ -23,11 +23,10 @@ fetch('medicamentos_ext.json')
 function iniciarAutocompletado(input) {
   const contenedorSugerencias = document.createElement("div");
   contenedorSugerencias.classList.add("sugerencias");
-  if (!input) {
-  console.warn("❌ No se pudo aplicar autocompletado: input inválido.", input);
+  if (!input || !input.parentElement) {
+  console.warn("❌ No se pudo aplicar autocompletado: input sin padre.", input);
   return;
 }
-
 let contenedorPadre = input.closest(".medicamento") || input.parentElement || document.getElementById("medicamentosContainer");
 
 if (!contenedorPadre) {
@@ -35,8 +34,10 @@ if (!contenedorPadre) {
   return;
 }
 
-contenedorPadre.appendChild(contenedorSugerencias);
+// Eliminar cualquier lista anterior de sugerencias
+contenedorPadre.querySelectorAll(".sugerencias").forEach(el => el.remove());
 
+contenedorPadre.appendChild(contenedorSugerencias);
 
   input.addEventListener("input", () => {
     const valor = input.value.toLowerCase();
