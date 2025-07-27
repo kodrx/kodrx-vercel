@@ -11,14 +11,14 @@
       background: white;
       color: #1e1e1e;
       margin: 0;
-      padding: 1rem;
+      padding: 0.5rem;
     }
     .receta {
       width: 100%;
       max-width: 800px;
       margin: auto;
       border: 1px solid #ccc;
-      padding: 1rem;
+      padding: 0.5rem 1rem;
       border-radius: 10px;
       page-break-inside: avoid;
       position: relative;
@@ -26,43 +26,44 @@
     h1, h2 {
       color: #123f91;
       border-bottom: 1px solid #d6d6d6;
-      padding-bottom: 0.25rem;
-      font-size: 1.1rem;
+      padding-bottom: 0.2rem;
+      font-size: 1rem;
+      margin-top: 0.8rem;
     }
     p, li {
-      font-size: 0.85rem;
-      margin: 0.15rem 0;
+      font-size: 0.8rem;
+      margin: 0.1rem 0;
     }
     .qr-main {
       display: flex;
       justify-content: center;
-      margin: 0.8rem 0;
+      margin: 0.6rem 0;
     }
     .qr-box {
-      padding: 6px;
+      padding: 4px;
       background: #e6f0ff;
-      border: 2px solid #2e6fd6;
-      border-radius: 8px;
+      border: 1.5px solid #2e6fd6;
+      border-radius: 6px;
     }
     .footer {
       text-align: center;
-      font-size: 0.75rem;
-      margin-top: 1rem;
+      font-size: 0.7rem;
+      margin-top: 0.6rem;
       color: #555;
     }
     .botones {
       display: flex;
       justify-content: space-between;
-      margin-bottom: 0.5rem;
+      margin-bottom: 0.3rem;
     }
     .botones button {
       background: #123f91;
       color: white;
-      padding: 0.4rem 0.8rem;
+      padding: 0.3rem 0.7rem;
       border: none;
       border-radius: 4px;
       cursor: pointer;
-      font-size: 0.8rem;
+      font-size: 0.75rem;
     }
     ul {
       padding-left: 1.2rem;
@@ -70,21 +71,21 @@
     .qr-blockchain {
       display: flex;
       justify-content: flex-end;
-      margin-top: 0.5rem;
+      margin-top: 0.3rem;
     }
     .barcode-section {
-      margin-top: 1rem;
+      margin-top: 0.6rem;
       text-align: left;
     }
     svg#codigoBarrasPlano {
       width: 100%;
-      max-width: 300px;
-      height: 60px;
+      max-width: 280px;
+      height: 35px;
     }
     @media print {
       .botones { display: none; }
       body { padding: 0; }
-      .receta { border: none; padding: 0.5rem; }
+      .receta { border: none; padding: 0.3rem 0.5rem; }
     }
   </style>
 </head>
@@ -126,20 +127,20 @@
     <div class="qr-main">
       <div id="qrReceta" class="qr-box"></div>
     </div>
-    <p style="text-align:center; font-size:0.75rem;">Escanear en farmacia para verificar receta digital</p>
+    <p style="text-align:center; font-size:0.7rem;">Escanear en farmacia para verificar receta digital</p>
 
     <h2>Información Técnica</h2>
     <p><strong>ID de Bloque:</strong> <span id="bloque">...</span></p>
     <p><strong>Hash:</strong> <span id="hash">...</span></p>
 
     <div class="qr-blockchain">
-      <div id="qrBlockchain" class="qr-box" style="transform: scale(0.8);"></div>
+      <div id="qrBlockchain" class="qr-box" style="transform: scale(0.75);"></div>
     </div>
-    <p style="text-align:right; font-size:0.75rem;">Verificar en KodRx Blockchain</p>
+    <p style="text-align:right; font-size:0.7rem;">Verificar en KodRx Blockchain</p>
 
     <div class="barcode-section">
       <svg id="codigoBarrasPlano"></svg>
-      <p style="font-size:0.75rem; margin-top:0.2rem;">Código para integración con sistemas de farmacia</p>
+      <p style="font-size:0.7rem; margin-top:0.2rem;">Código para integración con sistemas de farmacia</p>
     </div>
   </div>
 
@@ -206,24 +207,25 @@
 
       new QRCode(document.getElementById("qrReceta"), {
         text: `https://kodrx.app/verificar.html?id=${recetaId}`,
-        width: 120,
-        height: 120
+        width: 110,
+        height: 110
       });
 
       new QRCode(document.getElementById("qrBlockchain"), {
         text: `https://kodrx-blockchain.onrender.com/verificar.html?id=${receta.bloque}`,
-        width: 100,
-        height: 100
+        width: 90,
+        height: 90
       });
 
       JsBarcode("#codigoBarrasPlano", recetaId, {
         format: "CODE128",
         lineColor: "#000",
-        width: 2,
-        height: 50,
+        width: 1.8,
+        height: 35,
         displayValue: true
       });
     });
   </script>
 </body>
 </html>
+
