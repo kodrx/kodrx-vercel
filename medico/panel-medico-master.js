@@ -15,6 +15,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
+    const btnGenerar = document.querySelector("button[type='submit']");
+    btnGenerar.disabled = true;
+    btnGenerar.textContent = "Generando...";
     console.log("📤 Enviando receta...");
 
     try {
@@ -116,7 +119,9 @@ receta: medicamentos.map(m => `${m.nombre} ${m.dosis} por ${m.duracion}`).join("
         height: 128
       });
 
-      setTimeout(() => {
+      btnGenerar.disabled = false;
+    btnGenerar.textContent = "Generar receta";
+    setTimeout(() => {
         window.location.href = qrUrl;
       }, 3000);
 
@@ -125,15 +130,32 @@ receta: medicamentos.map(m => `${m.nombre} ${m.dosis} por ${m.duracion}`).join("
     }
   });
 
+  
   function agregarMedicamento() {
     const div = document.createElement("div");
     div.classList.add("medicamento");
-    div.innerHTML = `
-  <input type="text" class="nombre" placeholder="Nombre del medicamento">
-  <input type="text" class="dosis" placeholder="Dosis">
-  <input type="text" class="duracion" placeholder="Duración">
-`;
+
+    const inputNombre = document.createElement("input");
+    inputNombre.type = "text";
+    inputNombre.classList.add("nombre");
+    inputNombre.placeholder = "Nombre del medicamento";
+    iniciarAutocompletado(inputNombre);
+
+    const inputDosis = document.createElement("input");
+    inputDosis.type = "text";
+    inputDosis.classList.add("dosis");
+    inputDosis.placeholder = "Dosis";
+
+    const inputDuracion = document.createElement("input");
+    inputDuracion.type = "text";
+    inputDuracion.classList.add("duracion");
+    inputDuracion.placeholder = "Duración";
+
+    div.appendChild(inputNombre);
+    div.appendChild(inputDosis);
+    div.appendChild(inputDuracion);
 
     medicamentosContainer.appendChild(div);
   }
+
 });
