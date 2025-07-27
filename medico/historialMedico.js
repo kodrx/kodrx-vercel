@@ -19,7 +19,15 @@ document.addEventListener("DOMContentLoaded", () => {
   buscador.style.marginBottom = "1rem";
   buscador.style.padding = "0.5rem";
   buscador.style.width = "100%";
-  historialDiv.appendChild(buscador);
+  buscador.style.display = "block";
+buscador.style.margin = "1rem auto";
+buscador.style.padding = "0.5rem 1rem";
+buscador.style.fontSize = "1rem";
+buscador.style.borderRadius = "8px";
+buscador.style.border = "1px solid #ccc";
+buscador.style.width = "100%";
+buscador.style.maxWidth = "400px";
+historialDiv.appendChild(buscador);
 
   const contenedorGrupos = document.createElement("div");
   historialDiv.appendChild(contenedorGrupos);
@@ -101,11 +109,19 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     buscador.addEventListener("input", (e) => {
-      const termino = e.target.value.toLowerCase();
-      document.querySelectorAll(".acordeon-body .acordeon").forEach(card => {
-        const texto = card.querySelector(".acordeon-header").textContent.toLowerCase();
-        card.style.display = texto.includes(termino) ? "block" : "none";
-      });
+  const termino = e.target.value.toLowerCase();
+
+  document.querySelectorAll(".acordeon-body .acordeon-header").forEach(header => {
+    const card = header.parentElement;
+    const texto = header.textContent.toLowerCase();
+
+    if (texto.includes(termino)) {
+      card.style.display = "block";
+    } else {
+      card.style.display = "none";
+    }
+  });
+});
     });
   });
 });
