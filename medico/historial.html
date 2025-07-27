@@ -7,18 +7,23 @@
   <title>Historial de Recetas - Médico</title>
   <link rel="stylesheet" href="/estilos/global.css" />
   <script src="/componentes/header.js" defer></script>
+  <style>
+    body { font-family: 'Poppins', sans-serif; margin: 0; padding: 1rem; background: #f8f9fc; }
+    h1 { color: #123f91; text-align: center; margin-bottom: 1rem; }
+    .contenedor { max-width: 800px; margin: auto; }
+    .acordeon { background: white; border: 1px solid #ccc; border-radius: 6px; margin-bottom: 0.5rem; overflow: hidden; }
+    .acordeon-header { background: #123f91; color: white; padding: 0.75rem 1rem; cursor: pointer; font-weight: 500; display: flex; justify-content: space-between; align-items: center; }
+    .acordeon-body { display: none; padding: 1rem; background: #fff; border-top: 1px solid #ddd; }
+    .acordeon-body p { margin: 0.3rem 0; }
+    .acordeon.open .acordeon-body { display: block; }
+    .acordeon.open .acordeon-header::after { content: "▲"; }
+    .acordeon-header::after { content: "▼"; font-size: 0.8rem; }
+    a.boton-ver { background: #2e6fd6; color: white; padding: 0.4rem 0.8rem; border-radius: 4px; text-decoration: none; font-size: 0.85rem; margin-top: 0.5rem; display: inline-block; }
+  </style>
 </head>
 <body>
-  <main class="seccion">
-    <h2>📋 Historial de Recetas Emitidas</h2>
-    <input type="text" id="busqueda" placeholder="Buscar por nombre del paciente" oninput="filtrarRecetas(this.value)" style="padding: 10px; width: 100%; max-width: 500px; margin: 20px auto; display: block;" />
-
-    <div id="recetasContainer"></div>
-
-    <datalist id="listaMedicamentos"></datalist>
-  </main>
-
-  <script type="module" src="/firebase-init.js"></script>
-  <script type="module" src="/medico/historial.js"></script>
+  <h1>📋 Historial de Recetas Emitidas</h1>
+  <div class="contenedor" id="historial"></div>
+  <script type="module" src="/medico/historialMedico.js"></script>
 </body>
 </html>
