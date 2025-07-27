@@ -307,3 +307,25 @@ details.lab-card div {
   }
 }
 
+.sugerencias {
+  position: absolute;
+  background: white;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  max-height: 150px;
+  overflow-y: auto;
+  width: 100%;
+  z-index: 999;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+  margin-top: 2px;
+}
+
+.sugerencia {
+  padding: 8px 10px;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.sugerencia:hover {
+  background-color: #f0f0f0;
+}
