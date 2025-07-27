@@ -156,6 +156,9 @@ receta: medicamentos.map(m => `${m.nombre} ${m.dosis} por ${m.duracion}`).join("
     div.appendChild(inputDuracion);
 
     medicamentosContainer.appendChild(div);
+    setTimeout(() => {
+    iniciarAutocompletado(inputNombre);
+  }, 0);
   }
 
 });
