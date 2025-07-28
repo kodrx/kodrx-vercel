@@ -30,7 +30,7 @@
   </form>
 </section>
 
-<script type="module">
+
   import { auth, db } from './firebase-init.js';
   import { signInWithEmailAndPassword } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
   import { doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
@@ -67,7 +67,7 @@
       alert("Error al iniciar sesión: " + err.message);
     }
   };
-</script>
+
 
   
 
@@ -79,8 +79,8 @@
   <button onclick="consultarBloque()" style="padding: 0.7rem 2rem; border: none; background-color: #123f91; color: white; border-radius: 6px; font-weight: bold;">Consultar</button>
   <div id="resultadoBloque" style="margin-top: 2rem;"></div>
 </section>
-<script type="module">
-  import { cargarCadena } from '/blockchain.js';
+
+  
 
   window.consultarBloque = async () => {
     const id = document.getElementById("inputBloque").value.trim();
@@ -135,5 +135,46 @@
     <p>Contacto: contacto@kodrx.app | Instagram: @kodrx.app</p>
     <p>&copy; 2025 KodRx</p>
   </footer>
+
+<script>
+  async function consultarBloque() {
+    const id = document.getElementById("inputBloque").value.trim();
+    const res = document.getElementById("resultadoBloque");
+
+    if (!id) {
+      res.innerHTML = "<p style='color:red'>⚠️ Ingresa un número de bloque válido.</p>";
+      return;
+    }
+
+    try {
+      const response = await fetch("https://kodrx-blockchain.onrender.com/kodrx-blockchain.json");
+      const data = await response.json();
+      const bloque = data.chain.find(b => b.index == id);
+
+      if (!bloque) {
+        res.innerHTML = "<p style='color:red'>❌ Bloque no encontrado.</p>";
+        return;
+      }
+
+      const receta = bloque.receta || {};
+      const resumen = receta.medicamentos?.map(m => m.slice(0, 3)).join(', ') || 'N/A';
+
+      res.innerHTML = `
+        <div style="border: 1px solid #ddd; padding: 1rem; border-radius: 8px; background: white;">
+          <p><strong>🔢 Bloque:</strong> ${bloque.index}</p>
+          <p><strong>👨‍⚕️ Médico:</strong> ${receta.medico || 'Desconocido'}</p>
+          <p><strong>💊 Medicamentos:</strong> ${resumen}</p>
+          <p><strong>🔗 Hash:</strong> ${bloque.hash}</p>
+          <a href="/public/consulta.html?id=${bloque.index}" style="display:inline-block;margin-top:0.5rem;background:#2e6fd6;color:white;padding:0.5rem 1rem;border-radius:4px;text-decoration:none;">Ver detalles</a>
+        </div>
+      `;
+    } catch (err) {
+      res.innerHTML = "<p style='color:red'>❌ Error al conectar con el servidor de blockchain.</p>";
+      console.error(err);
+    }
+  }
+
+  window.consultarBloque = consultarBloque;
+</script>
 </body>
 </html>
