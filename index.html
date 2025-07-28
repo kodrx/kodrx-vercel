@@ -1,33 +1,33 @@
 <!DOCTYPE html>
+
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>KodRx | La receta digital</title>
-  <link rel="stylesheet" href="estilos/landing.css" />
-  <link rel="icon" href="favicon.ico" type="image/x-icon" />
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>KodRx | La receta digital</title>
+<link href="estilos/landing.css" rel="stylesheet"/>
+<link href="favicon.ico" rel="icon" type="image/x-icon"/>
 </head>
 <body>
-  <header class="hero">
-    <img src="logo-kodrx.png" alt="KodRx Logo" class="logo" />
-    <h1>La receta médica ya no se imprime. <span class="highlight">Se escanea.</span></h1>
-    <p>Prescripción digital, validación QR y blockchain al servicio de la salud.</p>
-  </header>
-
-  <section class="cta">
-    <h2>En fase piloto privada</h2>
-    <p>Estamos trabajando con médicos y farmacias seleccionadas.</p>
-    <a href="mailto:contacto@kodrx.app" class="boton">Solicitar acceso</a>
-  </section>
+<header class="hero">
+<img alt="KodRx Logo" class="logo" src="logo-kodrx.png"/>
+<h1>La receta médica ya no se imprime. <span class="highlight">Se escanea.</span></h1>
+<p>Prescripción digital, validación QR y blockchain al servicio de la salud.</p>
+</header>
+<section class="cta">
+<h2>En fase piloto privada</h2>
+<p>Estamos trabajando con médicos y farmacias seleccionadas.</p>
+<a class="boton" href="mailto:contacto@kodrx.app">Solicitar acceso</a>
+</section>
 <section class="acceso-directo">
-  <h2>Acceso para usuarios autorizados</h2>
-  <p>Inicia sesión si ya cuentas con acceso a la plataforma.</p>
-  <form id="form-login" onsubmit="return false;">
-    <input type="email" id="correo" placeholder="Correo electrónico" required />
-    <input type="password" id="password" placeholder="Contraseña" required />
-    <button onclick="iniciarSesion()">Iniciar sesión</button>
-    <p class="info-acceso">¿No tienes cuenta? Solicita acceso a <a href="mailto:contacto@kodrx.app">contacto@kodrx.app</a></p>
-  </form>
+<h2>Acceso para usuarios autorizados</h2>
+<p>Inicia sesión si ya cuentas con acceso a la plataforma.</p>
+<form id="form-login" onsubmit="return false;">
+<input id="correo" placeholder="Correo electrónico" required="" type="email"/>
+<input id="password" placeholder="Contraseña" required="" type="password"/>
+<button onclick="iniciarSesion()">Iniciar sesión</button>
+<p class="info-acceso">¿No tienes cuenta? Solicita acceso a <a href="mailto:contacto@kodrx.app">contacto@kodrx.app</a></p>
+</form>
 </section>
 
 
@@ -35,7 +35,7 @@
   import { signInWithEmailAndPassword } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
   import { doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
-  window.iniciarSesion = async () => {
+  window.iniciarSesion = async () =&gt; {
     const correo = document.getElementById("correo").value;
     const password = document.getElementById("password").value;
 
@@ -48,14 +48,14 @@
 
       if (refMedico.exists()) {
         const data = refMedico.data();
-        if (data.verificado && !data.suspendido) {
+        if (data.verificado &amp;&amp; !data.suspendido) {
           window.location.href = "/medico/panel.html";
         } else {
           alert("Tu cuenta de médico no está verificada o está suspendida.");
         }
       } else if (refFarmacia.exists()) {
         const data = refFarmacia.data();
-        if (data.verificado && !data.suspendido) {
+        if (data.verificado &amp;&amp; !data.suspendido) {
           window.location.href = "/farmacia/panel.html";
         } else {
           alert("Tu cuenta de farmacia no está verificada o está suspendida.");
@@ -72,17 +72,13 @@
   
 
 <section id="verificacion" style="padding: 3rem 1rem; background-color: #f9fafc; text-align: center;">
-  <h2 style="color: #123f91; font-size: 1.8rem;">🔎 Verifica una receta digital</h2>
-  <p>Ingresa el número de bloque para comprobar la autenticidad de una receta emitida con KodRx.</p>
-  <input id="inputBloque" type="text" placeholder="Ej. 0001" style="padding: 0.75rem 1rem; width: 100%; max-width: 400px; border: 1px solid #ccc; border-radius: 8px; margin-top: 1rem;">
-  <br><br>
-  <button onclick="consultarBloque()" style="padding: 0.7rem 2rem; border: none; background-color: #123f91; color: white; border-radius: 6px; font-weight: bold;">Consultar</button>
-  <div id="resultadoBloque" style="margin-top: 2rem;"></div>
+<h2 style="color: #123f91; font-size: 1.8rem;">🔎 Verifica una receta digital</h2>
+<p>Ingresa el número de bloque para comprobar la autenticidad de una receta emitida con KodRx.</p>
+<input id="inputBloque" placeholder="Ej. 0001" style="padding: 0.75rem 1rem; width: 100%; max-width: 400px; border: 1px solid #ccc; border-radius: 8px; margin-top: 1rem;" type="text"/>
+<br/><br/>
+<button onclick="consultarBloque()" style="padding: 0.7rem 2rem; border: none; background-color: #123f91; color: white; border-radius: 6px; font-weight: bold;">Consultar</button>
+<div id="resultadoBloque" style="margin-top: 2rem;"></div>
 </section>
-
-  
-
-  
 <script>
   async function consultarBloque() {
     const id = document.getElementById("inputBloque").value.trim();
@@ -132,4 +128,16 @@
   }
   window.consultarBloque = consultarBloque;
 </script>
-</body>
+<script>
+function consultarBloque() {
+  const id = document.getElementById("inputBloque").value.trim();
+  const res = document.getElementById("resultadoBloque");
+  if (!id || isNaN(id)) {
+    res.innerHTML = "<p style='color:red'>⚠️ Ingresa un número de bloque válido.</p>";
+    return;
+  }
+  window.open(`https://kodrx-blockchain.onrender.com/verificar.html?id=${id}`, "_blank");
+}
+window.consultarBloque = consultarBloque;
+</script></body>
+</html>
