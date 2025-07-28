@@ -120,6 +120,16 @@
     }
   }
 
+  
+<script>
+  function consultarBloque() {
+    const id = document.getElementById("inputBloque").value.trim();
+    if (!id || isNaN(id)) {
+      document.getElementById("resultadoBloque").innerHTML = "<p style='color:red'>⚠️ Ingresa un número de bloque válido.</p>";
+      return;
+    }
+    window.open(`https://kodrx-blockchain.onrender.com/verificar.html?id=${id}`, "_blank");
+  }
   window.consultarBloque = consultarBloque;
 </script>
 </body>
