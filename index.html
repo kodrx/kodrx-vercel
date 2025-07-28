@@ -73,5 +73,66 @@
     <p>Contacto: contacto@kodrx.app | Instagram: @kodrx.app</p>
     <p>&copy; 2025 KodRx</p>
   </footer>
+
+<section id="verificacion" style="padding: 3rem 1rem; background-color: #f9fafc; text-align: center;">
+  <h2 style="color: #123f91; font-size: 1.8rem;">🔎 Verifica una receta digital</h2>
+  <p>Ingresa el número de bloque para comprobar la autenticidad de una receta emitida con KodRx.</p>
+  <input id="inputBloque" type="text" placeholder="Ej. 0001" style="padding: 0.75rem 1rem; width: 100%; max-width: 400px; border: 1px solid #ccc; border-radius: 8px; margin-top: 1rem;">
+  <br><br>
+  <button onclick="consultarBloque()" style="padding: 0.7rem 2rem; border: none; background-color: #123f91; color: white; border-radius: 6px; font-weight: bold;">Consultar</button>
+  <div id="resultadoBloque" style="margin-top: 2rem;"></div>
+</section>
+<script type="module">
+  import { cargarCadena } from '/blockchain.js';
+
+  window.consultarBloque = async () => {
+    const id = document.getElementById("inputBloque").value.trim();
+    const res = document.getElementById("resultadoBloque");
+    if (!id) return res.innerHTML = "<p style='color:red'>⚠️ Ingresa un número de bloque válido.</p>";
+
+    const data = await cargarCadena();
+    const bloque = data.chain.find(b => b.index == id);
+    if (!bloque) return res.innerHTML = "<p style='color:red'>❌ Bloque no encontrado.</p>";
+
+    const receta = bloque.receta || {};
+    const resumen = receta.medicamentos?.map(m => m.slice(0, 3)).join(', ') || 'N/A';
+
+    res.innerHTML = `
+      <div style="border: 1px solid #ddd; padding: 1rem; border-radius: 8px; background: white;">
+        <p><strong>🔢 Bloque:</strong> ${bloque.index}</p>
+        <p><strong>👨‍⚕️ Médico:</strong> ${receta.medico || 'Desconocido'}</p>
+        <p><strong>💊 Medicamentos:</strong> ${resumen}</p>
+        <p><strong>🔗 Hash:</strong> ${bloque.hash}</p>
+        <a href="/public/consulta.html?id=${bloque.index}" style="display:inline-block;margin-top:0.5rem;background:#2e6fd6;color:white;padding:0.5rem 1rem;border-radius:4px;text-decoration:none;">Ver detalles</a>
+      </div>
+    `;
+  };
+</script>
+
+<section id="ventajas" style="padding: 4rem 1rem; background-color: #ffffff;">
+  <div style="max-width: 960px; margin: auto;">
+    <h2 style="text-align: center; color: #123f91; font-size: 2rem; margin-bottom: 2rem;">✨ ¿Por qué usar KodRx?</h2>
+    <div style="display: flex; flex-wrap: wrap; gap: 2rem; justify-content: center;">
+      <div style="flex: 1; min-width: 280px; background: #f0f4ff; padding: 1.5rem; border-radius: 10px;">
+        <h3 style="color: #123f91;">👨‍⚕️ Para médicos</h3>
+        <ul style="padding-left: 1.2rem; line-height: 1.7;">
+          <li>Generación rápida de recetas con respaldo digital.</li>
+          <li>Historial de pacientes y medicamentos automatizado.</li>
+          <li>Firma validada y trazabilidad con tecnología blockchain.</li>
+          <li>Seguridad y confianza para pacientes.</li>
+        </ul>
+      </div>
+      <div style="flex: 1; min-width: 280px; background: #fff7f0; padding: 1.5rem; border-radius: 10px;">
+        <h3 style="color: #d14032;">🏥 Para farmacias</h3>
+        <ul style="padding-left: 1.2rem; line-height: 1.7;">
+          <li>Verificación instantánea de recetas vía QR o ID de bloque.</li>
+          <li>Prevención de falsificaciones médicas.</li>
+          <li>Control parcial o total de medicamentos surtidos.</li>
+          <li>Acceso simple y gratuito sin apps externas.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
 </body>
 </html>
