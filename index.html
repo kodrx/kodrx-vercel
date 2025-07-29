@@ -1,109 +1,81 @@
+
 <!DOCTYPE html>
 
 <html lang="es">
 <head>
 <meta charset="utf-8"/>
+<title>KodRx | Plataforma de Recetas Médicas</title>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<title>KodRx | La receta digital</title>
-<link href="estilos/landing.css" rel="stylesheet"/>
-<link href="favicon.ico" rel="icon" type="image/x-icon"/>
-</head>
-<body>
-<header class="hero">
-<img alt="KodRx Logo" class="logo" src="logo-kodrx.png"/>
-<h1>La receta médica ya no se imprime. <span class="highlight">Se escanea.</span></h1>
-<p>Prescripción digital, validación QR y blockchain al servicio de la salud.</p>
-</header>
-<section class="cta">
-<h2>En fase piloto privada</h2>
-<p>Estamos trabajando con médicos y farmacias seleccionadas.</p>
-<a class="boton" href="mailto:contacto@kodrx.app">Solicitar acceso</a>
-</section>
-<section class="acceso-directo">
-<h2>Acceso para usuarios autorizados</h2>
-<p>Inicia sesión si ya cuentas con acceso a la plataforma.</p>
-<form id="form-login" onsubmit="return false;">
-<input id="correo" placeholder="Correo electrónico" required="" type="email"/>
-<input id="password" placeholder="Contraseña" required="" type="password"/>
-<button onclick="iniciarSesion()">Iniciar sesión</button>
-<p class="info-acceso">¿No tienes cuenta? Solicita acceso a <a href="mailto:contacto@kodrx.app">contacto@kodrx.app</a></p>
-</form>
-</section>
-
-
-
-  
-
-<section id="verificacion" style="padding: 3rem 1rem; background-color: #f9fafc; text-align: center;">
-<h2 style="color: #123f91; font-size: 1.8rem;">🔎 Verifica una receta digital</h2>
-<p>Ingresa el número de bloque para comprobar la autenticidad de una receta emitida con KodRx.</p>
-<input id="inputBloque" placeholder="Ej. 0001" style="padding: 0.75rem 1rem; width: 100%; max-width: 400px; border: 1px solid #ccc; border-radius: 8px; margin-top: 1rem;" type="text"/>
-<br/><br/>
-<button onclick="consultarBloque()" style="padding: 0.7rem 2rem; border: none; background-color: #123f91; color: white; border-radius: 6px; font-weight: bold;">Consultar</button>
-<div id="resultadoBloque" style="margin-top: 2rem;"></div>
-</section>
-<script>
-  async function consultarBloque() {
-    const id = document.getElementById("inputBloque").value.trim();
-    const res = document.getElementById("resultadoBloque");
-
-    if (!id) {
-      res.innerHTML = "<p style='color:red'>⚠️ Ingresa un número de bloque válido.</p>";
-      return;
-    }
-
-    try {
-      const response = await fetch("https://kodrx-blockchain.onrender.com/kodrx-blockchain.json");
-      const data = await response.json();
-      const bloque = data.chain.find(b => b.index == id);
-
-      if (!bloque) {
-        res.innerHTML = "<p style='color:red'>❌ Bloque no encontrado.</p>";
-        return;
-      }
-
-      const receta = bloque.receta || {};
-      const resumen = receta.medicamentos?.map(m => m.slice(0, 3)).join(', ') || 'N/A';
-
-      res.innerHTML = `
-        <div style="border: 1px solid #ddd; padding: 1rem; border-radius: 8px; background: white;">
-          <p><strong>🔢 Bloque:</strong> ${bloque.index}</p>
-          <p><strong>👨‍⚕️ Médico:</strong> ${receta.medico || 'Desconocido'}</p>
-          <p><strong>💊 Medicamentos:</strong> ${resumen}</p>
-          <a href="/public/consulta.html?id=${bloque.index}" style="display:inline-block;margin-top:0.5rem;background:#2e6fd6;color:white;padding:0.5rem 1rem;border-radius:4px;text-decoration:none;">Ver detalles</a>
-        </div>
-      `;
-    } catch (err) {
-      res.innerHTML = "<p style='color:red'>❌ Error al conectar con el servidor de blockchain.</p>";
-      console.error(err);
-    }
-  }
-
-  
-<script>
-  function consultarBloque() {
-    const id = document.getElementById("inputBloque").value.trim();
-    if (!id || isNaN(id)) {
-      document.getElementById("resultadoBloque").innerHTML = "<p style='color:red'>⚠️ Ingresa un número de bloque válido.</p>";
-      return;
-    }
-    window.open(`https://kodrx-blockchain.onrender.com/verificar.html?id=${id}`, "_blank");
-  }
-  window.consultarBloque = consultarBloque;
-</script>
-<script>
-function consultarBloque() {
-  const id = document.getElementById("inputBloque").value.trim();
-  const res = document.getElementById("resultadoBloque");
-  if (!id || isNaN(id)) {
-    res.innerHTML = "<p style='color:red'>⚠️ Ingresa un número de bloque válido.</p>";
-    return;
-  }
-  window.open(`https://kodrx-blockchain.onrender.com/verificar.html?id=${id}`, "_blank");
+<link href="/estilos/global.css" rel="stylesheet"/>
+<style>
+body {
+  background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 50%, #0fffc1 100%);
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+  font-family: 'Segoe UI', sans-serif;
 }
-window.consultarBloque = consultarBloque;
-</script>
-<script type="module" src="/index.js"></script>
 
-</body>
+section, header, footer {
+  z-index: 1;
+  position: relative;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background-image: url('https://www.transparenttextures.com/patterns/cubes.png');
+  opacity: 0.05;
+  z-index: 0;
+}
+</style></head>
+<body><header style="background-color: #1d4ed8; color: white; padding: 1rem; text-align: center;">
+<h1 style="margin: 0;">KodRx</h1>
+<p style="margin: 0;">Tecnología que verifica, salud que protege</p>
+</header>
+<section style="display: flex; justify-content: space-between; gap: 2rem; padding: 2rem; flex-wrap: wrap;">
+<div style="flex: 1; min-width: 300px; background: white; padding: 1.5rem; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1);">
+<h2>🔍 Verifica una receta</h2>
+<input id="inputBloque" placeholder="Ingresa el ID de bloque" style="width: 100%; padding: 0.6rem; margin: 1rem 0;" type="number"/>
+<div id="resultadoBloque"></div>
+<button onclick="consultarBloque()" style="width: 100%; padding: 0.7rem; background-color: #1d4ed8; color: white; border: none; border-radius: 6px;">Verificar receta</button>
+</div>
+<div style="flex: 1; min-width: 300px; background: white; padding: 1.5rem; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1);">
+<h2>🔐 Acceso a la plataforma</h2>
+<input id="correo" placeholder="Correo electrónico" style="width: 100%; padding: 0.6rem; margin: 0.5rem 0;" type="email"/>
+<input autocomplete="current-password" id="password" placeholder="Contraseña" style="width: 100%; padding: 0.6rem; margin: 0.5rem 0;" type="password"/>
+<button onclick="iniciarSesion()" style="width: 100%; padding: 0.7rem; background-color: #1d4ed8; color: white; border: none; border-radius: 6px;">Iniciar sesión</button>
+</div>
+</section>
+<section style="padding: 2rem; text-align: center; max-width: 1000px; margin: auto;">
+<h3>🧠 ¿Cómo funciona KodRx?</h3>
+<p style="font-size: 1.1rem; margin-top: 1rem;">
+    KodRx es una plataforma de prescripción médica digital con validación criptográfica y trazabilidad. Su sistema combina firma cruzada, QR dinámico y registro en bloques para evitar falsificación, pérdida de datos y mejorar la eficiencia clínica.
+    Actualmente nos encontramos en <strong>fase piloto privada</strong> con médicos certificados.
+  </p>
+</section>
+<section style="display: flex; gap: 2rem; justify-content: center; padding: 2rem; flex-wrap: wrap;">
+<div style="flex: 1; min-width: 280px; background: #f9fafb; padding: 1.5rem; border-left: 4px solid #1d4ed8; border-radius: 6px;">
+<h3>🩺 Beneficios para Médicos</h3>
+<ul style="padding-left: 1rem;">
+<li>✅ Recetas verificables con QR</li>
+<li>✅ Historial automático por paciente</li>
+<li>✅ Firma segura sin falsificaciones</li>
+<li>✅ Compatible con diagnósticos asistidos (futuro)</li>
+</ul>
+</div>
+<div style="flex: 1; min-width: 280px; background: #f9fafb; padding: 1.5rem; border-left: 4px solid #059669; border-radius: 6px;">
+<h3>💊 Beneficios para Farmacias</h3>
+<ul style="padding-left: 1rem;">
+<li>✅ Escaneo inmediato desde cualquier sistema</li>
+<li>✅ Reducción de errores de interpretación</li>
+<li>✅ Validación en segundos</li>
+<li>✅ Datos completos del prescriptor</li>
+</ul>
+</div>
+</section>
+<footer style="background-color: #f1f5f9; text-align: center; padding: 1rem; font-size: 0.9rem;">
+    © 2025 KodRx. Todos los derechos reservados.
+  </footer></body>
 </html>
