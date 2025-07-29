@@ -1,0 +1,150 @@
+/* ===== KodRx Landing Style v1.0 ===== */
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Segoe UI', sans-serif;
+  background: linear-gradient(135deg, #f8fbff 0%, #e7fcf8 100%);
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+  color: #111827;
+}
+
+header {
+  background: #1e3a8a;
+  color: white;
+  padding: 1.5rem;
+  text-align: center;
+  font-size: 1.2rem;
+  font-weight: bold;
+}
+
+.logo span {
+  display: block;
+  font-size: 0.9rem;
+  font-weight: normal;
+  margin-top: 0.2rem;
+}
+
+footer {
+  text-align: center;
+  padding: 1rem;
+  background-color: #f1f5f9;
+  color: #334155;
+  font-size: 0.85rem;
+}
+
+.main-grid {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 2rem;
+  padding: 2rem;
+}
+
+.card {
+  background: white;
+  padding: 2rem;
+  border-radius: 10px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+  width: 320px;
+  transition: transform 0.2s ease;
+}
+
+.card:hover {
+  transform: scale(1.015);
+}
+
+.card h2 {
+  margin-top: 0;
+  font-size: 1.3rem;
+  color: #1e3a8a;
+}
+
+input {
+  width: 100%;
+  padding: 0.6rem;
+  margin-bottom: 1rem;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 1rem;
+}
+
+button {
+  width: 100%;
+  padding: 0.7rem;
+  background-color: #1e3a8a;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background 0.3s ease;
+}
+
+button:hover {
+  background-color: #2563eb;
+}
+
+.explicacion {
+  max-width: 900px;
+  margin: 2rem auto;
+  text-align: center;
+  padding: 1rem;
+  background-color: #ffffffcc;
+  border-radius: 10px;
+}
+
+.explicacion h3 {
+  font-size: 1.5rem;
+  color: #1e3a8a;
+}
+
+.beneficios {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 2rem;
+  padding: 2rem;
+}
+
+.beneficios .card h3 {
+  font-size: 1.2rem;
+  margin-top: 0;
+  color: #0f766e;
+}
+
+.beneficios .card ul {
+  padding-left: 1rem;
+  line-height: 1.6;
+  margin: 0;
+  color: #374151;
+}
+
+/* === Animaciones suaves === */
+.fade-in {
+  opacity: 0;
+  animation: fadeIn 1.2s ease-in-out forwards;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 768px) {
+  .main-grid {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .card {
+    width: 90%;
+  }
+}
