@@ -10,21 +10,7 @@ body {
   color: #111827;
 }
 
-header {
-  background: #1e3a8a;
-  color: white;
-  padding: 1.5rem;
-  text-align: center;
-  font-size: 1.2rem;
-  font-weight: bold;
-}
 
-.logo span {
-  display: block;
-  font-size: 0.9rem;
-  font-weight: normal;
-  margin-top: 0.2rem;
-}
 
 footer {
   text-align: center;
