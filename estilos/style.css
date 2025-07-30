@@ -159,4 +159,29 @@ button:hover {
     width: 90%;
   }
 } 
+/* === Banner especial KodRx === */
+@keyframes slideInLeft {
+  0% {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  100% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
 
+.banner-kodrx {
+  margin: 2rem 0 0 0;
+  display: flex;
+  justify-content: flex-start;
+  padding-left: 2rem;
+  animation: slideInLeft 1.2s ease-out forwards;
+}
+
+.banner-kodrx img {
+  max-width: 420px;
+  height: auto;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+}
