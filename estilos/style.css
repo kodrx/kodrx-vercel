@@ -1,4 +1,4 @@
-/* ===== KodRx Landing Style v1.0 ===== */
+/* ===== KodRx Landing Style v1.1 (con estilo visual impresionante) ===== */
 
 body {
   margin: 0;
@@ -88,15 +88,32 @@ button:hover {
 
 .explicacion {
   max-width: 900px;
-  margin: 2rem auto;
+  margin: 3rem auto;
+  padding: 2rem;
+  background: rgba(255, 255, 255, 0.85);
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
   text-align: center;
-  padding: 1rem;
-  background-color: #ffffffcc;
-  border-radius: 10px;
+  backdrop-filter: blur(5px);
+  border-left: 5px solid #1e3a8a;
 }
 
 .explicacion h3 {
-  font-size: 1.5rem;
+  font-size: 1.6rem;
+  color: #0f172a;
+  margin-bottom: 1rem;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.explicacion p {
+  font-size: 1.1rem;
+  line-height: 1.75;
+  color: #1f2937;
+}
+
+.explicacion strong {
   color: #1e3a8a;
 }
 
@@ -124,15 +141,15 @@ button:hover {
 /* === Animaciones suaves === */
 .fade-in {
   opacity: 0;
-  animation: fadeIn 1.2s ease-in-out forwards;
+  animation: fadeInUp 1s ease forwards;
 }
 
-@keyframes fadeIn {
-  from {
+@keyframes fadeInUp {
+  0% {
     opacity: 0;
-    transform: translateY(20px);
+    transform: translateY(30px);
   }
-  to {
+  100% {
     opacity: 1;
     transform: translateY(0);
   }
@@ -147,4 +164,5 @@ button:hover {
   .card {
     width: 90%;
   }
-}
+} 
+
