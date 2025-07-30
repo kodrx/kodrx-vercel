@@ -34,3 +34,17 @@ window.iniciarSesion = async () => {
     alert("Error al iniciar sesión: " + err.message);
   }
 };
+//  Aparece la imagen al hacer scroll
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      entry.target.classList.add("visible");
+    }
+  });
+}, {
+  threshold: 0.3
+});
+
+document.querySelectorAll(".fade-in-on-scroll").forEach(el => {
+  observer.observe(el);
+});
