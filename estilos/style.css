@@ -185,3 +185,27 @@ button:hover {
   border-radius: 12px;
   box-shadow: 0 4px 20px rgba(0,0,0,0.15);
 }
+
+/* === Infografia === */
+.infografia-container {
+  width: 100%;
+  max-width: 900px;
+  margin: 80px auto 40px auto;
+  padding: 0 20px;
+  text-align: center;
+}
+
+.infografia-img {
+  width: 100%;
+  height: auto;
+  border-radius: 12px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+  opacity: 0;
+  transform: translateY(40px);
+  transition: opacity 1s ease, transform 1s ease;
+}
+
+.fade-in-on-scroll.visible .infografia-img {
+  opacity: 1;
+  transform: translateY(0);
+}
