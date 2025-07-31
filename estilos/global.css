@@ -342,3 +342,22 @@ details.lab-card div {
   font-size: 0.9rem;
   margin-bottom: 1rem;
 }
+@media print and (max-width: 768px) {
+  body {
+    font-size: 10pt;
+    zoom: 0.85;
+  }
+
+  .datos-horizontales {
+    font-size: 0.75rem;
+    gap: 1rem;
+  }
+
+  .site-header, footer, .botones {
+    display: none !important;
+  }
+
+  .barcode-container canvas {
+    max-width: 80%;
+  }
+}
