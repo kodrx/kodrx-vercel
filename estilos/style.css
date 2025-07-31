@@ -126,25 +126,54 @@ button:hover {
   }
 }
 
-.beneficios {
+.beneficios-container {
   display: flex;
   justify-content: center;
-  flex-wrap: wrap;
   gap: 2rem;
-  padding: 2rem;
+  flex-wrap: wrap;
+  margin-top: 3rem;
 }
 
-.beneficios .card h3 {
-  font-size: 1.2rem;
-  margin-top: 0;
-  color: #0f766e;
+.beneficio-box {
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+  padding: 2rem 2.5rem;
+  max-width: 420px;
+  width: 100%;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  font-family: 'Inter', sans-serif;
+  opacity: 0;
+  transform: translateY(30px);
+  animation: fadeInUp 1.2s ease forwards;
 }
 
-.beneficios .card ul {
-  padding-left: 1rem;
-  line-height: 1.6;
-  margin: 0;
-  color: #374151;
+.beneficio-box:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.12);
+}
+
+.beneficio-box h4 {
+  color: #065f46;
+  font-size: 1.4rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+  letter-spacing: 0.4px;
+}
+
+.beneficio-box ul {
+  list-style: none;
+  padding-left: 0;
+  font-size: 1.05rem;
+  line-height: 1.7;
+  color: #1f2937;
+}
+
+.beneficio-box ul li::before {
+  content: "✅ ";
+  margin-right: 0.4rem;
+  color: #059669;
+  font-weight: bold;
 }
 
 /* === Animaciones suaves === */
