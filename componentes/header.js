@@ -1,15 +1,13 @@
 document.addEventListener("DOMContentLoaded", () => {
   const header = document.createElement("header");
-  header.style.backgroundColor = "#002f6c";
-  header.style.padding = "2rem 1rem";
-  header.style.textAlign = "center";
+  header.classList.add("site-header");
 
   header.innerHTML = `
-    <img src="/img/logo-kodrx.png" alt="KodRx" style="max-width: 180px; height: auto; margin-bottom: 0.5rem;" />
-    <h1 style="font-size: 1.1rem; color: #cbd5e1; margin-top: 0.2rem; letter-spacing: 0.5px;">
-      KodRx | Validación médica en blockchain
-    </h1>
+    <div class="logo-container">
+      <img src="/img/logo-kodrx-blanco.png" alt="KodRx Logo" class="logo-img" />
+      <span class="tagline">Validación médica en blockchain</span>
+    </div>
   `;
 
-  document.body.prepend(header);
+  document.body.insertBefore(header, document.body.firstChild);
 });
