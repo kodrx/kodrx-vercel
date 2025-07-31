@@ -345,19 +345,27 @@ details.lab-card div {
 @media print and (max-width: 768px) {
   body {
     font-size: 10pt;
-    zoom: 0.85;
+    zoom: 0.8;
+  }
+
+  .receta, .receta * {
+    font-size: 10pt !important;
   }
 
   .datos-horizontales {
-    font-size: 0.75rem;
-    gap: 1rem;
+    font-size: 9pt !important;
+    gap: 0.75rem;
   }
 
-  .site-header, footer, .botones {
-    display: none !important;
+  h1, h2, h3 {
+    font-size: 12pt !important;
   }
 
   .barcode-container canvas {
     max-width: 80%;
+  }
+
+  .site-header, footer, .botones {
+    display: none !important;
   }
 }
