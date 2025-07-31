@@ -1,20 +1,15 @@
 document.addEventListener("DOMContentLoaded", () => {
   const header = document.createElement("header");
-  header.classList.add("site-header"); // ← ✅ Clase clave para ocultar en impresión
+  header.style.backgroundColor = "#002f6c";
+  header.style.padding = "2rem 1rem";
+  header.style.textAlign = "center";
 
-  // HTML inicial
-  header.innerHTML = `<a href="/acceso.html" class="logo-link"></a>`;
-  document.body.insertBefore(header, document.body.firstChild);
-
-  // Obtener color de fondo
-  const fondo = getComputedStyle(header).backgroundColor;
-  const usaLogoBlanco = fondo.includes("0, 51, 102"); // RGB de #003366
-
-  const logoSrc = usaLogoBlanco
-    ? "/img/logo-kodrx-blanco.png"
-    : "/img/logo-kodrx-color.png";
-
-  header.querySelector(".logo-link").innerHTML = `
-    <img src="${logoSrc}" class="logo" alt="KodRx Logo" />
+  header.innerHTML = `
+    <img src="/img/logo-kodrx.png" alt="KodRx" style="max-width: 180px; height: auto; margin-bottom: 0.5rem;" />
+    <h1 style="font-size: 1.1rem; color: #cbd5e1; margin-top: 0.2rem; letter-spacing: 0.5px;">
+      KodRx | Validación médica en blockchain
+    </h1>
   `;
+
+  document.body.prepend(header);
 });
