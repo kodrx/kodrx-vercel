@@ -209,3 +209,34 @@ button:hover {
   opacity: 1;
   transform: translateY(0);
 }
+.tech-banner-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 2rem;
+  margin: 2rem auto;
+  max-width: 1200px;
+  padding: 1rem;
+  flex-wrap: wrap;
+}
+
+.tech-banner-container img {
+  width: 100%;
+  max-width: 550px;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+  transition: transform 0.4s ease;
+}
+
+.tech-banner-container img:hover {
+  transform: scale(1.02);
+}
+
+.left-banner {
+  order: 1;
+}
+
+.right-banner {
+  order: 2;
+}
+
