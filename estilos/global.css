@@ -92,29 +92,33 @@ button:hover {
   background-color: #00b9a2;
 }
 
-header {
-  background-color: var(--color-primario);
-  color: var(--color-blanco);
+.site-header {
+  background-color: #003366;
+  padding: 2rem;
   display: flex;
-  align-items: center;
   justify-content: center;
-  padding: 12px;
-  min-height: 56px;
-}
-
-
-
-header .logo-link {
-  display: flex;
   align-items: center;
 }
 
-header img.logo {
-  height: auto;
-  max-height: none;
-  width: auto;
-  max-width: 220px;
+.logo-container {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  text-align: center;
 }
+
+.logo-img {
+  height: 56px;
+}
+
+.tagline {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #d1d5db; /* gris claro */
+  white-space: nowrap;
+}
+
 
 aside {
   background-color: var(--color-primario);
