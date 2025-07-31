@@ -1,12 +1,12 @@
 /* ===== KodRx Landing Style v1.1 (con estilo visual impresionante) ===== */
 .header-landing {
-  background: #1e3a8a;
+  background: #002f6c;
   padding: 2rem 1rem 1rem;
   text-align: center;
 }
 
 .logo-landing img {
-  max-width: 160px;
+  max-width: 220px;
   margin-bottom: 0.5rem;
 }
 
