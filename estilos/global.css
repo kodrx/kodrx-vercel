@@ -102,12 +102,7 @@ header {
   min-height: 56px;
 }
 
-tagline {
-  font-size: 1.1rem;
-  color: #cbd5e1;
-  margin-top: 0.2rem;
-  letter-spacing: 0.5px;
-}
+
 
 header .logo-link {
   display: flex;
@@ -335,4 +330,10 @@ details.lab-card div {
 
 .sugerencia:hover {
   background-color: #f0f0f0;
+}
+.tagline {
+  font-size: 1.1rem;
+  color: #cbd5e1;
+  margin-top: 0.2rem;
+  letter-spacing: 0.5px;
 }
