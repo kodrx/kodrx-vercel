@@ -102,21 +102,20 @@ button:hover {
 
 .logo-container {
   display: flex;
+  flex-direction: column; /* 👈 Este es el cambio clave */
   align-items: center;
-  gap: 1rem;
-  flex-wrap: wrap;
   text-align: center;
+  gap: 0.5rem;
 }
 
 .logo-img {
-  height: 220px;
+  height: 56px;
 }
 
 .tagline {
   font-size: 1.2rem;
   font-weight: 600;
-  color: #d1d5db; /* gris claro */
-  white-space: nowrap;
+  color: #d1d5db;
 }
 
 
