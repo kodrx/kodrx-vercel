@@ -10,6 +10,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const fondo = getComputedStyle(header).backgroundColor;
   const usaLogoBlanco = fondo.includes("0, 51, 102"); // RGB de #003366
 
+   <span class="tagline">Validación médica en blockchain</span>
   const logoSrc = usaLogoBlanco
     ? "/img/logo-kodrx-blanco.png"
     : "/img/logo-kodrx-color.png";
