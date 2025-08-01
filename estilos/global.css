@@ -342,52 +342,63 @@ details.lab-card div {
   font-size: 0.9rem;
   margin-bottom: 1rem;
 }
-@media print and (max-width: 768px) {
+@media print {
   body {
-    font-size: 10pt;
-    zoom: 0.8;
-  }
-
-  .receta, .receta * {
-    font-size: 10pt !important;
-  }
-
-  .datos-horizontales {
     font-size: 9pt !important;
-    gap: 0.75rem;
+  }
+
+  .receta {
+    padding: 1rem !important;
+  }
+
+  .receta,
+  .receta * {
+    font-size: 9pt !important;
+    line-height: 1.3 !important;
   }
 
   h1, h2, h3 {
-    font-size: 12pt !important;
+    font-size: 11pt !important;
+  }
+
+  .datos-horizontales {
+    font-size: 8pt !important;
+    gap: 0.75rem;
   }
 
   .barcode-container canvas {
-    max-width: 80%;
+    max-width: 75%;
   }
 
   .site-header, footer, .botones {
     display: none !important;
   }
+
+  @page {
+    margin: 0.7cm;
+  }
 }
-/* === Modo compacto simulado para descarga PDF móvil === */
+
+/* === Modo compacto simulado para descarga PDF mÃ³vil === */
 body.modo-compacto {
-  font-size: 10pt;
-  zoom: 0.8;
+  font-size: 9pt;
 }
 
 body.modo-compacto .receta, 
 body.modo-compacto .receta * {
-  font-size: 10pt !important;
+  font-size: 9pt !important;
+  line-height: 1.3 !important;
 }
 
 body.modo-compacto .datos-horizontales {
-  font-size: 9pt !important;
+  font-size: 8pt !important;
   gap: 0.75rem;
 }
 
 body.modo-compacto h1, 
-body.modo-compacto h2 {
-  font-size: 12pt !important;
+body.modo-compacto h2,
+body.modo-compacto h3 {
+  font-size: 11pt !important;
 }
 
 body.modo-compacto .site-header, 
