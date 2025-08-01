@@ -1,0 +1,397 @@
+
+:root {
+  --color-primario: #003366;
+  --color-acento: #00d4b2;
+  --color-fondo: #f5f5f5;
+  --color-texto: #222;
+  --color-blanco: #ffffff;
+  --sombra-card: 0 2px 8px rgba(0, 0, 0, 0.06);
+  --borde-radio: 8px;
+}
+
+body {
+  margin: 0;
+  font-family: 'Segoe UI', sans-serif;
+  background-color: var(--color-fondo);
+  color: var(--color-texto);
+}
+.formulario-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 2rem;
+  background-color: #fff;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.formulario-container h2 {
+  margin-bottom: 1rem;
+  font-size: 1.5rem;
+  color: #333;
+}
+
+.formulario-container label {
+  font-weight: bold;
+  margin-top: 1rem;
+}
+
+.formulario-container input,
+.formulario-container select,
+.formulario-container textarea {
+  width: 100%;
+  max-width: 100%;
+  padding: 10px;
+  margin-top: 4px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+.formulario-clinico {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+.formulario-clinico label {
+  display: block;
+  margin-bottom: 4px;
+  font-weight: bold;
+}
+
+.formulario-clinico input,
+.formulario-clinico select {
+  width: 100%;
+}
+
+.card {
+  background-color: var(--color-blanco);
+  border-radius: var(--borde-radio);
+  box-shadow: var(--sombra-card);
+  padding: 20px;
+  margin: 10px 0;
+}
+
+button {
+  background-color: var(--color-acento);
+  color: var(--color-blanco);
+  border: none;
+  padding: 10px 16px;
+  border-radius: 4px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+button:hover {
+  background-color: #00b9a2;
+}
+
+.site-header {
+  background-color: #003366;
+  padding: 2rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.logo-container {
+  display: flex;
+  flex-direction: column; /* 👈 Este es el cambio clave */
+  align-items: center;
+  text-align: center;
+  gap: 0.5rem;
+}
+
+.logo-img {
+  height: 220px;
+}
+
+.tagline {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #d1d5db;
+}
+
+
+aside {
+  background-color: var(--color-primario);
+  color: white;
+  padding: 20px;
+}
+
+aside button {
+  display: block;
+  width: 100%;
+  margin-bottom: 10px;
+  padding: 10px;
+  background: var(--color-blanco);
+  color: var(--color-primario);
+  border: none;
+  border-radius: 4px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+main {
+  padding: 20px;
+}
+
+header h1 {
+  font-size: 20px;
+  margin: 0;
+}
+
+.form-login {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 320px;
+  margin: 20px auto;
+  text-align: left;
+}
+
+.form-login input {
+  padding: 10px;
+  font-size: 16px;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+}
+
+.form-login button {
+  margin-top: 10px;
+}
+
+.volver {
+  margin: 20px auto;
+  display: block;
+  max-width: 200px;
+  text-align: center;
+  color: var(--color-primario);
+  font-weight: bold;
+  text-decoration: none;
+  font-size: 16px;
+}
+
+/* Acordeón general */
+details.lab-card {
+  border: 1px solid #ccc;
+  border-radius: var(--borde-radio);
+  margin: 12px 0;
+  background-color: var(--color-blanco);
+  padding: 0;
+  overflow: hidden;
+  box-shadow: var(--sombra-card);
+  transition: all 0.3s ease;
+}
+
+details.lab-card summary {
+  background-color: #f0f0f0;
+  padding: 12px 20px;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 16px;
+  list-style: none;
+  position: relative;
+}
+
+details.lab-card summary::marker,
+details.lab-card summary::-webkit-details-marker {
+  display: none;
+}
+
+details.lab-card summary::after {
+  content: "▶";
+  position: absolute;
+  right: 20px;
+  transition: transform 0.2s ease;
+}
+
+details.lab-card[open] summary::after {
+  transform: rotate(90deg);
+}
+
+details.lab-card div {
+  padding: 15px 20px;
+  border-top: 1px solid #ddd;
+  font-size: 14px;
+  line-height: 1.6;
+}
+@media print {
+  .no-print {
+    display: none !important;
+  }
+}
+/* Responsive Celular */
+@media (max-width: 768px) {
+  main {
+    padding: 20px;
+  }
+  @media print {
+  .site-header {
+    display: none !important;
+  }
+}
+
+  h1, h2 {
+    font-size: 22px;
+    text-align: center;
+  }
+
+  .form-login,
+  form,
+  .seccion,
+  .card {
+    width: 100%;
+    max-width: 100%;
+    padding: 16px;
+    margin: 10px auto;
+    box-sizing: border-box;
+  }
+
+  input, select, textarea {
+    font-size: 18px;
+    padding: 14px;
+    border-radius: 6px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  button {
+    font-size: 18px;
+    padding: 14px 20px;
+    width: 100%;
+    margin-top: 10px;
+  }
+
+  .logo {
+    max-width: 160px;
+    height: auto;
+    display: block;
+    margin: 0 auto;
+  }
+
+  .volver {
+    text-align: center;
+    font-size: 16px;
+    margin-top: 24px;
+  }
+
+  details.lab-card summary {
+    font-size: 18px;
+    padding: 16px 16px;
+  }
+
+  details.lab-card div {
+    font-size: 16px;
+    padding: 16px;
+  }
+}
+/* Código de barras responsivo */
+.barcode-container {
+  text-align: center;
+  margin-top: 1.5rem;
+  overflow-x: auto;
+}
+
+.barcode-container canvas {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Ajuste en pantallas pequeñas */
+@media (max-width: 600px) {
+  .barcode-container canvas {
+    max-width: 90%;
+    height: auto;
+  }
+}
+
+.sugerencias {
+  position: absolute;
+  background: white;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  max-height: 150px;
+  overflow-y: auto;
+  width: 100%;
+  z-index: 999;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+  margin-top: 2px;
+}
+
+.sugerencia {
+  padding: 8px 10px;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.sugerencia:hover {
+  background-color: #f0f0f0;
+}
+
+.datos-horizontales {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
+}
+@media print and (max-width: 768px) {
+  body {
+    font-size: 10pt;
+    zoom: 0.8;
+  }
+
+  .receta, .receta * {
+    font-size: 10pt !important;
+  }
+
+  .datos-horizontales {
+    font-size: 9pt !important;
+    gap: 0.75rem;
+  }
+
+  h1, h2, h3 {
+    font-size: 12pt !important;
+  }
+
+  .barcode-container canvas {
+    max-width: 80%;
+  }
+
+  .site-header, footer, .botones {
+    display: none !important;
+  }
+}
+/* === Modo compacto simulado para descarga PDF móvil === */
+body.modo-compacto {
+  font-size: 10pt;
+  zoom: 0.8;
+}
+
+body.modo-compacto .receta, 
+body.modo-compacto .receta * {
+  font-size: 10pt !important;
+}
+
+body.modo-compacto .datos-horizontales {
+  font-size: 9pt !important;
+  gap: 0.75rem;
+}
+
+body.modo-compacto h1, 
+body.modo-compacto h2 {
+  font-size: 12pt !important;
+}
+
+body.modo-compacto .site-header, 
+body.modo-compacto .botones, 
+body.modo-compacto footer {
+  display: none !important;
+}
