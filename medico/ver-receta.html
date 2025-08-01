@@ -214,25 +214,8 @@
     });
 
    <script src="ver-receta.js"></script>
-  <script>
-    // Descargar PDF con modo compacto activado
-    document.addEventListener("DOMContentLoaded", () => {
-      const btn = document.createElement("button");
-      btn.id = "descargarPDF";
-      btn.textContent = "⬇ Descargar PDF";
-      btn.classList.add("boton-flotante");
-      document.body.appendChild(btn);
 
-      btn.addEventListener("click", () => {
-        document.body.classList.add("modo-compacto");
-        setTimeout(() => {
-          window.print();
-          document.body.classList.remove("modo-compacto");
-        }, 300);
-      });
-    });
-  </script>
-  </script>
+
 </body>
 </html>
 
