@@ -232,25 +232,22 @@
       });
     });
 
-    window.descargarPDF = function () {
-  // Aplicar modo compacto
-  document.body.classList.add('modo-compacto');
+window.descargarPDF = function () {
+  // Activar modo compacto
+  document.body.classList.add("modo-compacto");
 
   const receta = document.querySelector('.receta');
-
   const opciones = {
     margin: 0.3,
     filename: 'receta-kodrx.pdf',
     image: { type: 'jpeg', quality: 0.98 },
-    html2canvas: { scale: 1.5 },
+    html2canvas: { scale: 2 },
     jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
   };
 
   html2pdf().set(opciones).from(receta).save().then(() => {
-    // Restaurar el estilo después de generar el PDF
-    setTimeout(() => {
-      document.body.classList.remove('modo-compacto');
-    }, 500);
+    // Restaurar estado
+    document.body.classList.remove("modo-compacto");
   });
 };
 
