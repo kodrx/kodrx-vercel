@@ -369,3 +369,29 @@ details.lab-card div {
     display: none !important;
   }
 }
+/* === Modo compacto simulado para descarga PDF móvil === */
+body.modo-compacto {
+  font-size: 10pt;
+  zoom: 0.8;
+}
+
+body.modo-compacto .receta, 
+body.modo-compacto .receta * {
+  font-size: 10pt !important;
+}
+
+body.modo-compacto .datos-horizontales {
+  font-size: 9pt !important;
+  gap: 0.75rem;
+}
+
+body.modo-compacto h1, 
+body.modo-compacto h2 {
+  font-size: 12pt !important;
+}
+
+body.modo-compacto .site-header, 
+body.modo-compacto .botones, 
+body.modo-compacto footer {
+  display: none !important;
+}
