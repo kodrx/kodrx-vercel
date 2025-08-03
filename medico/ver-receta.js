@@ -97,7 +97,23 @@ window.descargarPDF = async function () {
   });
 };
 
-document.addEventListener("DOMContentLoaded", () => {
-  document.getElementById("btnDescargarPDF")?.addEventListener("click", descargarPDF);
-  document.getElementById("btnDescargarUltraPDF")?.addEventListener("click", descargarPDFUltraCompacto);
-});
+// 📥 Descargar PDF Ultra Compacto
+window.descargarPDFUltraCompacto = async function () {
+  const receta = document.querySelector('.receta');
+  document.body.classList.add('modo-ultra-compacto');
+  receta.scrollIntoView({ behavior: "instant", block: "end" });
+
+  await new Promise(resolve => setTimeout(resolve, 500));
+
+  const opciones = {
+    margin: 0.2,
+    filename: 'receta-kodrx-ultra.pdf',
+    image: { type: 'jpeg', quality: 0.95 },
+    html2canvas: { scale: 2, scrollY: 0 },
+    jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+  };
+
+  html2pdf().set(opciones).from(receta).save().then(() => {
+    document.body.classList.remove('modo-ultra-compacto');
+  });
+};
