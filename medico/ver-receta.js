@@ -121,11 +121,12 @@ document.addEventListener("DOMContentLoaded", () => {
   const btnPDF = document.getElementById("btnDescargarPDF");
   const btnUltra = document.getElementById("btnDescargarUltraPDF");
 
-  if (btnPDF) {
-    btnPDF.addEventListener("click", descargarPDF);
-  }
+  btnPDF?.addEventListener("click", () => {
+    descargarPDF();
+  });
 
-  if (btnUltra) {
-    btnUltra.addEventListener("click", descargarPDFUltraCompacto);
-  }
+  btnUltra?.addEventListener("click", () => {
+    alert("Botón ultra fue clicado"); // prueba visual
+    descargarPDFUltraCompacto();
+  });
 });
