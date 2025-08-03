@@ -233,25 +233,46 @@
     });
 
 window.descargarPDF = function () {
-  document.body.classList.add("modo-compacto");
+  const recetaOriginal = document.querySelector('.receta');
 
-  // Esperar que el DOM recalcule estilos antes de generar PDF
-  setTimeout(() => {
-    const receta = document.querySelector('.receta');
-    const opciones = {
-      margin: 0.3,
-      filename: 'receta-kodrx.pdf',
-      image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2 },
-      jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
-    };
+  // Clonar receta para no afectar el DOM visible
+  const recetaClon = recetaOriginal.cloneNode(true);
 
-    html2pdf().set(opciones).from(receta).save().then(() => {
-      document.body.classList.remove("modo-compacto");
-    });
-  }, 300); // ← Espera de 300ms para asegurar que se aplique el estilo
+  // Inyectar estilos internos SOLO al clon
+  const estiloCompacto = document.createElement("style");
+  estiloCompacto.textContent = `
+    * {
+      font-size: 9pt !important;
+      line-height: 1.3 !important;
+    }
+    h1, h2, h3 {
+      font-size: 11pt !important;
+    }
+    .site-header, .botones, footer {
+      display: none !important;
+    }
+  `;
+  recetaClon.appendChild(estiloCompacto);
+
+  // Crear contenedor oculto para evitar que el clon se vea
+  const contenedor = document.createElement("div");
+  contenedor.style.position = "fixed";
+  contenedor.style.top = "-9999px";
+  contenedor.appendChild(recetaClon);
+  document.body.appendChild(contenedor);
+
+  // Generar PDF desde el clon
+  html2pdf().set({
+    margin: 0.3,
+    filename: 'receta-kodrx.pdf',
+    image: { type: 'jpeg', quality: 0.98 },
+    html2canvas: { scale: 2 },
+    jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+  }).from(recetaClon).save().then(() => {
+    // Limpiar después de generar PDF
+    document.body.removeChild(contenedor);
+  });
 };
-
 
 
   </script>
