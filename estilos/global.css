@@ -442,11 +442,19 @@ body.modo-ultra-compacto {
   font-size: 8pt !important;
   line-height: 1.2 !important;
 }
-body.modo-ultra-compacto .receta,
-body.modo-ultra-compacto .receta * {
+body.modo-ultra-compacto .receta {
   font-size: 8pt !important;
   line-height: 1.2 !important;
 }
+
+body.modo-ultra-compacto .receta p,
+body.modo-ultra-compacto .receta li,
+body.modo-ultra-compacto .receta span,
+body.modo-ultra-compacto .receta strong {
+  font-size: 8pt !important;
+  line-height: 1.2 !important;
+}
+
 body.modo-ultra-compacto .barcode-container canvas {
   max-width: 60% !important;
 }
