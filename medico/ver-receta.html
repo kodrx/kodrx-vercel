@@ -274,24 +274,20 @@ window.descargarPDF = function () {
     document.body.removeChild(contenedor);
   });
 };
-// === Modo Ultra Compacto para recetas largas ===
-window.descargarPDFUltraCompacto = function () {
-  document.body.classList.add("modo-ultra-compacto");
-
-  const receta = document.querySelector('.receta');
-  const opciones = {
-    margin: 0.25,
-    filename: 'receta-kodrx-compacta.pdf',
-    image: { type: 'jpeg', quality: 0.98 },
-    html2canvas: { scale: 2 },
-    jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
-  };
-
-  html2pdf().set(opciones).from(receta).save().then(() => {
-    document.body.classList.remove("modo-ultra-compacto");
-  });
-};
-
+function descargarPDF() {
+      document.body.classList.add("modo-ultra-compacto");
+      const receta = document.querySelector('.receta');
+      const opciones = {
+        margin: [5, 10, 5, 10],
+        filename: 'receta-kodrx-compacta.pdf',
+        image: { type: 'jpeg', quality: 0.95 },
+        html2canvas: { scale: 1.5 },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      };
+      html2pdf().set(opciones).from(receta).save().then(() => {
+        document.body.classList.remove("modo-ultra-compacto");
+      });
+    }
 
   </script>
 </body>
