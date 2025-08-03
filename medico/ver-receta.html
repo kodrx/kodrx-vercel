@@ -95,6 +95,7 @@
   <div class="botones">
     <button onclick="window.print()">🖨 Imprimir</button>
     <button onclick="descargarPDF()">⬇ Descargar PDF</button>
+    <button onclick="descargarPDFUltraCompacto()">⬇ PDF Ultra Compacto</button>
     <button onclick="window.location.href='/medico/panel.html'">⬅ Volver</button>
   </div>
 
@@ -271,6 +272,23 @@ window.descargarPDF = function () {
   }).from(recetaClon).save().then(() => {
     // Limpiar después de generar PDF
     document.body.removeChild(contenedor);
+  });
+};
+// === Modo Ultra Compacto para recetas largas ===
+window.descargarPDFUltraCompacto = function () {
+  document.body.classList.add("modo-ultra-compacto");
+
+  const receta = document.querySelector('.receta');
+  const opciones = {
+    margin: 0.25,
+    filename: 'receta-kodrx-compacta.pdf',
+    image: { type: 'jpeg', quality: 0.98 },
+    html2canvas: { scale: 2 },
+    jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+  };
+
+  html2pdf().set(opciones).from(receta).save().then(() => {
+    document.body.classList.remove("modo-ultra-compacto");
   });
 };
 
