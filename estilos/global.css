@@ -459,33 +459,40 @@ body.modo-compacto footer {
   margin: 0.5cm;
 }
 body.modo-ultra-compacto {
-  font-size: 8pt;
-  zoom: 0.75;
+  font-size: 8pt !important;
+  line-height: 1.2 !important;
 }
-
 body.modo-ultra-compacto .receta,
 body.modo-ultra-compacto .receta * {
   font-size: 8pt !important;
   line-height: 1.2 !important;
 }
-
-body.modo-ultra-compacto .datos-horizontales {
-  font-size: 7.5pt !important;
-  gap: 0.5rem;
+body.modo-ultra-compacto .barcode-container canvas {
+  max-width: 60% !important;
 }
-
 body.modo-ultra-compacto h1,
-body.modo-ultra-compacto h2,
-body.modo-ultra-compacto h3 {
+body.modo-ultra-compacto h2 {
   font-size: 10pt !important;
 }
-
-body.modo-ultra-compacto .barcode-container canvas {
-  max-width: 70%;
-}
-
 body.modo-ultra-compacto .site-header,
 body.modo-ultra-compacto .botones,
 body.modo-ultra-compacto footer {
   display: none !important;
+}
+
+/* Normal */
+.receta {
+  max-width: 800px;
+  margin: auto;
+  padding: 1rem;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+}
+h1, h2 {
+  color: #0d47a1;
+}
+.datos-horizontales {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
 }
