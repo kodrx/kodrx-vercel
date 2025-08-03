@@ -235,21 +235,37 @@
 window.descargarPDF = function () {
   document.body.classList.add("modo-compacto");
 
-  // Esperar que el DOM recalcule estilos antes de generar PDF
-  setTimeout(() => {
-    const receta = document.querySelector('.receta');
-    const opciones = {
-      margin: 0.3,
-      filename: 'receta-kodrx.pdf',
-      image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2 },
-      jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
-    };
+ window.descargarPDF = function () {
+  const receta = document.querySelector('.receta');
 
-    html2pdf().set(opciones).from(receta).save().then(() => {
-      document.body.classList.remove("modo-compacto");
-    });
-  }, 300); // ← Espera de 300ms para asegurar que se aplique el estilo
+  // Inyectar estilos internos directo dentro de la receta
+  const estiloCompacto = document.createElement("style");
+  estiloCompacto.textContent = `
+    * {
+      font-size: 9pt !important;
+      line-height: 1.3 !important;
+    }
+    h1, h2, h3 {
+      font-size: 11pt !important;
+    }
+    .site-header, .botones, footer {
+      display: none !important;
+    }
+  `;
+  receta.appendChild(estiloCompacto);
+
+  const opciones = {
+    margin: 0.3,
+    filename: 'receta-kodrx.pdf',
+    image: { type: 'jpeg', quality: 0.98 },
+    html2canvas: { scale: 2 },
+    jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+  };
+
+  html2pdf().set(opciones).from(receta).save().then(() => {
+    // Eliminar el estilo inyectado
+    receta.removeChild(estiloCompacto);
+  });
 };
 
 
