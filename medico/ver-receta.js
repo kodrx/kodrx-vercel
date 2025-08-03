@@ -96,3 +96,8 @@ window.descargarPDF = async function () {
     document.body.classList.remove('modo-compacto');
   });
 };
+
+document.addEventListener("DOMContentLoaded", () => {
+  document.getElementById("btnDescargarPDF")?.addEventListener("click", descargarPDF);
+  document.getElementById("btnDescargarUltraPDF")?.addEventListener("click", descargarPDFUltraCompacto);
+});
