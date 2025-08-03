@@ -222,17 +222,14 @@ details.lab-card div {
   font-size: 14px;
   line-height: 1.6;
 }
-@media print {
-  .no-print {
-    display: none !important;
-  }
-}
-/* Responsive Celular */
 @media (max-width: 768px) {
   main {
     padding: 20px;
   }
-  @media print {
+}
+
+/* Este va fuera del anterior */
+@media print {
   .site-header {
     display: none !important;
   }
