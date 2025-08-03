@@ -97,36 +97,26 @@ window.descargarPDF = async function () {
   });
 };
 
-// 📥 Descargar PDF Ultra Compacto
-window.descargarPDFUltraCompacto = async function () {
+window.descargarPDF = async function () {
   const receta = document.querySelector('.receta');
-  document.body.classList.add('modo-ultra-compacto');
-  receta.scrollIntoView({ behavior: "instant", block: "end" });
+  if (!receta) return alert("Receta no encontrada");
 
-  await new Promise(resolve => setTimeout(resolve, 500));
+  // Activar modo compacto
+  document.body.classList.add('modo-compacto');
+
+  // Esperar para aplicar estilos
+  await new Promise(resolve => setTimeout(resolve, 300));
 
   const opciones = {
     margin: 0.2,
-    filename: 'receta-kodrx-ultra.pdf',
+    filename: 'receta-kodrx.pdf',
     image: { type: 'jpeg', quality: 0.95 },
     html2canvas: { scale: 2, scrollY: 0 },
     jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
   };
 
-  html2pdf().set(opciones).from(receta).save().then(() => {
-    document.body.classList.remove('modo-ultra-compacto');
-  });
+  await html2pdf().set(opciones).from(receta).save();
+
+  // Restaurar estilos
+  document.body.classList.remove('modo-compacto');
 };
-document.addEventListener("DOMContentLoaded", () => {
-  const btnPDF = document.getElementById("btnDescargarPDF");
-  const btnUltra = document.getElementById("btnDescargarUltraPDF");
-
-  btnPDF?.addEventListener("click", () => {
-    descargarPDF();
-  });
-
-  btnUltra?.addEventListener("click", () => {
-    alert("Botón ultra fue clicado"); // prueba visual
-    descargarPDFUltraCompacto();
-  });
-});
