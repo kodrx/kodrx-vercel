@@ -71,17 +71,14 @@ document.addEventListener("DOMContentLoaded", async () => {
   });
 });
 
-// 📥 Descargar PDF con ajuste para móviles
 window.descargarPDF = async function () {
   const receta = document.querySelector('.receta');
+  if (!receta) return alert("Receta no encontrada");
 
-  // Activar modo compacto visualmente
   document.body.classList.add('modo-compacto');
 
-  // Forzar scroll al final para asegurar que todo el contenido esté visible
+  // Asegurar visibilidad total
   receta.scrollIntoView({ behavior: "instant", block: "end" });
-
-  // Esperar un pequeño delay para asegurar que el canvas capture todo
   await new Promise(resolve => setTimeout(resolve, 500));
 
   const opciones = {
@@ -92,31 +89,42 @@ window.descargarPDF = async function () {
     jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
   };
 
-  html2pdf().set(opciones).from(receta).save().then(() => {
-    document.body.classList.remove('modo-compacto');
-  });
+  await html2pdf().set(opciones).from(receta).save();
+  document.body.classList.remove('modo-compacto');
 };
-
-window.descargarPDF = async function () {
+window.descargarPDFUltraCompacto = async function () {
   const receta = document.querySelector('.receta');
   if (!receta) return alert("Receta no encontrada");
 
-  // Activar modo compacto
-  document.body.classList.add('modo-compacto');
+  document.body.classList.add('modo-ultra-compacto');
 
-  // Esperar para aplicar estilos
-  await new Promise(resolve => setTimeout(resolve, 300));
+  receta.scrollIntoView({ behavior: "instant", block: "end" });
+  await new Promise(resolve => setTimeout(resolve, 500));
 
   const opciones = {
     margin: 0.2,
-    filename: 'receta-kodrx.pdf',
-    image: { type: 'jpeg', quality: 0.95 },
+    filename: 'receta-kodrx-ultra.pdf',
+    image: { type: 'jpeg', quality: 0.98 },
     html2canvas: { scale: 2, scrollY: 0 },
     jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
   };
 
   await html2pdf().set(opciones).from(receta).save();
+  document.body.classList.remove('modo-ultra-compacto');
+};
+document.addEventListener("DOMContentLoaded", () => {
+  const btn = document.getElementById("btnDescargarPDF");
+  if (btn) {
+    btn.addEventListener("click", descargarPDF);
+  }
 
-  // Restaurar estilos
-  document.body.classList.remove('modo-compacto');
+  const btnUltra = document.getElementById("btnDescargarUltraPDF");
+  if (btnUltra) {
+    btnUltra.addEventListener("click", () => {
+      console.log("📎 Botón ultra fue clicado");
+      descargarPDFUltraCompacto();
+    });
+  }
+});
+
 };
