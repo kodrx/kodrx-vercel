@@ -378,42 +378,21 @@ details.lab-card div {
     margin: 0.7cm;
   }
 }
-/* === Ajustes generales para descarga PDF en mÃ³vil con modo compacto === */
 body.modo-compacto {
-  font-size: 10pt;
-  zoom: 0.8;
-  line-height: 1.3;
+  font-size: 9pt;
+  zoom: 0.9;
 }
 
 body.modo-compacto .receta,
 body.modo-compacto .receta * {
-  font-size: 10pt !important;
-  line-height: 1.3 !important;
+  font-size: 9pt !important;
+  line-height: 1.4 !important;
 }
 
-body.modo-compacto p,
-body.modo-compacto li,
 body.modo-compacto h1,
 body.modo-compacto h2,
-body.modo-compacto h3,
-body.modo-compacto span,
-body.modo-compacto strong {
-  font-size: 10pt !important;
-  line-height: 1.3 !important;
-}
-
-body.modo-compacto .datos-horizontales {
-  font-size: 9pt !important;
-  gap: 0.75rem;
-}
-
-body.modo-compacto #hash {
-  font-size: 9pt !important;
-  word-break: break-word;
-}
-
-body.modo-compacto .barcode-container canvas {
-  max-width: 80% !important;
+body.modo-compacto h3 {
+  font-size: 11pt !important;
 }
 
 body.modo-compacto .site-header,
@@ -421,6 +400,7 @@ body.modo-compacto .botones,
 body.modo-compacto footer {
   display: none !important;
 }
+
 
 /* === TambiÃ©n aplica para impresiÃ³n directa desde mÃ³viles === */
 @media print and (max-width: 768px) {
