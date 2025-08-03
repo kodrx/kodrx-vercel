@@ -232,39 +232,26 @@
       });
     });
 
-window.descargarPDF = async function () {
-  const receta = document.querySelector('.receta');
+window.descargarPDF = function () {
+  document.body.classList.add("modo-compacto");
 
-  // 💡 Activamos modo compacto visual
-  document.body.classList.add('modo-compacto');
+  // Esperar que el DOM recalcule estilos antes de generar PDF
+  setTimeout(() => {
+    const receta = document.querySelector('.receta');
+    const opciones = {
+      margin: 0.3,
+      filename: 'receta-kodrx.pdf',
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2 },
+      jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+    };
 
-  // 🔽 Forzamos scroll total para asegurar render completo
-  window.scrollTo(0, document.body.scrollHeight);
-
-  // ⏱ Esperamos para que todo se renderice (incluyendo QR)
-  await new Promise(resolve => setTimeout(resolve, 800));
-
-  const opciones = {
-    margin: 0.3,
-    filename: 'receta-kodrx.pdf',
-    image: { type: 'jpeg', quality: 0.98 },
-    html2canvas: {
-      scale: 2,
-      useCORS: true,
-      scrollY: 0
-    },
-    jsPDF: {
-      unit: 'in',
-      format: 'letter',
-      orientation: 'portrait'
-    }
-  };
-
-  await html2pdf().set(opciones).from(receta).save();
-
-  // 🧼 Limpiamos el modo visual
-  document.body.classList.remove('modo-compacto');
+    html2pdf().set(opciones).from(receta).save().then(() => {
+      document.body.classList.remove("modo-compacto");
+    });
+  }, 300); // ← Espera de 300ms para asegurar que se aplique el estilo
 };
+
 
   </script>
 </body>
