@@ -467,6 +467,13 @@ body.modo-ultra-compacto .botones,
 body.modo-ultra-compacto footer {
   display: none !important;
 }
+ body.modo-ultra-compacto .receta {
+  padding: 0.5rem !important;
+  margin: 0 !important;
+}
+@page {
+  margin: 0.3cm !important;
+}
 
 /* Normal */
 .receta {
