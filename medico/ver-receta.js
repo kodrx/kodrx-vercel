@@ -117,3 +117,10 @@ window.descargarPDFUltraCompacto = async function () {
     document.body.classList.remove('modo-ultra-compacto');
   });
 };
+document.addEventListener("DOMContentLoaded", () => {
+  const btnPDF = document.getElementById("btnDescargarPDF");
+  const btnUltra = document.getElementById("btnDescargarUltraPDF");
+
+  if (btnPDF) btnPDF.addEventListener("click", window.descargarPDF);
+  if (btnUltra) btnUltra.addEventListener("click", window.descargarPDFUltraCompacto);
+});
