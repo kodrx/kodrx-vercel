@@ -156,89 +156,13 @@
     Receta digital emitida mediante <strong>KodRx</strong> — Plataforma digital de recetas verificadas con trazabilidad tecnologica.
   </div>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+ <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script src="./ver-receta-compat.js"></script>
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyBIjaOe4HcGNDk0xrqen8etBv0RyjyOJHw",
-      authDomain: "kodrx-105b9.firebaseapp.com",
-      projectId: "kodrx-105b9"
-    };
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-
-    const params = new URLSearchParams(window.location.search);
-    const recetaId = params.get("id");
-
-    document.addEventListener("DOMContentLoaded", async () => {
-      if (!recetaId) return;
-
-      const docRef = doc(db, "recetas", recetaId);
-      const docSnap = await getDoc(docRef);
-      if (!docSnap.exists()) return;
-
-      const receta = docSnap.data();
-
-      const setText = (id, texto) => {
-        const el = document.getElementById(id);
-        if (el) el.textContent = texto || "—";
-      };
-
-      setText("medicoNombre", `Dr. ${receta.medicoNombre}`);
-      setText("medicoCedula", receta.medicoCedula);
-      setText("medicoEspecialidad", receta.medicoEspecialidad);
-      setText("medicoTelefono", receta.medicoTelefono);
-      setText("medicoDomicilio", receta.medicoDomicilio);
-      setText("nombrePaciente", receta.nombrePaciente);
-      setText("edad", receta.edad);
-      setText("sexo", receta.sexo);
-      setText("peso", receta.peso);
-      setText("talla", receta.talla);
-      setText("imc", receta.imc);
-      setText("presion", receta.presion);
-      setText("temperatura", receta.temperatura);
-      setText("observaciones", receta.observaciones);
-      setText("diagnostico", receta.diagnostico);
-      setText("bloque", receta.bloque);
-      setText("hash", receta.hash);
-
-      const lista = document.getElementById("tratamientoLista");
-      lista.innerHTML = "";
-      receta.medicamentos.forEach(med => {
-        const li = document.createElement("li");
-        li.textContent = `${med.nombre} — ${med.dosis} — ${med.duracion}`;
-        lista.appendChild(li);
-      });
-
-      new QRCode(document.getElementById("qrReceta"), {
-        text: `https://kodrx.app/verificar.html?id=${recetaId}`,
-        width: 110,
-        height: 110
-      });
-
-      new QRCode(document.getElementById("qrBlockchain"), {
-        text: `https://kodrx-blockchain.onrender.com/verificar.html?id=${receta.bloque}`,
-        width: 90,
-        height: 90
-      });
-
-      JsBarcode("#codigoBarrasPlano", recetaId, {
-        format: "CODE128",
-        lineColor: "#000",
-        width: 1.8,
-        height: 35,
-        displayValue: true
-      });
-    });
-
-
-
-  </script>
-  <script src="ver-receta.js"></script>
 </body>
 </html>
 
