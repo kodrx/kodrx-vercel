@@ -331,14 +331,6 @@ details.lab-card div {
   background-color: #f0f0f0;
 }
 
-.receta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1.5rem;
-  font-size: 0.9rem;
-  margin-bottom: 1rem;
-}
-
 .datos-horizontales {
   display: flex;
   flex-wrap: wrap;
