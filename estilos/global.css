@@ -374,129 +374,31 @@ details.lab-card div {
     margin: 0.7cm;
   }
 }
-body.modo-compacto {
-  font-size: 9pt;
-  zoom: 0.9;
-}
-
-body.modo-compacto .receta,
-body.modo-compacto .receta * {
-  font-size: 9pt !important;
-  line-height: 1.4 !important;
-}
-
-body.modo-compacto h1,
-body.modo-compacto h2,
-body.modo-compacto h3 {
-  font-size: 11pt !important;
-}
-
-body.modo-compacto .site-header,
-body.modo-compacto .botones,
-body.modo-compacto footer {
-  display: none !important;
-}
-
-
-/* === TambiÃ©n aplica para impresiÃ³n directa desde mÃ³viles === */
-@media print and (max-width: 768px) {
-  body {
-    font-size: 10pt;
-    zoom: 0.8;
-    line-height: 1.3;
-  }
-
-  .receta,
-  .receta * {
-    font-size: 10pt !important;
-    line-height: 1.3 !important;
-  }
-
-  .datos-horizontales {
-    font-size: 9pt !important;
-    gap: 0.75rem;
-  }
-
-  p, li, span, strong, h1, h2, h3 {
-    font-size: 10pt !important;
-    line-height: 1.3 !important;
-  }
-
-  .barcode-container canvas {
-    max-width: 80% !important;
-  }
-
-  .site-header, footer, .botones {
-    display: none !important;
-  }
-}
-
-@page {
-  margin: 0.5cm;
-}
-/* === MODO ULTRA COMPACTO REFORZADO === */
 body.modo-ultra-compacto {
   font-size: 8pt !important;
   line-height: 1.2 !important;
 }
 
-body.modo-ultra-compacto .receta {
-  font-size: 8pt !important;
-  line-height: 1.2 !important;
-  padding: 0.5rem !important;
-  margin: 0 !important;
-}
-
+body.modo-ultra-compacto .receta,
 body.modo-ultra-compacto .receta * {
   font-size: 8pt !important;
   line-height: 1.2 !important;
 }
 
-body.modo-ultra-compacto .receta span,
-body.modo-ultra-compacto .receta strong,
-body.modo-ultra-compacto .receta p,
-body.modo-ultra-compacto .receta li {
-  font-size: 8pt !important;
-  line-height: 1.2 !important;
+body.modo-ultra-compacto .datos-horizontales {
+  font-size: 7.8pt !important;
+  gap: 0.5rem !important;
 }
 
 body.modo-ultra-compacto h1,
 body.modo-ultra-compacto h2,
 body.modo-ultra-compacto h3 {
   font-size: 10pt !important;
-  color: #0d47a1 !important;
-  text-align: center !important;
-}
-
-body.modo-ultra-compacto .datos-horizontales {
-  font-size: 8pt !important;
-  gap: 0.5rem !important;
-}
-
-body.modo-ultra-compacto .barcode-container canvas {
-  max-width: 60% !important;
 }
 
 body.modo-ultra-compacto .site-header,
 body.modo-ultra-compacto .botones,
 body.modo-ultra-compacto footer {
   display: none !important;
-}
-
-/* Normal */
-.receta {
-  max-width: 800px;
-  margin: auto;
-  padding: 1rem;
-  border: 1px solid #ccc;
-  border-radius: 8px;
-}
-h1, h2 {
-  color: #0d47a1;
-}
-.datos-horizontales {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem 1rem;
 }
 
