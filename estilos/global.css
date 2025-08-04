@@ -1,4 +1,3 @@
-
 :root {
   --color-primario: #003366;
   --color-acento: #00d4b2;
@@ -350,9 +349,8 @@ details.lab-card div {
 
   .receta,
   .receta * {
-    font-size: 8pt !important;
+    font-size: 9pt !important;
     line-height: 1.3 !important;
-    gap: 0.75rem;
   }
 
   h1, h2, h3 {
@@ -440,8 +438,11 @@ body.modo-ultra-compacto {
   font-size: 8pt !important;
   line-height: 1.2 !important;
 }
-body.modo-ultra-compacto .receta {
+body.modo-ultra-compacto .receta span,
+body.modo-ultra-compacto .receta strong {
   font-size: 8pt !important;
+}
+
   line-height: 1.2 !important;
 }
 
@@ -472,7 +473,23 @@ body.modo-ultra-compacto footer {
 @page {
   margin: 0.3cm !important;
 }
+body.modo-ultra-compacto h1,
+body.modo-ultra-compacto h2,
+body.modo-ultra-compacto h3 {
+  font-size: 10pt !important;
+  color: #0d47a1 !important;
+  text-align: center !important;
+}
 
+body.modo-ultra-compacto .datos-horizontales {
+  font-size: 8pt !important;
+  gap: 0.5rem !important;
+}
+
+body.modo-ultra-compacto .receta span,
+body.modo-ultra-compacto .receta strong {
+  font-size: 8pt !important;
+}
 /* Normal */
 .receta {
   max-width: 800px;
