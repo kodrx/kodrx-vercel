@@ -434,45 +434,32 @@ body.modo-compacto footer {
 @page {
   margin: 0.5cm;
 }
+/* === MODO ULTRA COMPACTO REFORZADO === */
 body.modo-ultra-compacto {
   font-size: 8pt !important;
   line-height: 1.2 !important;
 }
-body.modo-ultra-compacto .receta span,
-body.modo-ultra-compacto .receta strong {
-  font-size: 8pt !important;
-}
 
-  line-height: 1.2 !important;
-}
-
-body.modo-ultra-compacto .receta p,
-body.modo-ultra-compacto .receta li,
-body.modo-ultra-compacto .receta span,
-body.modo-ultra-compacto .receta strong {
+body.modo-ultra-compacto .receta {
   font-size: 8pt !important;
   line-height: 1.2 !important;
-}
-
-body.modo-ultra-compacto .barcode-container canvas {
-  max-width: 60% !important;
-}
-body.modo-ultra-compacto h1,
-body.modo-ultra-compacto h2 {
-  font-size: 10pt !important;
-}
-body.modo-ultra-compacto .site-header,
-body.modo-ultra-compacto .botones,
-body.modo-ultra-compacto footer {
-  display: none !important;
-}
- body.modo-ultra-compacto .receta {
   padding: 0.5rem !important;
   margin: 0 !important;
 }
-@page {
-  margin: 0.3cm !important;
+
+body.modo-ultra-compacto .receta * {
+  font-size: 8pt !important;
+  line-height: 1.2 !important;
 }
+
+body.modo-ultra-compacto .receta span,
+body.modo-ultra-compacto .receta strong,
+body.modo-ultra-compacto .receta p,
+body.modo-ultra-compacto .receta li {
+  font-size: 8pt !important;
+  line-height: 1.2 !important;
+}
+
 body.modo-ultra-compacto h1,
 body.modo-ultra-compacto h2,
 body.modo-ultra-compacto h3 {
@@ -486,10 +473,16 @@ body.modo-ultra-compacto .datos-horizontales {
   gap: 0.5rem !important;
 }
 
-body.modo-ultra-compacto .receta span,
-body.modo-ultra-compacto .receta strong {
-  font-size: 8pt !important;
+body.modo-ultra-compacto .barcode-container canvas {
+  max-width: 60% !important;
 }
+
+body.modo-ultra-compacto .site-header,
+body.modo-ultra-compacto .botones,
+body.modo-ultra-compacto footer {
+  display: none !important;
+}
+
 /* Normal */
 .receta {
   max-width: 800px;
