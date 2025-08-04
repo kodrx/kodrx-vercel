@@ -332,7 +332,13 @@ details.lab-card div {
   background-color: #f0f0f0;
 }
 
-
+.datos-horizontales {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
+}
 @media print {
   body {
     font-size: 9pt !important;
@@ -429,51 +435,56 @@ body.modo-compacto footer {
 @page {
   margin: 0.5cm;
 }
-/* === MODO ULTRA COMPACTO REFORZADO === */
 body.modo-ultra-compacto {
   font-size: 8pt !important;
   line-height: 1.2 !important;
 }
-
 body.modo-ultra-compacto .receta {
   font-size: 8pt !important;
   line-height: 1.2 !important;
-  padding: 0.5rem !important;
-  margin: 0 !important;
 }
 
-body.modo-ultra-compacto .receta * {
-  font-size: 8pt !important;
-  line-height: 1.2 !important;
-}
-
-body.modo-ultra-compacto .receta span,
-body.modo-ultra-compacto .receta strong,
 body.modo-ultra-compacto .receta p,
-body.modo-ultra-compacto .receta li {
+body.modo-ultra-compacto .receta li,
+body.modo-ultra-compacto .receta span,
+body.modo-ultra-compacto .receta strong {
   font-size: 8pt !important;
   line-height: 1.2 !important;
-}
-
-body.modo-ultra-compacto h1,
-body.modo-ultra-compacto h2,
-body.modo-ultra-compacto h3 {
-  font-size: 10pt !important;
-  color: #0d47a1 !important;
-  text-align: center !important;
-}
-
-body.modo-ultra-compacto .datos-horizontales {
-  font-size: 8pt !important;
-  gap: 0.5rem !important;
 }
 
 body.modo-ultra-compacto .barcode-container canvas {
   max-width: 60% !important;
 }
-
+body.modo-ultra-compacto h1,
+body.modo-ultra-compacto h2 {
+  font-size: 10pt !important;
+}
 body.modo-ultra-compacto .site-header,
 body.modo-ultra-compacto .botones,
 body.modo-ultra-compacto footer {
   display: none !important;
+}
+ body.modo-ultra-compacto .receta {
+  padding: 0.5rem !important;
+  margin: 0 !important;
+}
+@page {
+  margin: 0.3cm !important;
+}
+
+/* Normal */
+.receta {
+  max-width: 800px;
+  margin: auto;
+  padding: 1rem;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+}
+h1, h2 {
+  color: #0d47a1;
+}
+.datos-horizontales {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
 }
