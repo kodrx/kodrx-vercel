@@ -119,13 +119,25 @@
   </div>
 
   <!-- jsPDF (puro) -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" integrity="sha512-NaW0jmRz6zvX8B9z8qC2iRaYI7X2pSLJH+9m7oM6e2WJj9W9oYFWQw3Wm8uE3hAObJQ9nF0yQn7lQ9Q2FQ0/3g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <!-- QRCode.js para generar QR en dataURL (rápido y sin dependencias) -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" integrity="sha512-MG7SxYb2yH2nNw0N9WbHjE+9h6x5zTq8wB9b+q5rj1oQv4pWQnTQUnc3L3sQK2qf6r2qB7MZlZJz4bCw2zA+9w==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
   <script>
     // ====== Utilidades ======
     const KODRX_BLUE = '#0b5bd3';
+
+    // Espera a que las librerías UMD (jsPDF y QRCode) se carguen correctamente
+    async function waitForLibs(maxTries = 50){
+      let tries = 0;
+      return new Promise(resolve => {
+        (function check(){
+          if (window.jspdf && window.QRCode){ resolve(); return; }
+          if (++tries >= maxTries){ console.warn('Aviso: librerías no confirmadas, continúo de todos modos'); resolve(); return; }
+          setTimeout(check, 100);
+        })();
+      });
+    }
 
     function prefixMedico(nombre, genero){
       if(!nombre) return '';
@@ -150,11 +162,19 @@
 
     function makeQRDataURL(text, size=260){
       return new Promise((resolve)=>{
+        if (typeof QRCode === 'undefined'){ console.error('QRCode no está disponible'); resolve(''); return; }
         const div = document.createElement('div');
         const qr = new QRCode(div,{text,width:size,height:size,correctLevel:QRCode.CorrectLevel.M});
         setTimeout(()=>{
           const img = div.querySelector('img');
           if(img && img.src){ resolve(img.src); }
+          else{
+            const canvas = div.querySelector('canvas');
+            resolve(canvas? canvas.toDataURL('image/png') : '');
+          }
+        }, 0);
+      });
+    }
           else{
             const canvas = div.querySelector('canvas');
             resolve(canvas? canvas.toDataURL('image/png') : '');
@@ -318,13 +338,18 @@
     let RECETA_ACTUAL = null; let QRS = null;
 
     async function boot(){
+      await waitForLibs();
       const receta = await cargarRecetaDesdeQuery();
       RECETA_ACTUAL = receta;
       QRS = await prepararReceta(receta);
     }
 
     document.getElementById('btnDescargar').addEventListener('click', async ()=>{
+      await waitForLibs();
       if(!RECETA_ACTUAL){ RECETA_ACTUAL = await cargarRecetaDesdeQuery(); }
+      if(!QRS){ QRS = await prepararReceta(RECETA_ACTUAL); }
+      generarPDF(RECETA_ACTUAL, QRS);
+    }); }
       if(!QRS){ QRS = await prepararReceta(RECETA_ACTUAL); }
       generarPDF(RECETA_ACTUAL, QRS);
     });
