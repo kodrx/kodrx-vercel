@@ -243,36 +243,42 @@
     }
 
     // ====== Carga de datos ======
-    async function cargarRecetaDesdeQuery(){
-      const p = new URLSearchParams(location.search);
-      const id = p.get('id') || 'RECETA-DE-EJEMPLO-001';
+ async function cargarRecetaDesdeQuery(){
+  const p = new URLSearchParams(location.search);
+  const id = p.get('id') || 'RECETA-DE-EJEMPLO-001';
 
-      // 1) Si hay Firestore y se pidió id, intenta real
-      if (p.get('id') && typeof window.kodrxGetReceta === 'function'){
-        try{
-          const r = await window.kodrxGetReceta(id);
-          if (r){ r._origen='firestore'; return r; }
-        }catch(e){ console.warn('[KodRx] Fallback a mock por error de Firestore:', e); }
+  // Si viene ?id=..., espera a que Firebase exponga el helper y prueba Firestore
+  if (p.get('id')){
+    const hasFS = await waitForFirestoreHelper(5000);
+    if (hasFS){
+      try{
+        const r = await window.kodrxGetReceta(id);
+        if (r){ r._origen = 'firestore'; return r; }
+      }catch(e){
+        console.warn('[KodRx] Error Firestore, usaré mock con ID:', e);
       }
-
-      // 2) Sin Firestore: genera un mock *dependiente del id* para notar el cambio
-      if (p.get('id')){ return mockFromId(id); }
-
-      // 3) Mock por defecto (sin id)
-      return {
-        id,
-        medico:{ nombre:'Gabriela López Ramírez', genero:'F', cedula:'1234567', especialidad:'Medicina Interna' },
-        paciente:{ nombre:'Juan Pérez' },
-        medicamentos:[
-          { nombre:'Amoxicilina 500 mg', dosis:'1 cápsula cada 8 h', duracion:'7 días' },
-          { nombre:'Paracetamol 500 mg', dosis:'1 tableta cada 8 h si dolor', duracion:'5 días' }
-        ],
-        timestamp: Date.now(),
-        urlVerificacion: location.origin + '/public/verificar.html?id='+encodeURIComponent(id),
-        urlBlockchain: location.origin + '/public/consulta.html?block='+encodeURIComponent(id),
-        _origen:'mock'
-      };
+    }else{
+      console.warn('[KodRx] Helper Firestore no llegó a tiempo, usaré mock con ID');
+      return mockFromId(id); // para que veas cambios aunque no haya FS
     }
+  }
+
+  // Mock por defecto (cuando no hay ?id=)
+  return {
+    id,
+    medico:{ nombre:'Gabriela López Ramírez', genero:'F', cedula:'1234567', especialidad:'Medicina Interna' },
+    paciente:{ nombre:'Juan Pérez' },
+    medicamentos:[
+      { nombre:'Amoxicilina 500 mg', dosis:'1 cápsula cada 8 h', duracion:'7 días' },
+      { nombre:'Paracetamol 500 mg', dosis:'1 tableta cada 8 h si dolor', duracion:'5 días' }
+    ],
+    timestamp: Date.now(),
+    urlVerificacion: location.origin + '/public/verificar.html?id='+encodeURIComponent(id),
+    urlBlockchain: location.origin + '/public/consulta.html?block='+encodeURIComponent(id),
+    _origen:'mock'
+  };
+}
+
 
     function renderPreview(receta, mainQRDataURL, chainQRDataURL){
       document.getElementById('doctorNombre').textContent = prefixMedico(receta.medico.nombre, receta.medico.genero);
@@ -365,7 +371,8 @@
       doc.roundedRect(rightX, My, qrBoxSize, qrBoxSize, 12, 12, 'S');
       const qrPadding = 16;
       const qrInner = qrBoxSize - qrPadding*2;
-      doc.addImage(qrs.mainQRUrl, 'PNG', rightX+qrPadding, My+qrpadding, qrInner, qrInner, undefined, 'FAST');
+      doc.addImage(qrs.mainQRUrl, 'PNG', rightX+qrPadding, My+qrPadding, qrInner, qrInner, undefined, 'FAST');
+
       doc.setTextColor(11,91,211); doc.setFontSize(10); doc.setFont(font,'bold');
       doc.text('Receta', rightX + qrBoxSize/2, My + qrBoxSize + 18, {align:'center'});
 
@@ -404,12 +411,14 @@
     // ====== Boot ======
     let RECETA_ACTUAL = null; let QRS = null;
 
-    async function boot(){
-      await waitForLibs();
-      const receta = await cargarRecetaDesdeQuery();
-      RECETA_ACTUAL = receta;
-      QRS = await prepararReceta(receta);
-    }
+async function boot(){
+  await waitForLibs();
+  const p = new URLSearchParams(location.search);
+  if (p.get('id')){ await waitForFirestoreHelper(5000); }  // <- agrega esta línea
+  const receta = await cargarRecetaDesdeQuery();
+  RECETA_ACTUAL = receta;
+  QRS = await prepararReceta(receta);
+}
 
     document.getElementById('btnDescargar').addEventListener('click', async ()=>{
       await waitForLibs();
@@ -417,6 +426,17 @@
       if(!QRS){ QRS = await prepararReceta(RECETA_ACTUAL); }
       generarPDF(RECETA_ACTUAL, QRS);
     });
+
+    // Espera a que window.kodrxGetReceta exista (lo pone el <script type="module"> de Firebase)
+async function waitForFirestoreHelper(maxMs = 5000){
+  const t0 = Date.now();
+  while (Date.now() - t0 < maxMs){
+    if (typeof window.kodrxGetReceta === 'function') return true;
+    await new Promise(r=>setTimeout(r,100));
+  }
+  return false;
+}
+
 
     document.getElementById('btnCargarEjemplo').addEventListener('click', async ()=>{
       const receta = await cargarRecetaDesdeQuery();
