@@ -183,9 +183,7 @@
       document.getElementById('recetaId').textContent = 'ID: '+receta.id;
       document.getElementById('listaMeds').textContent = receta.medicamentos.map((m,i)=>`${i+1}. ${m.nombre}
    Dosis: ${m.dosis}
-   Duración: ${m.duracion}`).join('
-
-');
+   Duración: ${m.duracion}`).join('\n\n');
       document.getElementById('hashTexto').textContent = 'hash: '+hashSimulado(receta);
       document.getElementById('verifUrl').textContent = receta.urlBlockchain;
 
@@ -251,9 +249,7 @@
       doc.setTextColor(17,24,39); doc.setFontSize(11);
       const medsLines = (receta.medicamentos||[]).map((m,i)=>{ return `${i+1}. ${m.nombre}
    Dosis: ${m.dosis}
-   Duración: ${m.duracion}`; }).join('
-
-');
+   Duración: ${m.duracion}`; }).join('\n\n');
       const medsSplit = doc.splitTextToSize(medsLines, leftW);
       doc.text(medsSplit, leftX, medsY+18);
 
@@ -329,3 +325,4 @@
   </script>
 </body>
 </html>
+
