@@ -368,13 +368,13 @@ function renderPreview(receta, mainQRDataURL, chainQRDataURL){
   document.getElementById('hashTexto').textContent = 'hash: '+hashSimulado(receta);
   document.getElementById('verifUrl').textContent  = receta.urlBlockchain;
 
-  // QR - Ajustar tamaños (todo DENTRO de la función)
+  // QRs (más compactos)
   const qrMain = document.getElementById('qrMain');
   qrMain.innerHTML = '';
   const img1 = new Image();
   img1.alt = 'QR Receta';
-  img1.width = 200;   // antes 240
-  img1.height = 200;  // antes 240
+  img1.width = 200;
+  img1.height = 200;
   img1.src = mainQRDataURL;
   qrMain.appendChild(img1);
 
@@ -382,12 +382,12 @@ function renderPreview(receta, mainQRDataURL, chainQRDataURL){
   qrChain.innerHTML = '';
   const img2 = new Image();
   img2.alt = 'QR Blockchain';
-  img2.width = 100;   // antes 120
-  img2.height = 100;  // antes 120
+  img2.width = 100;
+  img2.height = 100;
   img2.src = chainQRDataURL;
   qrChain.appendChild(img2);
 
-  // Actualiza badge de origen
+  // Badge de origen
   const badge = document.getElementById('badgeOrigen');
   if (badge){
     if (receta._origen === 'firestore'){ badge.textContent = 'FIRESTORE';  badge.className='badge ok'; }
@@ -396,13 +396,12 @@ function renderPreview(receta, mainQRDataURL, chainQRDataURL){
   }
 }
 
-
-    async function prepararReceta(receta){
-      const mainQRUrl = await makeQRDataURL(receta.urlVerificacion, 520);
-      const chainQRUrl = await makeQRDataURL(receta.urlBlockchain, 260);
-      renderPreview(receta, mainQRUrl, chainQRUrl);
-      return { mainQRUrl, chainQRUrl };
-    }
+async function prepararReceta(receta){
+  const mainQRUrl  = await makeQRDataURL(receta.urlVerificacion, 520);
+  const chainQRUrl = await makeQRDataURL(receta.urlBlockchain, 260);
+  renderPreview(receta, mainQRUrl, chainQRUrl);
+  return { mainQRUrl, chainQRUrl };
+}
 
     // ====== Generación de PDF con jsPDF puro ======
 async function generarPDF(receta, qrs){
