@@ -341,11 +341,12 @@ async function smartLoadReceta(id){
     return pref + nombre;
   }
 
-  function fechaLarga(ts){
+ function fechaLarga(ts){
   try{
     if (!ts) return '';
-    if (typeof ts.toDate === 'function') ts = ts.toDate();
-    else if (ts && typeof ts.seconds === 'number') {
+    if (typeof ts.toDate === 'function') {
+      ts = ts.toDate();
+    } else if (ts && typeof ts.seconds === 'number') {
       ts = new Date(ts.seconds * 1000 + Math.floor((ts.nanoseconds || 0) / 1e6));
     } else if (!(ts instanceof Date)) {
       ts = new Date(ts);
@@ -354,7 +355,9 @@ async function smartLoadReceta(id){
       year:'numeric', month:'long', day:'numeric',
       hour:'2-digit', minute:'2-digit'
     });
-  }catch(e){ return ''; }
+  } catch(e) {
+    return '';
+  }
 }
 
 
