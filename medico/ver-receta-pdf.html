@@ -270,7 +270,58 @@ receta.diagnostico   = d.diagnostico   || '—';
   <script>
     // ====== Utilidades ======
     const KODRX_BLUE = '#0b5bd3';
+async function waitForFirestoreHelper(maxMs = 8000){
+  const t0 = Date.now();
+  while (Date.now() - t0 < maxMs){
+    if (typeof window.kodrxGetReceta === 'function') return true;
+    await new Promise(r=>setTimeout(r,120));
+  }
+  return false;
+}
 
+async function smartLoadReceta(id){
+  // 1) intenta directo si el helper ya está
+  if (await waitForFirestoreHelper(0)){
+    try{
+      const r = await window.kodrxGetReceta(id);
+      if (r) return r; // FIRESTORE listo
+    }catch(_){}
+  }
+
+  // 2) muestra MOCK(ID) inmediato para no dejar vacío…
+  let receta = {
+    id,
+    medico:{ nombre:`Demo ${id.slice(0,6)}`, genero:'F', cedula:`MX-${id.slice(0,6)}`, especialidad:'Medicina General', telefono:'—', direccion:'—' },
+    paciente:{ nombre:`Paciente ${id.slice(0,6)}` },
+    medicamentos:[],
+    observaciones:'—',
+    diagnostico:'—',
+    timestamp: Date.now(),
+    urlVerificacion: location.origin + '/public/verificar.html?id='+encodeURIComponent(id),
+    urlBlockchain: location.origin + '/public/consulta.html?block='+encodeURIComponent(id),
+    _origen:'mock-id'
+  };
+
+  // 3) …y reintenta Firestore en background 3 veces; si llega, re-renderiza
+  (async ()=>{
+    const maxTries = 3;
+    for (let i=0;i<maxTries;i++){
+      const ready = await waitForFirestoreHelper(2500);
+      if (!ready) continue;
+      try{
+        const r = await window.kodrxGetReceta(id);
+        if (r){
+          RECETA_ACTUAL = r;
+          const q = await prepararReceta(r); // re-render
+          QRS = q;
+          return;
+        }
+      }catch(_){}
+    }
+  })();
+
+  return receta;
+}
     // Espera a que las librerías UMD (jsPDF y QRCode) se carguen correctamente
     async function waitForLibs(maxTries = 50){
     let tries = 0;
@@ -509,52 +560,35 @@ async function generarPDF(receta, qrs){
   let RECETA_ACTUAL = null; let QRS = null;
 
   async function cargarRecetaDesdeQuery(){
-    const p = new URLSearchParams(location.search);
-    const id = p.get('id') || 'RECETA-DE-EJEMPLO-001';
+  const p = new URLSearchParams(location.search);
+  const id = p.get('id') || 'RECETA-DE-EJEMPLO-001';
+  if (p.get('id')) return await smartLoadReceta(id);
 
-    if (p.get('id') && typeof window.kodrxGetReceta === 'function'){
-      try{
-        const r = await window.kodrxGetReceta(id);
-        if (r){ r._origen='firestore'; return r; }
-      }catch(e){ console.warn('[KodRx] Fallback a mock por error de Firestore:', e); }
-    }
-    if (p.get('id')){ // mock dependiente del id
-      return {
-        id,
-        medico:{ nombre:`Dra. Demo ${id.slice(0,6)}`, genero:'F', cedula:`MX-${id.slice(0,6)}`, especialidad:'Medicina General', telefono:'—', direccion:'—' },
-        paciente:{ nombre:`Paciente ${id.slice(0,6)}`, edad:'—', sexo:'—', peso:'—', talla:'—', imc:'—', temperatura:'—', presion:'—' },
-        medicamentos:[],
-        observaciones:'—',
-        diagnostico:'—',
-        timestamp: Date.now(),
-        urlVerificacion: location.origin + '/public/verificar.html?id='+encodeURIComponent(id),
-        urlBlockchain: location.origin + '/public/consulta.html?block='+encodeURIComponent(id),
-        _origen:'mock-id'
-      };
-    }
-    return {
-      id,
-      medico:{ nombre:'Gabriela López Ramírez', genero:'F', cedula:'1234567', especialidad:'Medicina Interna', telefono:'—', direccion:'—' },
-      paciente:{ nombre:'Juan Pérez', edad:'—', sexo:'—', peso:'—', talla:'—', imc:'—', temperatura:'—', presion:'—' },
-      medicamentos:[
-        { nombre:'Amoxicilina 500 mg', dosis:'1 cápsula cada 8 h', duracion:'7 días' },
-        { nombre:'Paracetamol 500 mg', dosis:'1 tableta cada 8 h si dolor', duracion:'5 días' }
-      ],
-      observaciones:'—',
-      diagnostico:'—',
-      timestamp: Date.now(),
-      urlVerificacion: location.origin + '/public/verificar.html?id='+encodeURIComponent(id),
-      urlBlockchain: location.origin + '/public/consulta.html?block='+encodeURIComponent(id),
-      _origen:'mock'
-    };
-  }
+  // mock por defecto cuando NO hay ?id=
+  return {
+    id,
+    medico:{ nombre:'Gabriela López Ramírez', genero:'F', cedula:'1234567', especialidad:'Medicina Interna', telefono:'—', direccion:'—' },
+    paciente:{ nombre:'Juan Pérez' },
+    medicamentos:[
+      { nombre:'Amoxicilina 500 mg', dosis:'1 cápsula cada 8 h', duracion:'7 días' },
+      { nombre:'Paracetamol 500 mg', dosis:'1 tableta cada 8 h si dolor', duracion:'5 días' }
+    ],
+    observaciones:'—',
+    diagnostico:'—',
+    timestamp: Date.now(),
+    urlVerificacion: location.origin + '/public/verificar.html?id='+encodeURIComponent(id),
+    urlBlockchain: location.origin + '/public/consulta.html?block='+encodeURIComponent(id),
+    _origen:'mock'
+  };
+}
 
-  async function boot(){
-    await waitForLibs();
-    const receta = await cargarRecetaDesdeQuery();
-    RECETA_ACTUAL = receta;
-    QRS = await prepararReceta(receta);
-  }
+async function boot(){
+  await waitForLibs();
+  const receta = await cargarRecetaDesdeQuery();
+  RECETA_ACTUAL = receta;
+  QRS = await prepararReceta(receta);
+}
+
 
   document.getElementById('btnDescargar').addEventListener('click', async ()=>{
     await waitForLibs();
