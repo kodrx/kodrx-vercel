@@ -195,77 +195,65 @@
       const app = initializeApp(firebaseConfig);
       const db = getFirestore(app);
 
-      // Expone un helper global para que el script no-módulo lo use
-      window.kodrxGetReceta = async (id) => {
-        try{
-          // Ajusta la colección/nombre a tu esquema real
-          const ref = doc(db, 'recetas', id);
-          const snap = await getDoc(ref);
-          if(!snap.exists()) return null;
-          const d = snap.data();
-          // Mapea a la estructura esperada por el renderer
-          const receta = {
-            id,
-            medico: {
-              nombre: d.medicoNombre || d.medico?.nombre || '—',
-              genero: d.medicoGenero || d.medico?.genero || '',
-              cedula: d.medicoCedula || d.medico?.cedula || '—',
-              especialidad: d.medicoEspecialidad || d.medico?.especialidad || '—'
-            },
-            paciente: { nombre: d.nombrePaciente || d.pacienteNombre || d.paciente?.nombre || '—' },
-            medicamentos: (d.medicamentos || d.items || []).map((m, i) => ({
-              nombre: m.nombre || m.medicamento || `Medicamento ${i+1}`,
-              dosis: m.dosis || m.indicaciones || '—',
-              duracion: m.duracion || m.tiempo || '—'
-            })),
-           // …d = snap.data() ya obtenido…
-const ts = d.fecha ?? d.timestamp;
-const normDate =
-  (ts && typeof ts.toDate === 'function') ? ts.toDate() :
-  (ts && typeof ts.seconds === 'number') ? new Date(ts.seconds * 1000 + Math.floor((ts.nanoseconds || 0) / 1e6)) :
-  (ts ? new Date(ts) : new Date());
+   
+  // Expone un helper global para que el script no-módulo lo use
+window.kodrxGetReceta = async (id) => {
+  try{
+    const ref = doc(db, 'recetas', id);
+    const snap = await getDoc(ref);
+    if(!snap.exists()) return null;
+    const d = snap.data();
 
-return {
-  // …
-  timestamp: normDate,
-  // …
-  _origen: "firestore"
+    // Normaliza timestamp a Date (soporta Timestamp y {seconds, nanos})
+    const ts = d.fecha ?? d.timestamp;
+    const normDate =
+      (ts && typeof ts.toDate === 'function') ? ts.toDate() :
+      (ts && typeof ts.seconds === 'number') ? new Date(ts.seconds * 1000 + Math.floor((ts.nanoseconds || 0) / 1e6)) :
+      (ts ? new Date(ts) : new Date());
+
+    // Arma el objeto final de receta
+    const receta = {
+      id,
+      medico: {
+        nombre:        d.medicoNombre       || d.medico?.nombre       || '—',
+        genero:        d.medicoGenero       || d.medico?.genero       || '',
+        cedula:        d.medicoCedula       || d.medico?.cedula       || '—',
+        especialidad:  d.medicoEspecialidad || d.medico?.especialidad || '—',
+        telefono:      d.medicoTelefono     || d.medico?.telefono     || '—',
+        direccion:     d.medicoDomicilio    || d.medico?.domicilio    || d.medico?.direccion || '—'
+      },
+      paciente: {
+        nombre:       d.nombrePaciente || d.pacienteNombre || d.paciente?.nombre || '—',
+        edad:         d.edad ?? d.paciente?.edad ?? '—',
+        sexo:         d.sexo ?? d.paciente?.sexo ?? '—',
+        peso:         d.peso ?? d.paciente?.peso ?? '—',
+        talla:        d.talla ?? d.paciente?.talla ?? '—',
+        imc:          d.imc ?? d.paciente?.imc ?? '—',
+        temperatura:  d.temperatura ?? d.paciente?.temperatura ?? '—',
+        presion:      d.presion ?? d.paciente?.presion ?? '—'
+      },
+      medicamentos: (d.medicamentos || d.items || []).map((m,i)=>({
+        nombre:  m.nombre || m.medicamento || `Medicamento ${i+1}`,
+        dosis:   m.dosis  || m.indicaciones || '—',
+        duracion:m.duracion || m.tiempo     || '—'
+      })),
+      observaciones: d.observaciones || '—',
+      diagnostico:   d.diagnostico   || '—',
+      timestamp:     normDate,
+      urlVerificacion: `https://kodrx.app/verificar.html?id=${encodeURIComponent(id)}`,
+      urlBlockchain:  `https://kodrx-blockchain.onrender.com/verificar.html?id=${encodeURIComponent(d.bloque || id)}`,
+      _origen: 'firestore'
+    };
+
+    console.info('[KodRx] Receta obtenida de Firestore:', id);
+    return receta;
+
+  }catch(e){
+    console.warn('[KodRx] No se pudo leer Firestore, usando mock. Motivo:', e);
+    return null;
+  }
 };
 
-          console.info('[KodRx] Receta obtenida de Firestore:', id);
-          // Normaliza fecha si viene como Timestamp de Firestore
-receta.timestamp = (d.fecha && typeof d.fecha.toDate === 'function')
-  ? d.fecha.toDate()
-  : (d.timestamp || d.fecha || Date.now());
-
-// Enriquecer con campos adicionales
-receta.medico.telefono  = d.medicoTelefono || d.medico?.telefono || '—';
-receta.medico.direccion = d.medicoDomicilio || d.medico?.domicilio || d.medico?.direccion || '—';
-
-receta.paciente = {
-  ...receta.paciente,
-  edad:        d.edad ?? d.paciente?.edad ?? '—',
-  sexo:        d.sexo ?? d.paciente?.sexo ?? '—',
-  peso:        d.peso ?? d.paciente?.peso ?? '—',
-  talla:       d.talla ?? d.paciente?.talla ?? '—',
-  imc:         d.imc ?? d.paciente?.imc ?? '—',
-  temperatura: d.temperatura ?? d.paciente?.temperatura ?? '—',
-  presion:     d.presion ?? d.paciente?.presion ?? '—'
-};
-
-receta.observaciones = d.observaciones || '—';
-receta.diagnostico   = d.diagnostico   || '—';
-
-          return receta;
-        }catch(e){
-          console.warn('[KodRx] No se pudo leer Firestore, usando mock. Motivo:', e);
-          return null;
-        }
-      }
-    }catch(e){
-      console.warn('[KodRx] Firebase no disponible (modo demo). Puedes ignorar este aviso si aún no configuras Firebase.');
-    }
-  </script>
 
   <script>
     // ====== Utilidades ======
