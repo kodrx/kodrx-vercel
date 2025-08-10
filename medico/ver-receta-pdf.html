@@ -393,7 +393,7 @@ qrChain.appendChild(img2);
       if (receta._origen === 'firestore'){ badge.textContent = 'FIRESTORE'; badge.className='badge ok'; }
       else if (receta._origen === 'mock-id'){ badge.textContent = 'MOCK (ID)'; badge.className='badge warn'; }
       else { badge.textContent = 'MOCK'; badge.className='badge warn'; }
-    }
+  
 
     async function prepararReceta(receta){
       const mainQRUrl = await makeQRDataURL(receta.urlVerificacion, 520);
