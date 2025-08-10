@@ -264,389 +264,328 @@ receta.diagnostico   = d.diagnostico   || '—';
 
     // Espera a que las librerías UMD (jsPDF y QRCode) se carguen correctamente
     async function waitForLibs(maxTries = 50){
-      let tries = 0;
-      return new Promise(resolve => {
-        (function check(){
-          if (window.jspdf && window.QRCode){ resolve(); return; }
-          if (++tries >= maxTries){ console.warn('Aviso: librerías no confirmadas, continúo'); resolve(); return; }
-          setTimeout(check, 100);
-        })();
-      });
-    }
-
-    function prefixMedico(nombre, genero){
-      if(!nombre) return '';
-      const g = (genero||'').toLowerCase();
-      const pref = (g.startsWith('f'))? 'Dra. ':'Dr. ';
-      return pref + nombre;
-    }
-
-   function fechaLarga(ts){
-  try{
-    const d = (ts && typeof ts.toDate === 'function') ? ts.toDate()
-            : (ts instanceof Date ? ts : new Date(ts));
-    return d.toLocaleString('es-MX',{
-      year:'numeric',month:'long',day:'numeric',hour:'2-digit',minute:'2-digit'
+    let tries = 0;
+    return new Promise(resolve => {
+      (function check(){
+        if (window.jspdf && window.QRCode){ resolve(); return; }
+        if (++tries >= maxTries){ console.warn('Aviso: librerías no confirmadas, continúo'); resolve(); return; }
+        setTimeout(check, 100);
+      })();
     });
-  }catch(e){ return String(ts||''); }
-}
+  }
 
+  function prefixMedico(nombre, genero){
+    if(!nombre) return '';
+    const g = (genero||'').toLowerCase();
+    const pref = (g.startsWith('f'))? 'Dra. ':'Dr. ';
+    return pref + nombre;
+  }
 
-    function hashSimulado(receta){
-      const base = JSON.stringify({id:receta.id, meds:receta.medicamentos, t:receta.timestamp});
-      let h = 0; for (let i=0;i<base.length;i++){ h = (h*31 + base.charCodeAt(i))>>>0; }
-      return ('00000000'+h.toString(16)).slice(-8)+('-'+btoa(unescape(encodeURIComponent(receta.id))).replace(/=+$/,''));
+  function fechaLarga(ts){
+    try{
+      const d = (ts && typeof ts.toDate === 'function') ? ts.toDate() : (ts instanceof Date ? ts : new Date(ts));
+      return d.toLocaleString('es-MX',{year:'numeric',month:'long',day:'numeric',hour:'2-digit',minute:'2-digit'});
+    }catch(e){ return String(ts||''); }
+  }
+
+  function hashSimulado(receta){
+    const base = JSON.stringify({id:receta.id, meds:receta.medicamentos, t:receta.timestamp});
+    let h = 0; for (let i=0;i<base.length;i++){ h = (h*31 + base.charCodeAt(i))>>>0; }
+    return ('00000000'+h.toString(16)).slice(-8)+('-'+btoa(unescape(encodeURIComponent(receta.id))).replace(/=+$/,''));
+  }
+
+  function makeQRDataURL(text, size=260){
+    return new Promise((resolve)=>{
+      if (typeof QRCode === 'undefined'){ console.error('QRCode no está disponible'); resolve(''); return; }
+      const div = document.createElement('div');
+      new QRCode(div,{text,width:size,height:size,correctLevel:QRCode.CorrectLevel.M});
+      setTimeout(()=>{
+        const img = div.querySelector('img');
+        if(img && img.src){ resolve(img.src); }
+        else{
+          const canvas = div.querySelector('canvas');
+          resolve(canvas? canvas.toDataURL('image/png') : '');
+        }
+      }, 0);
+    });
+  }
+
+  // ===== Render de vista =====
+  function renderPreview(receta, mainQRDataURL, chainQRDataURL){
+    // Médico
+    document.getElementById('doctorNombre').textContent = prefixMedico(receta.medico.nombre, receta.medico.genero);
+    document.getElementById('doctorCedula').textContent = 'Cédula: '+(receta.medico.cedula||'—');
+    document.getElementById('doctorEsp').textContent   = 'Especialidad: '+(receta.medico.especialidad||'—');
+    document.getElementById('doctorTel').textContent   = 'Tel: '+(receta.medico.telefono||'—');
+    document.getElementById('doctorDir').textContent   = 'Dirección: '+(receta.medico.direccion||'—');
+
+    // Paciente
+    document.getElementById('pacienteNombre').textContent = receta.paciente.nombre||'—';
+    document.getElementById('pacEdad').textContent   = 'Edad: '+(receta.paciente.edad||'—');
+    document.getElementById('pacSexo').textContent   = 'Sexo: '+(receta.paciente.sexo||'—');
+    document.getElementById('pacPeso').textContent   = 'Peso: '+(receta.paciente.peso||'—');
+    document.getElementById('pacTalla').textContent  = 'Talla: '+(receta.paciente.talla||'—');
+    document.getElementById('pacIMC').textContent    = 'IMC: '+(receta.paciente.imc||'—');
+    document.getElementById('pacTemp').textContent   = 'Temp: '+(receta.paciente.temperatura||'—');
+    document.getElementById('pacPresion').textContent= 'PA: '+(receta.paciente.presion||'—');
+
+    document.getElementById('fechaEmision').textContent = fechaLarga(receta.timestamp);
+    document.getElementById('recetaId').textContent = 'ID: '+receta.id;
+
+    // Medicamentos
+    const medsText = (receta.medicamentos||[])
+      .map((m,i)=>`${i+1}. ${m.nombre}\n   Dosis: ${m.dosis}\n   Duración: ${m.duracion}`)
+      .join('\n\n');
+    document.getElementById('listaMeds').textContent = medsText;
+
+    // Observaciones y diagnóstico
+    document.getElementById('obsTexto').textContent  = receta.observaciones||'—';
+    document.getElementById('diagTexto').textContent = receta.diagnostico||'—';
+
+    // Hash y URL
+    document.getElementById('hashTexto').textContent = 'hash: '+hashSimulado(receta);
+    document.getElementById('verifUrl').textContent  = receta.urlBlockchain;
+
+    // QRs en pantalla (compactos)
+    const qrMain = document.getElementById('qrMain');
+    qrMain.innerHTML = '';
+    const img1 = new Image();
+    img1.alt = 'QR Receta';
+    img1.width = 200;
+    img1.height = 200;
+    img1.src = mainQRDataURL;
+    qrMain.appendChild(img1);
+
+    const qrChain = document.getElementById('qrChain');
+    qrChain.innerHTML = '';
+    const img2 = new Image();
+    img2.alt = 'QR Blockchain';
+    img2.width = 100;
+    img2.height = 100;
+    img2.src = chainQRDataURL;
+    qrChain.appendChild(img2);
+
+    // Badge
+    const badge = document.getElementById('badgeOrigen');
+    if (badge){
+      if (receta._origen === 'firestore'){ badge.textContent = 'FIRESTORE';  badge.className='badge ok'; }
+      else if (receta._origen === 'mock-id'){ badge.textContent = 'MOCK (ID)'; badge.className='badge warn'; }
+      else { badge.textContent = 'MOCK'; badge.className='badge warn'; }
+    }
+  }
+
+  async function prepararReceta(receta){
+    const mainQRUrl  = await makeQRDataURL(receta.urlVerificacion, 520);
+    const chainQRUrl = await makeQRDataURL(receta.urlBlockchain, 260);
+    renderPreview(receta, mainQRUrl, chainQRUrl);
+    return { mainQRUrl, chainQRUrl };
+  }
+
+  // ===== PDF (compacto, con paneles y marco) =====
+  async function generarPDF(receta, qrs){
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit:'pt', format:'a4', compress:true }); // 595 x 842
+    const W = doc.internal.pageSize.getWidth();
+    const H = doc.internal.pageSize.getHeight();
+    const Mx = 44, My = 46;
+    const font = 'helvetica';
+    doc.setFont(font, 'normal');
+
+    // Marco exterior
+    doc.setDrawColor(220,226,235);
+    doc.setLineWidth(1);
+    doc.roundedRect(18, 18, W-36, H-36, 10, 10, 'S');
+
+    // Encabezado
+    doc.setFillColor(240,245,255);
+    doc.roundedRect(18,18,W-36,54,10,10,'F');
+    doc.setTextColor(11,27,43);
+    doc.setFontSize(13);
+    doc.text('KodRx — Receta médica digital', Mx, 50);
+
+    // Cols
+    const leftX = Mx, leftW = W/2 - Mx - 12;
+    const rightX = W/2 + 12, rightW = W - rightX - Mx;
+
+    // Panel helper
+    const PANEL_FILL = [248,250,252], PANEL_STROKE = [224,231,240];
+    function panel(x, y, w, h){
+      doc.setFillColor(...PANEL_FILL);
+      doc.setDrawColor(...PANEL_STROKE);
+      doc.setLineWidth(0.8);
+      doc.roundedRect(x-8, y-10, w+16, h+20, 8, 8, 'FD');
     }
 
-    // Construye un mock distinto basado en el ID (si no hay Firestore) para que se note el cambio
-    function mockFromId(id){
-      const suf = (id||'').slice(0,6) || 'EJEMP1';
+    const fechaStr = fechaLarga(receta.timestamp);
+
+    const medsLines = (receta.medicamentos||[])
+      .map((m,i)=>`${i+1}. ${m.nombre}\n   Dosis: ${m.dosis}\n   Duración: ${m.duracion}`)
+      .join('\n\n');
+    const medsSplit = doc.splitTextToSize(medsLines, leftW);
+    const obsSplit  = doc.splitTextToSize(receta.observaciones||'—', leftW);
+    const diagSplit = doc.splitTextToSize(receta.diagnostico||'—', leftW);
+
+    const medicoH   = 86;
+    const pacBaseY  = My+104;
+    const pacienteH = 104;
+    const medsH = (medsSplit.length * 12) + 24;
+    const obsH  = (obsSplit.length  * 11) + 24;
+    const diagH = (diagSplit.length * 11) + 24;
+
+    panel(leftX, My, leftW, medicoH);
+    panel(leftX, pacBaseY, leftW, pacienteH);
+    let yPanels = pacBaseY + pacienteH + 12;
+    panel(leftX, yPanels, leftW, medsH); yPanels += medsH + 12;
+    panel(leftX, yPanels, leftW, obsH);  yPanels += obsH + 12;
+    panel(leftX, yPanels, leftW, diagH);
+
+    // Médico
+    doc.setTextColor(107,114,128); doc.setFontSize(9);
+    doc.text('Médico', leftX, My);
+    doc.setTextColor(17,24,39); doc.setFontSize(13); doc.setFont(font,'bold');
+    doc.text(prefixMedico(receta.medico.nombre, receta.medico.genero), leftX, My+16);
+    doc.setFont(font,'normal'); doc.setFontSize(9.5); doc.setTextColor(55,65,81);
+    doc.text(`Cédula: ${receta.medico.cedula||'—'}`, leftX, My+30);
+    doc.text(`Especialidad: ${receta.medico.especialidad||'—'}`, leftX, My+44);
+    doc.text(`Tel: ${receta.medico.telefono||'—'}`, leftX, My+58);
+    doc.text(`Dirección: ${receta.medico.direccion||'—'}`, leftX, My+72);
+
+    // Paciente
+    doc.setTextColor(107,114,128); doc.setFontSize(9);
+    doc.text('Paciente', leftX, pacBaseY);
+    doc.setTextColor(17,24,39); doc.setFontSize(13); doc.setFont(font,'bold');
+    doc.text(receta.paciente.nombre||'—', leftX, pacBaseY+16);
+    doc.setFont(font,'normal'); doc.setFontSize(9.5); doc.setTextColor(55,65,81);
+    doc.text(fechaStr, leftX, pacBaseY+30);
+    doc.text(`ID: ${receta.id}`, leftX, pacBaseY+44);
+    let y = pacBaseY + 60;
+    doc.text(`Edad: ${receta.paciente.edad||'—'}  Sexo: ${receta.paciente.sexo||'—'}`, leftX, y); y+=14;
+    doc.text(`Peso: ${receta.paciente.peso||'—'}  Talla: ${receta.paciente.talla||'—'}  IMC: ${receta.paciente.imc||'—'}`, leftX, y); y+=14;
+    doc.text(`Temp: ${receta.paciente.temperatura||'—'}  PA: ${receta.paciente.presion||'—'}`, leftX, y);
+
+    // Medicamentos
+    let medsY = pacBaseY + pacienteH + 12;
+    doc.setTextColor(107,114,128); doc.setFontSize(9);
+    doc.text('Medicamentos', leftX, medsY);
+    doc.setTextColor(17,24,39); doc.setFontSize(10.5);
+    doc.text(medsSplit, leftX, medsY+16);
+
+    // Observaciones
+    let obsY = medsY + 16 + (medsSplit.length * 12) + 10;
+    doc.setTextColor(107,114,128); doc.setFontSize(9);
+    doc.text('Observaciones', leftX, obsY);
+    doc.setTextColor(17,24,39); doc.setFontSize(9.5);
+    doc.text(obsSplit, leftX, obsY+14);
+
+    // Diagnóstico
+    let diagY = obsY + 14 + (obsSplit.length * 11) + 16;
+    doc.setTextColor(107,114,128); doc.setFontSize(9);
+    doc.text('Diagnóstico', leftX, diagY);
+    doc.setTextColor(17,24,39); doc.setFontSize(9.5);
+    doc.text(diagSplit, leftX, diagY+14);
+
+    // Derecha: QRs
+    const qrBoxSize = 210, qrPadding = 12, qrInner = qrBoxSize - qrPadding*2;
+    doc.setDrawColor(11,91,211); doc.setLineWidth(3.2);
+    doc.roundedRect(rightX, My, qrBoxSize, qrBoxSize, 10, 10, 'S');
+    doc.addImage(qrs.mainQRUrl, 'PNG', rightX+qrPadding, My+qrPadding, qrInner, qrInner, undefined, 'FAST');
+    doc.setTextColor(11,91,211); doc.setFont(font,'bold'); doc.setFontSize(9.5);
+    doc.text('Receta', rightX + qrBoxSize/2, My + qrBoxSize + 16, {align:'center'});
+
+    // Hash + verificación
+    let ry = My + qrBoxSize + 34;
+    doc.setTextColor(17,24,39); doc.setFont(font,'normal'); doc.setFontSize(9.5);
+    const hashText = 'hash: '+hashSimulado(receta);
+    const hashSplit = doc.splitTextToSize(hashText, rightW);
+    doc.text(hashSplit, rightX, ry);
+    ry += hashSplit.length * 11 + 18;
+
+    doc.setTextColor(107,114,128); doc.setFontSize(9);
+    doc.text('Verificación en cadena (pública)', rightX, ry);
+    doc.setTextColor(55,65,81); doc.setFontSize(9);
+    const urlSplit = doc.splitTextToSize(receta.urlBlockchain, rightW - 110);
+    doc.text(urlSplit, rightX, ry+14);
+
+    const miniSize = 90;
+    doc.setDrawColor(11,91,211); doc.setLineWidth(2.6);
+    doc.roundedRect(rightX + rightW - miniSize, ry - 8, miniSize, miniSize, 8, 8, 'S');
+    doc.addImage(qrs.chainQRUrl, 'PNG', rightX + rightW - miniSize + 8, ry + 2, miniSize-16, miniSize-16, undefined, 'FAST');
+    doc.setTextColor(11,91,211); doc.setFont(font,'bold'); doc.setFontSize(8.5);
+    doc.text('Blockchain', rightX + rightW - miniSize/2, ry + miniSize + 10, {align:'center'});
+
+    // Pie
+    doc.setFillColor(11,91,211);
+    doc.rect(18, H-54-18, W-36, 54, 'F');
+    doc.setTextColor(255,255,255); doc.setFont(font,'bold'); doc.setFontSize(10.5);
+    doc.text('Creada con KodRx. Tecnología que verifica, salud que protege.', W/2, H-22, {align:'center'});
+
+    doc.save(`receta_${receta.id}.pdf`);
+  }
+
+  // ===== Boot & Listeners =====
+  let RECETA_ACTUAL = null; let QRS = null;
+
+  async function cargarRecetaDesdeQuery(){
+    const p = new URLSearchParams(location.search);
+    const id = p.get('id') || 'RECETA-DE-EJEMPLO-001';
+
+    if (p.get('id') && typeof window.kodrxGetReceta === 'function'){
+      try{
+        const r = await window.kodrxGetReceta(id);
+        if (r){ r._origen='firestore'; return r; }
+      }catch(e){ console.warn('[KodRx] Fallback a mock por error de Firestore:', e); }
+    }
+    if (p.get('id')){ // mock dependiente del id
       return {
         id,
-        medico:{ nombre: `Dra. Demo ${suf}`, genero:'F', cedula:`MX-${suf}`, especialidad:'Medicina General' },
-        paciente:{ nombre:`Paciente ${suf}` },
-        medicamentos:[
-          { nombre:`IBUPROFENO 400mg ${suf}`, dosis:'1 tableta cada 8 h', duracion:'3 días' },
-          { nombre:`OMEPRAZOL 20mg ${suf}`, dosis:'1 cápsula en ayunas', duracion:'7 días' }
-        ],
+        medico:{ nombre:`Dra. Demo ${id.slice(0,6)}`, genero:'F', cedula:`MX-${id.slice(0,6)}`, especialidad:'Medicina General', telefono:'—', direccion:'—' },
+        paciente:{ nombre:`Paciente ${id.slice(0,6)}`, edad:'—', sexo:'—', peso:'—', talla:'—', imc:'—', temperatura:'—', presion:'—' },
+        medicamentos:[],
+        observaciones:'—',
+        diagnostico:'—',
         timestamp: Date.now(),
         urlVerificacion: location.origin + '/public/verificar.html?id='+encodeURIComponent(id),
         urlBlockchain: location.origin + '/public/consulta.html?block='+encodeURIComponent(id),
         _origen:'mock-id'
       };
     }
-
-    function makeQRDataURL(text, size=260){
-      return new Promise((resolve)=>{
-        if (typeof QRCode === 'undefined'){ console.error('QRCode no está disponible'); resolve(''); return; }
-        const div = document.createElement('div');
-        new QRCode(div,{text,width:size,height:size,correctLevel:QRCode.CorrectLevel.M});
-        setTimeout(()=>{
-          const img = div.querySelector('img');
-          if(img && img.src){ resolve(img.src); }
-          else{
-            const canvas = div.querySelector('canvas');
-            resolve(canvas? canvas.toDataURL('image/png') : '');
-          }
-        }, 0);
-      });
-    }
-
-    // ====== Carga de datos ======
- async function cargarRecetaDesdeQuery(){
-  const p = new URLSearchParams(location.search);
-  const id = p.get('id') || 'RECETA-DE-EJEMPLO-001';
-
-  // Si viene ?id=..., espera a que Firebase exponga el helper y prueba Firestore
-  if (p.get('id')){
-    const hasFS = await waitForFirestoreHelper(5000);
-    if (hasFS){
-      try{
-        const r = await window.kodrxGetReceta(id);
-        if (r){ r._origen = 'firestore'; return r; }
-      }catch(e){
-        console.warn('[KodRx] Error Firestore, usaré mock con ID:', e);
-      }
-    }else{
-      console.warn('[KodRx] Helper Firestore no llegó a tiempo, usaré mock con ID');
-      return mockFromId(id); // para que veas cambios aunque no haya FS
-    }
+    return {
+      id,
+      medico:{ nombre:'Gabriela López Ramírez', genero:'F', cedula:'1234567', especialidad:'Medicina Interna', telefono:'—', direccion:'—' },
+      paciente:{ nombre:'Juan Pérez', edad:'—', sexo:'—', peso:'—', talla:'—', imc:'—', temperatura:'—', presion:'—' },
+      medicamentos:[
+        { nombre:'Amoxicilina 500 mg', dosis:'1 cápsula cada 8 h', duracion:'7 días' },
+        { nombre:'Paracetamol 500 mg', dosis:'1 tableta cada 8 h si dolor', duracion:'5 días' }
+      ],
+      observaciones:'—',
+      diagnostico:'—',
+      timestamp: Date.now(),
+      urlVerificacion: location.origin + '/public/verificar.html?id='+encodeURIComponent(id),
+      urlBlockchain: location.origin + '/public/consulta.html?block='+encodeURIComponent(id),
+      _origen:'mock'
+    };
   }
 
-  // Mock por defecto (cuando no hay ?id=)
-  return {
-    id,
-    medico:{ nombre:'Gabriela López Ramírez', genero:'F', cedula:'1234567', especialidad:'Medicina Interna' },
-    paciente:{ nombre:'Juan Pérez' },
-    medicamentos:[
-      { nombre:'Amoxicilina 500 mg', dosis:'1 cápsula cada 8 h', duracion:'7 días' },
-      { nombre:'Paracetamol 500 mg', dosis:'1 tableta cada 8 h si dolor', duracion:'5 días' }
-    ],
-    timestamp: Date.now(),
-    urlVerificacion: location.origin + '/public/verificar.html?id='+encodeURIComponent(id),
-    urlBlockchain: location.origin + '/public/consulta.html?block='+encodeURIComponent(id),
-    _origen:'mock'
-  };
-}
-
-
-function renderPreview(receta, mainQRDataURL, chainQRDataURL){
-  // Datos de médico
-  document.getElementById('doctorNombre').textContent = prefixMedico(receta.medico.nombre, receta.medico.genero);
-  document.getElementById('doctorCedula').textContent = 'Cédula: '+(receta.medico.cedula||'—');
-  document.getElementById('doctorEsp').textContent   = 'Especialidad: '+(receta.medico.especialidad||'—');
-  document.getElementById('doctorTel').textContent   = 'Tel: '+(receta.medico.telefono||'—');
-  document.getElementById('doctorDir').textContent   = 'Dirección: '+(receta.medico.direccion||'—');
-
-  // Datos de paciente
-  document.getElementById('pacienteNombre').textContent = receta.paciente.nombre||'—';
-  document.getElementById('pacEdad').textContent   = 'Edad: '+(receta.paciente.edad||'—');
-  document.getElementById('pacSexo').textContent   = 'Sexo: '+(receta.paciente.sexo||'—');
-  document.getElementById('pacPeso').textContent   = 'Peso: '+(receta.paciente.peso||'—');
-  document.getElementById('pacTalla').textContent  = 'Talla: '+(receta.paciente.talla||'—');
-  document.getElementById('pacIMC').textContent    = 'IMC: '+(receta.paciente.imc||'—');
-  document.getElementById('pacTemp').textContent   = 'Temp: '+(receta.paciente.temperatura||'—');
-  document.getElementById('pacPresion').textContent= 'PA: '+(receta.paciente.presion||'—');
-
-  document.getElementById('fechaEmision').textContent = fechaLarga(receta.timestamp);
-  document.getElementById('recetaId').textContent = 'ID: '+receta.id;
-
-  // Medicamentos
-  const medsText = (receta.medicamentos||[])
-    .map((m,i)=>`${i+1}. ${m.nombre}\n   Dosis: ${m.dosis}\n   Duración: ${m.duracion}`)
-    .join('\n\n');
-  document.getElementById('listaMeds').textContent = medsText;
-
-  // Observaciones y diagnóstico
-  document.getElementById('obsTexto').textContent  = receta.observaciones||'—';
-  document.getElementById('diagTexto').textContent = receta.diagnostico||'—';
-
-  // Hash y URL
-  document.getElementById('hashTexto').textContent = 'hash: '+hashSimulado(receta);
-  document.getElementById('verifUrl').textContent  = receta.urlBlockchain;
-
-  // QRs (más compactos)
-  const qrMain = document.getElementById('qrMain');
-  qrMain.innerHTML = '';
-  const img1 = new Image();
-  img1.alt = 'QR Receta';
-  img1.width = 200;
-  img1.height = 200;
-  img1.src = mainQRDataURL;
-  qrMain.appendChild(img1);
-
-  const qrChain = document.getElementById('qrChain');
-  qrChain.innerHTML = '';
-  const img2 = new Image();
-  img2.alt = 'QR Blockchain';
-  img2.width = 100;
-  img2.height = 100;
-  img2.src = chainQRDataURL;
-  qrChain.appendChild(img2);
-
-  // Badge de origen
-  const badge = document.getElementById('badgeOrigen');
-  if (badge){
-    if (receta._origen === 'firestore'){ badge.textContent = 'FIRESTORE';  badge.className='badge ok'; }
-    else if (receta._origen === 'mock-id'){ badge.textContent = 'MOCK (ID)'; badge.className='badge warn'; }
-    else { badge.textContent = 'MOCK'; badge.className='badge warn'; }
-  }
-}
-
-async function prepararReceta(receta){
-  const mainQRUrl  = await makeQRDataURL(receta.urlVerificacion, 520);
-  const chainQRUrl = await makeQRDataURL(receta.urlBlockchain, 260);
-  renderPreview(receta, mainQRUrl, chainQRUrl);
-  return { mainQRUrl, chainQRUrl };
-}
-
-    // ====== Generación de PDF con jsPDF puro ======
- async function generarPDF(receta, qrs){
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF({unit:'pt', format:'a4', compress:true}); // 595 x 842
-    const W = doc.internal.pageSize.getWidth();
-    const H = doc.internal.pageSize.getHeight();
-    const Mx = 48, My = 54;
-    const font = 'helvetica';
-    doc.setFont(font, 'normal');
-
-    // Marco general alrededor de la hoja
-    doc.setDrawColor(220,226,235);
-    doc.setLineWidth(1.2);
-    doc.roundedRect(18, 18, W-36, H-36, 12, 12, 'S');
-
-    // Encabezado
-    doc.setFillColor(240,245,255);
-    doc.roundedRect(18,18,W-36,60,12,12,'F');
-    doc.setTextColor(11,27,43);
-    doc.setFontSize(14);
-    doc.text('KodRx — Receta médica digital', Mx, 50);
-
-    // Columnas
-    const leftX = Mx, leftW = W/2 - Mx - 12;
-    const rightX = W/2 + 12, rightW = W - rightX - Mx;
-
-    // Helpers de panel
-    const PANEL_FILL = [248,250,252]; // #F8FAFC
-    const PANEL_STROKE = [224,231,240]; // #E0E7F0
-    function drawPanel(x, y, w, h){
-      doc.setFillColor(...PANEL_FILL);
-      doc.setDrawColor(...PANEL_STROKE);
-      doc.setLineWidth(1);
-      doc.roundedRect(x-10, y-12, w+20, h+24, 10, 10, 'FD');
-    }
-
-    // ===== Precalcular splits y alturas para dibujar fondos antes del texto
-    // Paciente + vitals (usamos la misma lógica del render)
-    const pacBaseY = My+112;
-    const vitalsLines = [
-      `Edad: ${receta.paciente.edad||'—'}  Sexo: ${receta.paciente.sexo||'—'}`,
-      `Peso: ${receta.paciente.peso||'—'}  Talla: ${receta.paciente.talla||'—'}  IMC: ${receta.paciente.imc||'—'}`,
-      `Temp: ${receta.paciente.temperatura||'—'}  PA: ${receta.paciente.presion||'—'}`
-    ];
-
-    // Medicamentos
-    const medsLines = (receta.medicamentos||[]).map((m,i)=>`${i+1}. ${m.nombre}
-   Dosis: ${m.dosis}
-   Duración: ${m.duracion}`).join('
-
-');
-    const medsSplit = doc.splitTextToSize(medsLines, leftW);
-
-    // Observaciones y Diagnóstico
-    const obsSplit = doc.splitTextToSize(receta.observaciones||'—', leftW);
-    const diagSplit = doc.splitTextToSize(receta.diagnostico||'—', leftW);
-
-    // Alturas aproximadas (coherentes con la tipografía usada)
-    const medicoHeight = 94;
-    const pacienteHeight = 112;
-    const medsHeight = (medsSplit.length * 13) + 28;
-    const obsHeight  = (obsSplit.length * 12) + 28;
-    const diagHeight = (diagSplit.length * 12) + 28;
-
-    // ===== Dibujar paneles de la columna izquierda
-    drawPanel(leftX, My, leftW, medicoHeight);
-    drawPanel(leftX, pacBaseY, leftW, pacienteHeight);
-    let yPanels = pacBaseY + pacienteHeight + 16;
-    drawPanel(leftX, yPanels, leftW, medsHeight);
-    yPanels += medsHeight + 16;
-    drawPanel(leftX, yPanels, leftW, obsHeight);
-    yPanels += obsHeight + 16;
-    drawPanel(leftX, yPanels, leftW, diagHeight);
-
-    // ===== Escribir contenidos encima de paneles
-    // Médico
-    doc.setTextColor(107,114,128); doc.setFontSize(10); doc.setFont(font,'normal');
-    doc.text('Médico', leftX, My);
-    doc.setTextColor(17,24,39); doc.setFontSize(14); doc.setFont(font,'bold');
-    doc.text(prefixMedico(receta.medico.nombre, receta.medico.genero), leftX, My+18);
-    doc.setFont(font,'normal'); doc.setFontSize(10); doc.setTextColor(55,65,81);
-    doc.text(`Cédula: ${receta.medico.cedula||'—'}`, leftX, My+34);
-    doc.text(`Especialidad: ${receta.medico.especialidad||'—'}`, leftX, My+50);
-    doc.text(`Tel: ${receta.medico.telefono||'—'}`, leftX, My+66);
-    doc.text(`Dirección: ${receta.medico.direccion||'—'}`, leftX, My+82);
-
-    // Paciente
-    doc.setTextColor(107,114,128); doc.setFontSize(10);
-    doc.text('Paciente', leftX, pacBaseY);
-    doc.setTextColor(17,24,39); doc.setFontSize(14); doc.setFont(font,'bold');
-    doc.text(receta.paciente.nombre||'—', leftX, pacBaseY+18);
-    doc.setFont(font,'normal'); doc.setFontSize(10); doc.setTextColor(55,65,81);
-    // Fecha segura (acepta Timestamp)
-    const fechaStr = (function(ts){
-      try{
-        const d = (ts && typeof ts.toDate==='function') ? ts.toDate() : (ts instanceof Date ? ts : new Date(ts));
-        return d.toLocaleString('es-MX',{year:'numeric',month:'long',day:'numeric',hour:'2-digit',minute:'2-digit'});
-      }catch(e){ return String(ts||''); }
-    })(receta.timestamp);
-    doc.text(fechaStr, leftX, pacBaseY+34);
-    doc.text(`ID: ${receta.id}`, leftX, pacBaseY+50);
-    let y = pacBaseY + 68;
-    doc.text(vitalsLines[0], leftX, y); y+=16;
-    doc.text(vitalsLines[1], leftX, y); y+=16;
-    doc.text(vitalsLines[2], leftX, y);
-
-    // Medicamentos
-    let medsY = pacBaseY + pacienteHeight + 16;
-    doc.setTextColor(107,114,128); doc.setFontSize(10);
-    doc.text('Medicamentos', leftX, medsY);
-    doc.setTextColor(17,24,39); doc.setFontSize(11);
-    doc.text(medsSplit, leftX, medsY+18);
-
-    // Observaciones
-    let obsY = medsY + 18 + (medsSplit.length * 13) + 12;
-    doc.setTextColor(107,114,128); doc.setFontSize(10);
-    doc.text('Observaciones', leftX, obsY);
-    doc.setTextColor(17,24,39); doc.setFontSize(10);
-    doc.text(obsSplit, leftX, obsY+16);
-
-    // Diagnóstico
-    let diagY = obsY + 16 + (obsSplit.length * 12) + 24;
-    doc.setTextColor(107,114,128); doc.setFontSize(10);
-    doc.text('Diagnóstico', leftX, diagY);
-    doc.setTextColor(17,24,39); doc.setFontSize(10);
-    doc.text(diagSplit, leftX, diagY+16);
-
-    // ===== Derecha: QR principal y blockchain más abajo
-    const qrBoxSize = 230;      // más compacto
-    const qrPadding = 14;
-    const qrInner = qrBoxSize - qrPadding*2;
-    doc.setDrawColor(11,91,211); doc.setLineWidth(4);
-    doc.roundedRect(rightX, My, qrBoxSize, qrBoxSize, 12, 12, 'S');
-    doc.addImage(qrs.mainQRUrl, 'PNG', rightX+qrPadding, My+qrPadding, qrInner, qrInner, undefined, 'FAST');
-    doc.setTextColor(11,91,211); doc.setFont(font,'bold'); doc.setFontSize(10);
-    doc.text('Receta', rightX + qrBoxSize/2, My + qrBoxSize + 18, {align:'center'});
-
-    // Hash
-    let ry = My + qrBoxSize + 40;
-    doc.setTextColor(17,24,39); doc.setFont(font,'normal'); doc.setFontSize(10);
-    const hashText = 'hash: '+hashSimulado(receta);
-    const hashSplit = doc.splitTextToSize(hashText, rightW);
-    doc.text(hashSplit, rightX, ry);
-    ry += hashSplit.length * 12 + 26;
-
-    // Verificación + QR pequeño (más abajo y más chico)
-    doc.setTextColor(107,114,128); doc.setFontSize(10);
-    doc.text('Verificación en cadena (pública)', rightX, ry);
-    doc.setTextColor(55,65,81); doc.setFontSize(9);
-    const urlSplit = doc.splitTextToSize(receta.urlBlockchain, rightW - 120);
-    doc.text(urlSplit, rightX, ry+16);
-
-    const miniSize = 100;  // más pequeño
-    doc.setDrawColor(11,91,211); doc.setLineWidth(3);
-    doc.roundedRect(rightX + rightW - miniSize, ry - 8, miniSize, miniSize, 10, 10, 'S');
-    doc.addImage(qrs.chainQRUrl, 'PNG', rightX + rightW - miniSize + 10, ry + 2, miniSize-20, miniSize-20, undefined, 'FAST');
-    doc.setTextColor(11,91,211); doc.setFont(font,'bold'); doc.setFontSize(9);
-    doc.text('Blockchain', rightX + rightW - miniSize/2, ry + miniSize + 10, {align:'center'});
-
-    // Pie
-    doc.setFillColor(11,91,211);
-    doc.rect(18, H-60-18, W-36, 60, 'F');
-    doc.setTextColor(255,255,255); doc.setFont(font,'bold'); doc.setFontSize(11);
-    doc.text('Creada con KodRx. Tecnología que verifica, salud que protege.', W/2, H-24, {align:'center'});
-
-    // Guardar
-    doc.save(`receta_${receta.id}.pdf`);
+  async function boot(){
+    await waitForLibs();
+    const receta = await cargarRecetaDesdeQuery();
+    RECETA_ACTUAL = receta;
+    QRS = await prepararReceta(receta);
   }
 
+  document.getElementById('btnDescargar').addEventListener('click', async ()=>{
+    await waitForLibs();
+    if(!RECETA_ACTUAL){ RECETA_ACTUAL = await cargarRecetaDesdeQuery(); }
+    if(!QRS){ QRS = await prepararReceta(RECETA_ACTUAL); }
+    generarPDF(RECETA_ACTUAL, QRS);
+  });
 
-    // ====== Boot ======
-    let RECETA_ACTUAL = null; let QRS = null;
+  document.getElementById('btnCargarEjemplo').addEventListener('click', async ()=>{
+    const receta = await cargarRecetaDesdeQuery();
+    RECETA_ACTUAL = receta; QRS = await prepararReceta(receta);
+  });
 
-async function boot(){
-  await waitForLibs();
-  const p = new URLSearchParams(location.search);
-  if (p.get('id')){ await waitForFirestoreHelper(5000); }  // <- agrega esta línea
-  const receta = await cargarRecetaDesdeQuery();
-  RECETA_ACTUAL = receta;
-  QRS = await prepararReceta(receta);
-}
-
-    document.getElementById('btnDescargar').addEventListener('click', async ()=>{
-      await waitForLibs();
-      if(!RECETA_ACTUAL){ RECETA_ACTUAL = await cargarRecetaDesdeQuery(); }
-      if(!QRS){ QRS = await prepararReceta(RECETA_ACTUAL); }
-      generarPDF(RECETA_ACTUAL, QRS);
-    });
-
-    // Espera a que window.kodrxGetReceta exista (lo pone el <script type="module"> de Firebase)
-async function waitForFirestoreHelper(maxMs = 5000){
-  const t0 = Date.now();
-  while (Date.now() - t0 < maxMs){
-    if (typeof window.kodrxGetReceta === 'function') return true;
-    await new Promise(r=>setTimeout(r,100));
-  }
-  return false;
-}
-
-
-    document.getElementById('btnCargarEjemplo').addEventListener('click', async ()=>{
-      const receta = await cargarRecetaDesdeQuery();
-      RECETA_ACTUAL = receta; QRS = await prepararReceta(receta);
-    });
-
-    // Auto-carga
-    boot();
+  boot();
   </script>
 </body>
 </html>
