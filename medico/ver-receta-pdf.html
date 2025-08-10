@@ -218,11 +218,20 @@
               dosis: m.dosis || m.indicaciones || '—',
               duracion: m.duracion || m.tiempo || '—'
             })),
-            timestamp: d.timestamp || d.fecha || Date.now(),
-            urlVerificacion: `https://kodrx.app/verificar.html?id=${encodeURIComponent(id)}`,
-            urlBlockchain: `https://kodrx-blockchain.onrender.com/verificar.html?id=${encodeURIComponent(d.bloque || id)}`,
-            _origen: 'firestore'
-          };
+           // …d = snap.data() ya obtenido…
+const ts = d.fecha ?? d.timestamp;
+const normDate =
+  (ts && typeof ts.toDate === 'function') ? ts.toDate() :
+  (ts && typeof ts.seconds === 'number') ? new Date(ts.seconds * 1000 + Math.floor((ts.nanoseconds || 0) / 1e6)) :
+  (ts ? new Date(ts) : new Date());
+
+return {
+  // …
+  timestamp: normDate,
+  // …
+  _origen: "firestore"
+};
+
           console.info('[KodRx] Receta obtenida de Firestore:', id);
           // Normaliza fecha si viene como Timestamp de Firestore
 receta.timestamp = (d.fecha && typeof d.fecha.toDate === 'function')
@@ -282,11 +291,21 @@ receta.diagnostico   = d.diagnostico   || '—';
   }
 
   function fechaLarga(ts){
-    try{
-      const d = (ts && typeof ts.toDate === 'function') ? ts.toDate() : (ts instanceof Date ? ts : new Date(ts));
-      return d.toLocaleString('es-MX',{year:'numeric',month:'long',day:'numeric',hour:'2-digit',minute:'2-digit'});
-    }catch(e){ return String(ts||''); }
-  }
+  try{
+    if (!ts) return '';
+    if (typeof ts.toDate === 'function') ts = ts.toDate();
+    else if (ts && typeof ts.seconds === 'number') {
+      ts = new Date(ts.seconds * 1000 + Math.floor((ts.nanoseconds || 0) / 1e6));
+    } else if (!(ts instanceof Date)) {
+      ts = new Date(ts);
+    }
+    return ts.toLocaleString('es-MX', {
+      year:'numeric', month:'long', day:'numeric',
+      hour:'2-digit', minute:'2-digit'
+    });
+  }catch(e){ return ''; }
+}
+
 
   function hashSimulado(receta){
     const base = JSON.stringify({id:receta.id, meds:receta.medicamentos, t:receta.timestamp});
