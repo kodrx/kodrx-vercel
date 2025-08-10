@@ -48,35 +48,61 @@
         <div class="logo">K</div>
         <div>
           <div class="title">KodRx — Receta médica digital</div>
-          <div class="sub">Vista previa en pantalla • Generación de PDF con jsPDF puro</div>
+          <div class="sub">Vista previa en pantalla </div>
         </div>
         <span id="badgeOrigen" class="badge warn">MOCK</span>
       </div>
 
       <div class="canvas">
         <section class="left">
-          <div>
-            <div class="doc-label">Médico</div>
-            <div class="doc-val" id="doctorNombre">—</div>
-            <div class="meta">
-              <div id="doctorCedula">Cédula: —</div>
-              <div id="doctorEsp">Especialidad: —</div>
-            </div>
-          </div>
+         <div>
+  <div class="doc-label">Médico</div>
+  <div class="doc-val" id="doctorNombre">—</div>
+  <div class="meta">
+    <div id="doctorCedula">Cédula: —</div>
+    <div id="doctorEsp">Especialidad: —</div>
+  </div>
+  <div class="meta">
+    <div id="doctorTel">Tel: —</div>
+    <div id="doctorDir">Dirección: —</div>
+  </div>
+</div>
+
 
           <div>
-            <div class="doc-label">Paciente</div>
-            <div class="doc-val" id="pacienteNombre">—</div>
-            <div class="meta">
-              <div id="fechaEmision">—</div>
-              <div id="recetaId">ID: —</div>
-            </div>
-          </div>
+  <div class="doc-label">Paciente</div>
+  <div class="doc-val" id="pacienteNombre">—</div>
+  <div class="meta">
+    <div id="fechaEmision">—</div>
+    <div id="recetaId">ID: —</div>
+  </div>
+  <div class="meta" id="pacienteVitals">
+    <div id="pacEdad">Edad: —</div>
+    <div id="pacSexo">Sexo: —</div>
+    <div id="pacPeso">Peso: —</div>
+    <div id="pacTalla">Talla: —</div>
+    <div id="pacIMC">IMC: —</div>
+    <div id="pacTemp">Temp: —</div>
+    <div id="pacPresion">PA: —</div>
+  </div>
+</div>
+
+<div>
+  <div class="doc-label">Observaciones</div>
+  <div id="obsTexto" class="hash" style="white-space:pre-wrap">—</div>
+</div>
+
+<div>
+  <div class="doc-label">Diagnóstico</div>
+  <div id="diagTexto" class="hash" style="white-space:pre-wrap">—</div>
+</div>
 
           <div>
             <div class="doc-label">Medicamentos</div>
             <div id="listaMeds" class="hash" style="white-space:pre-wrap">—</div>
           </div>
+
+          
         </section>
 
         <section class="right">
@@ -161,6 +187,29 @@
             _origen: 'firestore'
           };
           console.info('[KodRx] Receta obtenida de Firestore:', id);
+          // Normaliza fecha si viene como Timestamp de Firestore
+receta.timestamp = (d.fecha && typeof d.fecha.toDate === 'function')
+  ? d.fecha.toDate()
+  : (d.timestamp || d.fecha || Date.now());
+
+// Enriquecer con campos adicionales
+receta.medico.telefono  = d.medicoTelefono || d.medico?.telefono || '—';
+receta.medico.direccion = d.medicoDomicilio || d.medico?.domicilio || d.medico?.direccion || '—';
+
+receta.paciente = {
+  ...receta.paciente,
+  edad:        d.edad ?? d.paciente?.edad ?? '—',
+  sexo:        d.sexo ?? d.paciente?.sexo ?? '—',
+  peso:        d.peso ?? d.paciente?.peso ?? '—',
+  talla:       d.talla ?? d.paciente?.talla ?? '—',
+  imc:         d.imc ?? d.paciente?.imc ?? '—',
+  temperatura: d.temperatura ?? d.paciente?.temperatura ?? '—',
+  presion:     d.presion ?? d.paciente?.presion ?? '—'
+};
+
+receta.observaciones = d.observaciones || '—';
+receta.diagnostico   = d.diagnostico   || '—';
+
           return receta;
         }catch(e){
           console.warn('[KodRx] No se pudo leer Firestore, usando mock. Motivo:', e);
@@ -281,14 +330,31 @@
 
 
     function renderPreview(receta, mainQRDataURL, chainQRDataURL){
-      document.getElementById('doctorNombre').textContent = prefixMedico(receta.medico.nombre, receta.medico.genero);
-      document.getElementById('doctorCedula').textContent = 'Cédula: '+(receta.medico.cedula||'—');
-      document.getElementById('doctorEsp').textContent = 'Especialidad: '+(receta.medico.especialidad||'—');
-      document.getElementById('pacienteNombre').textContent = receta.paciente.nombre||'—';
-      document.getElementById('fechaEmision').textContent = fechaLarga(receta.timestamp);
-      document.getElementById('recetaId').textContent = 'ID: '+receta.id;
-      const medsText = (receta.medicamentos||[]).map((m,i)=>`${i+1}. ${m.nombre}\n   Dosis: ${m.dosis}\n   Duración: ${m.duracion}`).join('\n\n');
-      document.getElementById('listaMeds').textContent = medsText;
+      const setText = (id, val)=>{ const el=document.getElementById(id); if(el) el.textContent = (val ?? '—'); };
+
+setText('doctorNombre', prefixMedico(receta.medico.nombre, receta.medico.genero));
+setText('doctorCedula', 'Cédula: '+(receta.medico.cedula||'—'));
+setText('doctorEsp', 'Especialidad: '+(receta.medico.especialidad||'—'));
+setText('doctorTel', 'Tel: '+(receta.medico.telefono||'—'));
+setText('doctorDir', 'Dirección: '+(receta.medico.direccion||'—'));
+
+setText('pacienteNombre', receta.paciente.nombre||'—');
+setText('fechaEmision', fechaLarga(receta.timestamp));
+setText('recetaId', 'ID: '+receta.id);
+
+setText('pacEdad',   'Edad: '+(receta.paciente.edad||'—'));
+setText('pacSexo',   'Sexo: '+(receta.paciente.sexo||'—'));
+setText('pacPeso',   'Peso: '+(receta.paciente.peso||'—'));
+setText('pacTalla',  'Talla: '+(receta.paciente.talla||'—'));
+setText('pacIMC',    'IMC: '+(receta.paciente.imc||'—'));
+setText('pacTemp',   'Temp: '+(receta.paciente.temperatura||'—'));
+setText('pacPresion','PA: '+(receta.paciente.presion||'—'));
+
+const medsText = (receta.medicamentos||[]).map((m,i)=>`${i+1}. ${m.nombre}\n   Dosis: ${m.dosis}\n   Duración: ${m.duracion}`).join('\n\n');
+setText('listaMeds', medsText);
+setText('obsTexto', receta.observaciones||'—');
+setText('diagTexto', receta.diagnostico||'—');
+      
       document.getElementById('hashTexto').textContent = 'hash: '+hashSimulado(receta);
       document.getElementById('verifUrl').textContent = receta.urlBlockchain;
 
@@ -342,6 +408,9 @@
       doc.setFont(font,'normal'); doc.setFontSize(10); doc.setTextColor(55,65,81);
       doc.text(`Cédula: ${receta.medico.cedula||'—'}`, leftX, My+34);
       doc.text(`Especialidad: ${receta.medico.especialidad||'—'}`, leftX, My+50);
+      doc.text(`Tel: ${receta.medico.telefono||'—'}`, leftX, My+66);
+      doc.text(`Dirección: ${receta.medico.direccion||'—'}`, leftX, My+82);
+
 
       // Paciente
       const secY = My+84;
@@ -352,6 +421,29 @@
       doc.setFont(font,'normal'); doc.setFontSize(10); doc.setTextColor(55,65,81);
       doc.text(fechaLarga(receta.timestamp), leftX, secY+34);
       doc.text(`ID: ${receta.id}`, leftX, secY+50);
+      const vitY = secY + 68;
+      const vitLines = [
+     `Edad: ${receta.paciente.edad||'—'}  Sexo: ${receta.paciente.sexo||'—'}`,
+     `Peso: ${receta.paciente.peso||'—'}  Talla: ${receta.paciente.talla||'—'}  IMC: ${receta.paciente.imc||'—'}`,
+     `Temp: ${receta.paciente.temperatura||'—'}  PA: ${receta.paciente.presion||'—'}`
+      ];
+     doc.text(vitLines, leftX, vitY);
+
+
+
+      let obsStart = medsY + 18 + (medsSplit.length*13);
+doc.setTextColor(107,114,128); doc.setFontSize(10);
+doc.text('Observaciones', leftX, obsStart + 20);
+doc.setTextColor(17,24,39); doc.setFontSize(10);
+const obsSplit = doc.splitTextToSize(receta.observaciones||'—', leftW);
+doc.text(obsSplit, leftX, obsStart + 36);
+
+let diagStart = obsStart + 36 + (obsSplit.length*12);
+doc.setTextColor(107,114,128); doc.setFontSize(10);
+doc.text('Diagnóstico', leftX, diagStart + 20);
+doc.setTextColor(17,24,39); doc.setFontSize(10);
+const diagSplit = doc.splitTextToSize(receta.diagnostico||'—', leftW);
+doc.text(diagSplit, leftX, diagStart + 36);
 
       // Medicamentos
       const medsY = secY + 82;
@@ -371,7 +463,8 @@
       doc.roundedRect(rightX, My, qrBoxSize, qrBoxSize, 12, 12, 'S');
       const qrPadding = 16;
       const qrInner = qrBoxSize - qrPadding*2;
-      doc.addImage(qrs.mainQRUrl, 'PNG', rightX+qrPadding, My+qrPadding, qrInner, qrInner, undefined, 'FAST');
+    doc.addImage(qrs.mainQRUrl, 'PNG', rightX+qrPadding, My+qrPadding, qrInner, qrInner, undefined, 'FAST');
+
 
       doc.setTextColor(11,91,211); doc.setFontSize(10); doc.setFont(font,'bold');
       doc.text('Receta', rightX + qrBoxSize/2, My + qrBoxSize + 18, {align:'center'});
