@@ -337,63 +337,65 @@ function renderPreview(receta, mainQRDataURL, chainQRDataURL){
   // Datos de médico
   document.getElementById('doctorNombre').textContent = prefixMedico(receta.medico.nombre, receta.medico.genero);
   document.getElementById('doctorCedula').textContent = 'Cédula: '+(receta.medico.cedula||'—');
-  document.getElementById('doctorEsp').textContent = 'Especialidad: '+(receta.medico.especialidad||'—');
-  document.getElementById('doctorTel').textContent = 'Tel: '+(receta.medico.telefono||'—');
-  document.getElementById('doctorDir').textContent = 'Dirección: '+(receta.medico.direccion||'—');
+  document.getElementById('doctorEsp').textContent   = 'Especialidad: '+(receta.medico.especialidad||'—');
+  document.getElementById('doctorTel').textContent   = 'Tel: '+(receta.medico.telefono||'—');
+  document.getElementById('doctorDir').textContent   = 'Dirección: '+(receta.medico.direccion||'—');
 
   // Datos de paciente
   document.getElementById('pacienteNombre').textContent = receta.paciente.nombre||'—';
-  document.getElementById('pacEdad').textContent = 'Edad: '+(receta.paciente.edad||'—');
-  document.getElementById('pacSexo').textContent = 'Sexo: '+(receta.paciente.sexo||'—');
-  document.getElementById('pacPeso').textContent = 'Peso: '+(receta.paciente.peso||'—');
-  document.getElementById('pacTalla').textContent = 'Talla: '+(receta.paciente.talla||'—');
-  document.getElementById('pacIMC').textContent = 'IMC: '+(receta.paciente.imc||'—');
-  document.getElementById('pacTemp').textContent = 'Temp: '+(receta.paciente.temperatura||'—');
-  document.getElementById('pacPresion').textContent = 'PA: '+(receta.paciente.presion||'—');
+  document.getElementById('pacEdad').textContent   = 'Edad: '+(receta.paciente.edad||'—');
+  document.getElementById('pacSexo').textContent   = 'Sexo: '+(receta.paciente.sexo||'—');
+  document.getElementById('pacPeso').textContent   = 'Peso: '+(receta.paciente.peso||'—');
+  document.getElementById('pacTalla').textContent  = 'Talla: '+(receta.paciente.talla||'—');
+  document.getElementById('pacIMC').textContent    = 'IMC: '+(receta.paciente.imc||'—');
+  document.getElementById('pacTemp').textContent   = 'Temp: '+(receta.paciente.temperatura||'—');
+  document.getElementById('pacPresion').textContent= 'PA: '+(receta.paciente.presion||'—');
 
   document.getElementById('fechaEmision').textContent = fechaLarga(receta.timestamp);
   document.getElementById('recetaId').textContent = 'ID: '+receta.id;
 
   // Medicamentos
-  const medsText = (receta.medicamentos||[]).map((m,i)=>`${i+1}. ${m.nombre}\n   Dosis: ${m.dosis}\n   Duración: ${m.duracion}`).join('\n\n');
+  const medsText = (receta.medicamentos||[])
+    .map((m,i)=>`${i+1}. ${m.nombre}\n   Dosis: ${m.dosis}\n   Duración: ${m.duracion}`)
+    .join('\n\n');
   document.getElementById('listaMeds').textContent = medsText;
 
   // Observaciones y diagnóstico
-  document.getElementById('obsTexto').textContent = receta.observaciones||'—';
+  document.getElementById('obsTexto').textContent  = receta.observaciones||'—';
   document.getElementById('diagTexto').textContent = receta.diagnostico||'—';
 
+  // Hash y URL
   document.getElementById('hashTexto').textContent = 'hash: '+hashSimulado(receta);
-  document.getElementById('verifUrl').textContent = receta.urlBlockchain;
+  document.getElementById('verifUrl').textContent  = receta.urlBlockchain;
+
+  // QR - Ajustar tamaños (todo DENTRO de la función)
+  const qrMain = document.getElementById('qrMain');
+  qrMain.innerHTML = '';
+  const img1 = new Image();
+  img1.alt = 'QR Receta';
+  img1.width = 200;   // antes 240
+  img1.height = 200;  // antes 240
+  img1.src = mainQRDataURL;
+  qrMain.appendChild(img1);
+
+  const qrChain = document.getElementById('qrChain');
+  qrChain.innerHTML = '';
+  const img2 = new Image();
+  img2.alt = 'QR Blockchain';
+  img2.width = 100;   // antes 120
+  img2.height = 100;  // antes 120
+  img2.src = chainQRDataURL;
+  qrChain.appendChild(img2);
+
+  // Actualiza badge de origen
+  const badge = document.getElementById('badgeOrigen');
+  if (badge){
+    if (receta._origen === 'firestore'){ badge.textContent = 'FIRESTORE';  badge.className='badge ok'; }
+    else if (receta._origen === 'mock-id'){ badge.textContent = 'MOCK (ID)'; badge.className='badge warn'; }
+    else { badge.textContent = 'MOCK'; badge.className='badge warn'; }
+  }
 }
 
-  // QR - Ajustar tamaños
-  // QR principal en pantalla (más compacto)
-const qrMain = document.getElementById('qrMain');
-qrMain.innerHTML = '';
-const img1 = new Image();
-img1.alt = 'QR Receta';
-img1.width = 200;   // antes 240
-img1.height = 200;  // antes 240
-img1.src = mainQRDataURL;
-qrMain.appendChild(img1);
-
-// QR blockchain en pantalla (más compacto)
-const qrChain = document.getElementById('qrChain');
-qrChain.innerHTML = '';
-const img2 = new Image();
-img2.alt = 'QR Blockchain';
-img2.width = 100;   // antes 120
-img2.height = 100;  // antes 120
-img2.src = chainQRDataURL;
-qrChain.appendChild(img2);
-
-
-      // Actualiza badge de origen
-      const badge = document.getElementById('badgeOrigen');
-      if (receta._origen === 'firestore'){ badge.textContent = 'FIRESTORE'; badge.className='badge ok'; }
-      else if (receta._origen === 'mock-id'){ badge.textContent = 'MOCK (ID)'; badge.className='badge warn'; }
-      else { badge.textContent = 'MOCK'; badge.className='badge warn'; }
-  
 
     async function prepararReceta(receta){
       const mainQRUrl = await makeQRDataURL(receta.urlVerificacion, 520);
