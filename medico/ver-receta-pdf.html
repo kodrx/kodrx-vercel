@@ -515,7 +515,7 @@ async function generarPDF(receta, qrs){
 
   // QR Receta (derecha)
  const medsText = 120
-  y = drawSection(rightX, My + 260, rightW, medsH, 'MEDICAMENTOS'); 
+  y = drawSection(rightX, My + 260, rightW, medsText, 'MEDICAMENTOS'); 
  doc.text(doc.splitTextToSize(receta.medicamentos || '—', rightW - 16), rightX + 8, y);
   
 
