@@ -389,63 +389,65 @@ function medsToText(meds){
     });
   }
 
-  // ===== Render de vista =====
- // helper local
-function setTextById(id, txt){
-  const el = document.getElementById(id);
-  if (el) el.textContent = txt;
-}
+function renderPreview(receta, mainQRDataURL, chainQRDataURL){
+  // helper local
+  function setTextById(id, txt){
+    const el = document.getElementById(id);
+    if (el) el.textContent = txt;
+  }
 
-// ...en vez de document.getElementById(...).textContent = ...
-setTextById('doctorNombre', prefixMedico(receta.medico.nombre, receta.medico.genero));
-setTextById('doctorCedula', 'Cédula: ' + (receta.medico.cedula||'—'));
-setTextById('doctorEsp',    'Especialidad: ' + (receta.medico.especialidad||'—'));
-setTextById('doctorTel',    'Tel: ' + (receta.medico.telefono||'—'));
-setTextById('doctorDir',    'Dirección: ' + (receta.medico.direccion||'—'));
+  // Datos médico
+  setTextById('doctorNombre', prefixMedico(receta.medico.nombre, receta.medico.genero));
+  setTextById('doctorCedula', 'Cédula: ' + (receta.medico.cedula||'—'));
+  setTextById('doctorEsp',    'Especialidad: ' + (receta.medico.especialidad||'—'));
+  setTextById('doctorTel',    'Tel: ' + (receta.medico.telefono||'—'));
+  setTextById('doctorDir',    'Dirección: ' + (receta.medico.direccion||'—'));
 
-setTextById('pacienteNombre', receta.paciente.nombre||'—');
-setTextById('pacEdad',   'Edad: ' + (receta.paciente.edad||'—'));
-setTextById('pacSexo',   'Sexo: ' + (receta.paciente.sexo||'—'));
-setTextById('pacPeso',   'Peso: ' + (receta.paciente.peso||'—'));
-setTextById('pacTalla',  'Talla: ' + (receta.paciente.talla||'—'));
-setTextById('pacIMC',    'IMC: '  + (receta.paciente.imc||'—'));
-setTextById('pacTemp',   'Temp: ' + (receta.paciente.temperatura||'—'));
-setTextById('pacPresion','PA: '   + (receta.paciente.presion||'—'));
+  // Datos paciente
+  setTextById('pacienteNombre', receta.paciente.nombre||'—');
+  setTextById('pacEdad',   'Edad: ' + (receta.paciente.edad||'—'));
+  setTextById('pacSexo',   'Sexo: ' + (receta.paciente.sexo||'—'));
+  setTextById('pacPeso',   'Peso: ' + (receta.paciente.peso||'—'));
+  setTextById('pacTalla',  'Talla: ' + (receta.paciente.talla||'—'));
+  setTextById('pacIMC',    'IMC: '  + (receta.paciente.imc||'—'));
+  setTextById('pacTemp',   'Temp: ' + (receta.paciente.temperatura||'—'));
+  setTextById('pacPresion','PA: '   + (receta.paciente.presion||'—'));
 
-setTextById('fechaEmision', fechaLarga(receta.timestamp));
-setTextById('recetaId', 'ID: ' + receta.id);
+  setTextById('fechaEmision', fechaLarga(receta.timestamp));
+  setTextById('recetaId', 'ID: ' + receta.id);
 
-// MEDS: intenta derecha y, si no existe, usa el viejo id a la izquierda
-const medsTXT = medsToText(receta.medicamentos);
-const medsEl = document.getElementById('listaMedsDerecha') || document.getElementById('listaMeds');
-if (medsEl) medsEl.textContent = medsTXT;
+  // Medicamentos (derecha si existe, si no a la izquierda)
+  const medsTXT = medsToText(receta.medicamentos);
+  const medsEl = document.getElementById('listaMedsDerecha') || document.getElementById('listaMeds');
+  if (medsEl) medsEl.textContent = medsTXT;
 
-// Hash y URL
-setTextById('hashTexto', 'hash: ' + hashSimulado(receta));
-setTextById('verifUrl', receta.urlBlockchain);
+  // Hash y URL
+  setTextById('hashTexto', 'hash: ' + hashSimulado(receta));
+  setTextById('verifUrl', receta.urlBlockchain);
 
-// QRs (solo si existen contenedores)
-const qrMain = document.getElementById('qrMain');
-if (qrMain){
-  qrMain.innerHTML = '';
-  const img1 = new Image();
-  img1.alt = 'QR Receta'; img1.width = 200; img1.height = 200; img1.src = mainQRDataURL;
-  qrMain.appendChild(img1);
-}
-const qrChain = document.getElementById('qrChain');
-if (qrChain){
-  qrChain.innerHTML = '';
-  const img2 = new Image();
-  img2.alt = 'QR Blockchain'; img2.width = 100; img2.height = 100; img2.src = chainQRDataURL;
-  qrChain.appendChild(img2);
-}
+  // QRs (solo si existen contenedores)
+  const qrMain = document.getElementById('qrMain');
+  if (qrMain){
+    qrMain.innerHTML = '';
+    const img1 = new Image();
+    img1.alt = 'QR Receta'; img1.width = 200; img1.height = 200; img1.src = mainQRDataURL;
+    qrMain.appendChild(img1);
+  }
+  const qrChain = document.getElementById('qrChain');
+  if (qrChain){
+    qrChain.innerHTML = '';
+    const img2 = new Image();
+    img2.alt = 'QR Blockchain'; img2.width = 100; img2.height = 100; img2.src = chainQRDataURL;
+    qrChain.appendChild(img2);
+  }
 
-// Badge
-const badge = document.getElementById('badgeOrigen');
-if (badge){
-  if (receta._origen === 'firestore'){ badge.textContent = 'FIRESTORE';  badge.className='badge ok'; }
-  else if (receta._origen === 'mock-id'){ badge.textContent = 'MOCK (ID)'; badge.className='badge warn'; }
-  else { badge.textContent = 'MOCK'; badge.className='badge warn'; }
+  // Badge
+  const badge = document.getElementById('badgeOrigen');
+  if (badge){
+    if (receta._origen === 'firestore'){ badge.textContent = 'FIRESTORE';  badge.className='badge ok'; }
+    else if (receta._origen === 'mock-id'){ badge.textContent = 'MOCK (ID)'; badge.className='badge warn'; }
+    else { badge.textContent = 'MOCK'; badge.className='badge warn'; }
+  }
 }
 
 
