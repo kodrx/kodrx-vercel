@@ -416,6 +416,10 @@ function renderPreview(receta, mainQRDataURL, chainQRDataURL){
   setTextById('fechaEmision', fechaLarga(receta.timestamp));
   setTextById('recetaId', 'ID: ' + receta.id);
 
+  setTextById('obsTexto',  receta.observaciones||'—');
+  setTextById('diagTexto', receta.diagnostico||'—');
+
+
   // Medicamentos (derecha si existe, si no a la izquierda)
   const medsTXT = medsToText(receta.medicamentos);
   const medsEl = document.getElementById('listaMedsDerecha') || document.getElementById('listaMeds');
