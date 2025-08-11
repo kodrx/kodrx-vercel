@@ -18,7 +18,17 @@
     .badge.ok{background:#ecfdf5;color:var(--ok);border:1px solid #a7f3d0}
     .badge.warn{background:#fffbeb;color:var(--warn);border:1px solid #fcd34d}
 
-    .canvas{display:grid;grid-template-columns:1fr 1fr;gap:20px;padding:20px}
+    /* Layout de dos columnas con derecha fija para que los QR no se muevan */
+.canvas{
+  display: grid;
+  grid-template-columns: 1fr 320px; /* izquierda fluye, derecha fija */
+  gap: 16px;
+}
+.right{ display:flex; flex-direction:column; align-items:center; }
+.qr-frame{ flex:0 0 auto; }          /* evita que el QR cambie de tamaño */
+#qrMain img{ width:200px; height:200px }
+#qrChain img{ width:100px; height:100px }
+
     .left{display:flex;flex-direction:column;gap:8px}
     .doc-label{font-size:12px;color:var(--muted);letter-spacing:.04em;text-transform:uppercase}
     .doc-val{font-size:16px;font-weight:700;color:#111827}
@@ -138,11 +148,16 @@
 
           
         </section>
-<div>
-            <div class="doc-label">Medicamentos</div>
-            <div id="listaMeds" class="hash" style="white-space:pre-wrap">—</div>
-          </div>
+
         <section class="right">
+          <section class="right">
+  <div class="panel" id="panelMedsRight">
+    <div class="doc-label">Medicamentos</div>
+    <pre id="listaMedsDerecha" style="white-space:pre-wrap; margin:0">—</pre>
+  </div>
+
+  
+
           <div class="qr-frame">
             <div id="qrMain"></div>
             <div class="qr-legend">Receta</div>
@@ -350,6 +365,10 @@ async function smartLoadReceta(id){
   }
 }
 
+function medsToText(meds){
+  if(!Array.isArray(meds) || meds.length===0) return '—';
+  return meds.map((m,i)=>`${i+1}. ${m.nombre}\n   Dosis: ${m.dosis}\n   Duración: ${m.duracion}`).join('\n\n');
+}
 
   function hashSimulado(receta){
     const base = JSON.stringify({id:receta.id, meds:receta.medicamentos, t:receta.timestamp});
@@ -514,9 +533,18 @@ async function generarPDF(receta, qrs){
   doc.text(doc.splitTextToSize(receta.diagnostico || '—', leftW - 16), leftX + 8, y);
 
   // QR Receta (derecha)
- const medsText = 120
-  y = drawSection(rightX, My + 260, rightW, medsText, 'MEDICAMENTOS'); 
- doc.text(doc.splitTextToSize(receta.medicamentos || '—', rightW - 16), rightX + 8, y);
+ // === MEDICAMENTOS (columna derecha)
+const medsTextRight = medsToText(receta.medicamentos);
+doc.setFontSize(9.5); doc.setFont('helvetica','normal'); doc.setTextColor(17,24,39);
+
+// calculamos el wrap primero para saber altura
+const medsWrappedRight = doc.splitTextToSize(medsTextRight, rightW - 16);
+const lineH = 12;                      // alto de línea que estás usando
+const medsH = Math.max(60, medsWrappedRight.length * lineH + 24); // 24 = padding vertical del panel
+
+let yMedsRight = drawSection(rightX, My + 260, rightW, medsH, 'MEDICAMENTOS');
+doc.text(medsWrappedRight, rightX + 8, yMedsRight);
+
   
 
   const qrBoxSize = 240; // más compacto
