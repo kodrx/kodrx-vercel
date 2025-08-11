@@ -149,33 +149,30 @@
           
         </section>
 
-        <section class="right">
+      
           <section class="right">
-  <div class="panel" id="panelMedsRight">
-    <div class="doc-label">Medicamentos</div>
-    <pre id="listaMedsDerecha" style="white-space:pre-wrap; margin:0">—</pre>
+ <div class="panel" id="panelMedsRight" style="margin-bottom:12px">
+  <div class="doc-label">Medicamentos</div>
+  <pre id="listaMedsDerecha" style="white-space:pre-wrap; margin:0">—</pre>
+</div>
+
+<div class="qr-frame">
+  <div id="qrMain"></div>
+  <div class="qr-legend">Receta</div>
+</div>
+<div class="hash" id="hashTexto">hash: —</div>
+
+<div style="display:grid;grid-template-columns:1fr auto;gap:14px;align-items:center;margin-top:6px">
+  <div>
+    <div class="doc-label">Verificación en cadena (pública)</div>
+    <div class="sub" id="verifUrl">—</div>
   </div>
-
-  
-
-          <div class="qr-frame">
-            <div id="qrMain"></div>
-            <div class="qr-legend">Receta</div>
-          </div>
-          <div class="hash" id="hashTexto">hash: —</div>
-
-          <div style="display:grid;grid-template-columns:1fr auto;gap:14px;align-items:center;margin-top:6px">
-            <div>
-              <div class="doc-label">Verificación en cadena (pública)</div>
-              <div class="sub" id="verifUrl">—</div>
-            </div>
-            <div class="qr-frame small" style="width:150px;height:150px">
-              <div id="qrChain"></div>
-              <div class="qr-legend" style="bottom:-12px;font-size:10px">Blockchain</div>
-            </div>
-          </div>
-        </section>
-      </div>
+  <div class="qr-frame small" style="width:150px;height:150px">
+    <div id="qrChain"></div>
+    <div class="qr-legend" style="bottom:-12px;font-size:10px">Blockchain</div>
+  </div>
+</div>
+          </section>
 
       <div class="footer">Creada con KodRx. Tecnología que verifica, salud que protege.</div>
 
@@ -393,68 +390,64 @@ function medsToText(meds){
   }
 
   // ===== Render de vista =====
-  function renderPreview(receta, mainQRDataURL, chainQRDataURL){
-    // Médico
-    document.getElementById('doctorNombre').textContent = prefixMedico(receta.medico.nombre, receta.medico.genero);
-    document.getElementById('doctorCedula').textContent = 'Cédula: '+(receta.medico.cedula||'—');
-    document.getElementById('doctorEsp').textContent   = 'Especialidad: '+(receta.medico.especialidad||'—');
-    document.getElementById('doctorTel').textContent   = 'Tel: '+(receta.medico.telefono||'—');
-    document.getElementById('doctorDir').textContent   = 'Dirección: '+(receta.medico.direccion||'—');
+ // helper local
+function setTextById(id, txt){
+  const el = document.getElementById(id);
+  if (el) el.textContent = txt;
+}
 
-    // Paciente
-    document.getElementById('pacienteNombre').textContent = receta.paciente.nombre||'—';
-    document.getElementById('pacEdad').textContent   = 'Edad: '+(receta.paciente.edad||'—');
-    document.getElementById('pacSexo').textContent   = 'Sexo: '+(receta.paciente.sexo||'—');
-    document.getElementById('pacPeso').textContent   = 'Peso: '+(receta.paciente.peso||'—');
-    document.getElementById('pacTalla').textContent  = 'Talla: '+(receta.paciente.talla||'—');
-    document.getElementById('pacIMC').textContent    = 'IMC: '+(receta.paciente.imc||'—');
-    document.getElementById('pacTemp').textContent   = 'Temp: '+(receta.paciente.temperatura||'—');
-    document.getElementById('pacPresion').textContent= 'PA: '+(receta.paciente.presion||'—');
+// ...en vez de document.getElementById(...).textContent = ...
+setTextById('doctorNombre', prefixMedico(receta.medico.nombre, receta.medico.genero));
+setTextById('doctorCedula', 'Cédula: ' + (receta.medico.cedula||'—'));
+setTextById('doctorEsp',    'Especialidad: ' + (receta.medico.especialidad||'—'));
+setTextById('doctorTel',    'Tel: ' + (receta.medico.telefono||'—'));
+setTextById('doctorDir',    'Dirección: ' + (receta.medico.direccion||'—'));
 
-    document.getElementById('fechaEmision').textContent = fechaLarga(receta.timestamp);
-    document.getElementById('recetaId').textContent = 'ID: '+receta.id;
+setTextById('pacienteNombre', receta.paciente.nombre||'—');
+setTextById('pacEdad',   'Edad: ' + (receta.paciente.edad||'—'));
+setTextById('pacSexo',   'Sexo: ' + (receta.paciente.sexo||'—'));
+setTextById('pacPeso',   'Peso: ' + (receta.paciente.peso||'—'));
+setTextById('pacTalla',  'Talla: ' + (receta.paciente.talla||'—'));
+setTextById('pacIMC',    'IMC: '  + (receta.paciente.imc||'—'));
+setTextById('pacTemp',   'Temp: ' + (receta.paciente.temperatura||'—'));
+setTextById('pacPresion','PA: '   + (receta.paciente.presion||'—'));
 
-    // Medicamentos
-    const medsText = (receta.medicamentos||[])
-      .map((m,i)=>`${i+1}. ${m.nombre}\n   Dosis: ${m.dosis}\n   Duración: ${m.duracion}`)
-      .join('\n\n');
-    document.getElementById('listaMeds').textContent = medsText;
+setTextById('fechaEmision', fechaLarga(receta.timestamp));
+setTextById('recetaId', 'ID: ' + receta.id);
 
-    // Observaciones y diagnóstico
-    document.getElementById('obsTexto').textContent  = receta.observaciones||'—';
-    document.getElementById('diagTexto').textContent = receta.diagnostico||'—';
+// MEDS: intenta derecha y, si no existe, usa el viejo id a la izquierda
+const medsTXT = medsToText(receta.medicamentos);
+const medsEl = document.getElementById('listaMedsDerecha') || document.getElementById('listaMeds');
+if (medsEl) medsEl.textContent = medsTXT;
 
-    // Hash y URL
-    document.getElementById('hashTexto').textContent = 'hash: '+hashSimulado(receta);
-    document.getElementById('verifUrl').textContent  = receta.urlBlockchain;
+// Hash y URL
+setTextById('hashTexto', 'hash: ' + hashSimulado(receta));
+setTextById('verifUrl', receta.urlBlockchain);
 
-    // QRs en pantalla (compactos)
-    const qrMain = document.getElementById('qrMain');
-    qrMain.innerHTML = '';
-    const img1 = new Image();
-    img1.alt = 'QR Receta';
-    img1.width = 200;
-    img1.height = 200;
-    img1.src = mainQRDataURL;
-    qrMain.appendChild(img1);
+// QRs (solo si existen contenedores)
+const qrMain = document.getElementById('qrMain');
+if (qrMain){
+  qrMain.innerHTML = '';
+  const img1 = new Image();
+  img1.alt = 'QR Receta'; img1.width = 200; img1.height = 200; img1.src = mainQRDataURL;
+  qrMain.appendChild(img1);
+}
+const qrChain = document.getElementById('qrChain');
+if (qrChain){
+  qrChain.innerHTML = '';
+  const img2 = new Image();
+  img2.alt = 'QR Blockchain'; img2.width = 100; img2.height = 100; img2.src = chainQRDataURL;
+  qrChain.appendChild(img2);
+}
 
-    const qrChain = document.getElementById('qrChain');
-    qrChain.innerHTML = '';
-    const img2 = new Image();
-    img2.alt = 'QR Blockchain';
-    img2.width = 100;
-    img2.height = 100;
-    img2.src = chainQRDataURL;
-    qrChain.appendChild(img2);
+// Badge
+const badge = document.getElementById('badgeOrigen');
+if (badge){
+  if (receta._origen === 'firestore'){ badge.textContent = 'FIRESTORE';  badge.className='badge ok'; }
+  else if (receta._origen === 'mock-id'){ badge.textContent = 'MOCK (ID)'; badge.className='badge warn'; }
+  else { badge.textContent = 'MOCK'; badge.className='badge warn'; }
+}
 
-    // Badge
-    const badge = document.getElementById('badgeOrigen');
-    if (badge){
-      if (receta._origen === 'firestore'){ badge.textContent = 'FIRESTORE';  badge.className='badge ok'; }
-      else if (receta._origen === 'mock-id'){ badge.textContent = 'MOCK (ID)'; badge.className='badge warn'; }
-      else { badge.textContent = 'MOCK'; badge.className='badge warn'; }
-    }
-  }
 
   async function prepararReceta(receta){
     const mainQRUrl  = await makeQRDataURL(receta.urlVerificacion, 520);
@@ -608,27 +601,35 @@ doc.text(medsWrappedRight, rightX + 8, yMedsRight);
   };
 }
 
-async function boot(){
-  await waitForLibs();
-  const receta = await cargarRecetaDesdeQuery();
-  RECETA_ACTUAL = receta;
-  QRS = await prepararReceta(receta);
+// Evita doble boot/listeners si el script se inyecta dos veces
+if (!window.__kodrx_booted__) {
+  window.__kodrx_booted__ = true;
+
+  window.addEventListener('DOMContentLoaded', () => {
+    // Listeners seguros (solo si existen)
+    document.getElementById('btnDescargar')?.addEventListener('click', async () => {
+      await waitForLibs();
+      if (!RECETA_ACTUAL)  RECETA_ACTUAL = await cargarRecetaDesdeQuery();
+      if (!QRS)            QRS = await prepararReceta(RECETA_ACTUAL);
+      generarPDF(RECETA_ACTUAL, QRS);
+    });
+
+    document.getElementById('btnCargarEjemplo')?.addEventListener('click', async () => {
+      const receta = await cargarRecetaDesdeQuery();
+      RECETA_ACTUAL = receta;
+      QRS = await prepararReceta(receta);
+    });
+
+    // Boot una sola vez
+    (async () => {
+      await waitForLibs();
+      const receta = await cargarRecetaDesdeQuery();
+      RECETA_ACTUAL = receta;
+      QRS = await prepararReceta(receta);
+    })();
+  });
 }
 
-
-  document.getElementById('btnDescargar').addEventListener('click', async ()=>{
-    await waitForLibs();
-    if(!RECETA_ACTUAL){ RECETA_ACTUAL = await cargarRecetaDesdeQuery(); }
-    if(!QRS){ QRS = await prepararReceta(RECETA_ACTUAL); }
-    generarPDF(RECETA_ACTUAL, QRS);
-  });
-
-  document.getElementById('btnCargarEjemplo').addEventListener('click', async ()=>{
-    const receta = await cargarRecetaDesdeQuery();
-    RECETA_ACTUAL = receta; QRS = await prepararReceta(receta);
-  });
-
-  boot();
   </script>
 </body>
 </html>
