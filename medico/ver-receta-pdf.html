@@ -588,16 +588,37 @@ async function generarPDF(receta, qrs){
   }
 
 
-  // ===== PACIENTE (izquierda, alto controlado) =====
+// ===== PACIENTE (izquierda, alto controlado) =====
 {
-  const Hfixed = 100; // un poco más alto para que quepa Fecha+ID debajo
+  const Hfixed = 140; // un poco más alto para que quepa Fecha+ID debajo
   const s = sectionBox(leftX, yL, colW, Hfixed, 'PACIENTE');
 
   // Nombre (puede ser largo)
   doc.setFont(font,'bold'); doc.setFontSize(11.5); doc.setTextColor(...COLORS.text);
   drawClampedParagraph(s.cx, s.cy, colW - 16, 13*2, String(receta.paciente?.nombre || '—'), 13);
 
-// ↓↓↓ Fecha + ID debajo de Temp/PA (con wrap y sin desbordar) ↓↓↓
+  // Vitals (dos filas)
+  let cy = s.cy + 13*2 + 8;
+  const lv = (x,y,lbl,val)=>{ 
+    doc.setFont(font,'bold'); doc.setTextColor(...COLORS.sub); 
+    doc.text(lbl, x,y);
+    const w=doc.getTextWidth(lbl); 
+    doc.setFont(font,'normal'); doc.setTextColor(...COLORS.text); 
+    doc.text(String(val ?? '—'), x+w+4, y); 
+  };
+  doc.setFont(font,'normal'); doc.setFontSize(9.5);
+  lv(s.cx,      cy, 'Edad:', receta.paciente?.edad);
+  lv(s.cx+120,  cy, 'Sexo:', receta.paciente?.sexo);
+  cy += 13;
+  lv(s.cx,      cy, 'Peso:', receta.paciente?.peso);
+  lv(s.cx+120,  cy, 'Talla:', receta.paciente?.talla);
+  lv(s.cx+220,  cy, 'IMC:',  receta.paciente?.imc);
+  cy += 13;
+  lv(s.cx,      cy, 'Temp:', receta.paciente?.temperatura);
+  lv(s.cx+120,  cy, 'PA:',   receta.paciente?.presion);
+  cy += 16;
+
+  // ↓↓↓ Fecha + ID debajo de Temp/PA (con wrap y sin desbordar) ↓↓↓
   const lineH = 11;
   const fechaId = `${fechaStrSafe(receta.timestamp)}    ID: ${receta.id}`;
   const restante = (s.cy + Hfixed) - cy; // alto que queda dentro del panel
@@ -615,29 +636,6 @@ async function generarPDF(receta, qrs){
 
   yL = s.ny;
 }
-
-  
-  // Vitals (dos filas)
-  let cy = s.cy + 13*2 + 8;
-  const lv = (x,y,lbl,val)=>{ 
-    doc.setFont(font,'bold'); doc.setTextColor(...COLORS.sub); 
-    doc.text(lbl, x,y);
-    const w=doc.getTextWidth(lbl); 
-    doc.setFont(font,'normal'); doc.setTextColor(...COLORS.text); 
-    doc.text(String(val ?? '—'), x+w+4, y); 
-  };
-  doc.setFont(font,'normal'); doc.setFontSize(9.5);
-  lv(s.cx,      cy, 'Edad:', receta.paciente?.edad);
-  lv(s.cx+120,  cy, 'Sexo:', receta.paciente?.sexo);
-  cy += 13;
-  lv(s.cx,      cy, 'Peso:', receta.paciente?.peso);
-  lv(s.cx+120,  cy, 'Talla:', receta.paciente?.talla);
-  cy += 13;
-  lv(s.cx,      cy, 'Temp:', receta.paciente?.temperatura);
-  lv(s.cx+120,  cy, 'PA:',   receta.paciente?.presion);
-  cy += 16;
-  lv(s.cx,      cy, 'IMC:',  receta.paciente?.imc);
-  
 
   // OBSERVACIONES
   {
