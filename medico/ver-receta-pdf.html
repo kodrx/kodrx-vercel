@@ -636,21 +636,41 @@ async function generarPDF(receta, qrs){
     yL = s.ny;
   }
 
-  // antes de OBSERVACIONES y DIAGNÓSTICO
+ // ===== IZQUIERDA: OBSERVACIONES + DIAGNÓSTICO (sin encimarse) =====
 {
   const lineH = 11;
-  const spaceRestante = availYMax - yL; // espacio real libre en la izquierda
-  const mitad = Math.floor(spaceRestante / 2) - 8; // mitad para cada uno con margen
+  const minObs = 60, minDx = 60;
+
+  // espacio disponible real que queda en la columna izquierda
+  const leftSpace = Math.max(0, availYMax - yL);
+
+  // textos y alturas "ideales" por contenido
+  const obsLines = wrap(receta.observaciones, colW - 16);
+  const dxLines  = wrap(receta.diagnostico,   colW - 16);
+  const idealObsH = Math.max(minObs, obsLines.length * lineH + 6);
+  const idealDxH  = Math.max(minDx,  dxLines.length  * lineH + 6);
+
+  // si cabe todo ideal, úsalo; si no, reparte proporcionalmente
+  let obsH = idealObsH, dxH = idealDxH;
+  if (idealObsH + idealDxH > leftSpace) {
+    const totalIdeal = idealObsH + idealDxH;
+    // reparto proporcional al peso del contenido (mínimos respetados)
+    obsH = Math.max(minObs, Math.floor(leftSpace * (idealObsH / totalIdeal)));
+    dxH  = Math.max(minDx,  leftSpace - obsH);
+    // si por redondeo se pasan, corrige
+    const over = (obsH + dxH) - leftSpace;
+    if (over > 0) dxH = Math.max(minDx, dxH - over);
+  }
 
   // OBSERVACIONES
-  const sObs = sectionBox(leftX, yL, colW, mitad, 'OBSERVACIONES');
-  doc.setFont(font,'normal'); doc.setFontSize(9.5); doc.setTextColor(...COLORS.text);
+  const sObs = sectionBox(leftX, yL, colW, obsH, 'OBSERVACIONES');
+  doc.setFont('helvetica','normal'); doc.setFontSize(9.5); doc.setTextColor(17,24,39);
   drawClampedParagraph(sObs.cx, sObs.cy, colW - 16, sObs.innerH, receta.observaciones, lineH);
   yL = sObs.ny;
 
-  // DIAGNÓSTICO
-  const sDx = sectionBox(leftX, yL, colW, mitad, 'DIAGNÓSTICO');
-  doc.setFont(font,'normal'); doc.setFontSize(9.5); doc.setTextColor(...COLORS.text);
+  // DIAGNÓSTICO (empieza exactamente donde terminó OBS)
+  const sDx = sectionBox(leftX, yL, colW, dxH, 'DIAGNÓSTICO');
+  doc.setFont('helvetica','normal'); doc.setFontSize(9.5); doc.setTextColor(17,24,39);
   drawClampedParagraph(sDx.cx, sDx.cy, colW - 16, sDx.innerH, receta.diagnostico, lineH);
   yL = sDx.ny;
 }
