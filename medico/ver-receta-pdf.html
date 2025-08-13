@@ -586,24 +586,31 @@ async function generarPDF(receta, qrs){
     yL = s.ny;
   }
 
-  // ===== OBSERVACIONES (col izquierda)
-  {
-    const obsWrapped = wrap(receta.observaciones, colW - 20);
-    const contentH = Math.max(40, obsWrapped.length * 11 + 6);
-    const s = sectionBoxCol(leftX, yL, colW, contentH, 'OBSERVACIONES');
-    doc.setFont(font,'normal'); doc.setFontSize(9.5); doc.setTextColor(...COLORS.text);
-    doc.text(obsWrapped, s.cx, s.cy);
-    yL = s.ny;
-  }
+ // ===== DIAGNÓSTICO (col derecha, arriba)
+{
+  doc.setFont(font,'normal'); doc.setFontSize(9); doc.setTextColor(...COLORS.text);
+  const diagWrapped = wrap(receta.diagnostico, colW - 20);
+  const lineH = 10.5; // más compacto
+  const contentH = Math.max(36, diagWrapped.length * lineH + 4);
+  const s = sectionBoxCol(rightX, yR, colW, contentH, 'DIAGNÓSTICO');
+  // dibuja con lineHeight controlado
+  let yy = s.cy;
+  diagWrapped.forEach(line => { doc.text(line, s.cx, yy); yy += lineH; });
+  yR = s.ny;
+}
 
-  // ===== DIAGNÓSTICO (col derecha, arriba)
-  {
-    const diagWrapped = wrap(receta.diagnostico, colW - 20);
-    const contentH = Math.max(40, diagWrapped.length * 11 + 6);
-    const s = sectionBoxCol(leftX, yL, colW, contentH, 'DIAGNÓSTICO');
-    doc.text(diagWrapped, s.cx, s.cy);
-    yR = s.ny;
-  }
+// ===== MEDICAMENTOS (col derecha, debajo de diagnóstico)
+{
+  doc.setFont(font,'normal'); doc.setFontSize(9); doc.setTextColor(...COLORS.text);
+  const medsWrapped = wrap(medsToText(receta.medicamentos), colW - 20);
+  const lineH = 10.5;
+  const contentH = Math.max(48, medsWrapped.length * lineH + 4);
+  const s = sectionBoxCol(rightX, yR, colW, contentH, 'MEDICAMENTOS');
+  let yy = s.cy;
+  medsWrapped.forEach(line => { doc.text(line, s.cx, yy); yy += lineH; });
+  yR = s.ny;
+}
+
 
   // ===== MEDICAMENTOS (col derecha, debajo de diagnóstico)
   {
@@ -614,54 +621,63 @@ async function generarPDF(receta, qrs){
     yR = s.ny;
   }
 
-  // ===== QR RECETA (debajo de Medicamentos, mismo flujo derecha)
-  {
-    const box = 140, pad = 10;       // más compacto (140 px)
-    let y = yR;
-    // si no cabe arriba del footer, lo pegamos a la altura mínima de margen
-    if (y + box + 28 > availYMax) y = Math.min(availYMax - (box + 28), y);
+// ===== QR RECETA (debajo de Medicamentos, mismo flujo derecha)
+{
+  const box = 120, pad = 10;  // más compacto (antes 140)
+  // y deseada = donde terminó la derecha
+  let y = yR;
+  // Asegura que NUNCA quede por ENCIMA de yR y que quepa antes del footer
+  const yMax = availYMax - (box + 22);
+  y = Math.min(Math.max(y, My), yMax);
 
-    const xQR = rightX + (colW - box) / 2;
-    doc.setDrawColor(...COLORS.brand); doc.setLineWidth(3);
-    doc.roundedRect(xQR, y, box, box, 10, 10, 'S');
-    doc.addImage(qrs.mainQRUrl, 'PNG', xQR + pad, y + pad, box - pad*2, box - pad*2, undefined, 'FAST');
-    doc.setTextColor(...COLORS.brand); doc.setFont(font,'bold'); doc.setFontSize(9.5);
-    doc.text('Receta', xQR + box/2, y + box + 14, {align:'center'});
-    yR = y + box + 22;
-  }
+  const xQR = rightX + (colW - box) / 2;
+  doc.setDrawColor(...COLORS.brand); doc.setLineWidth(3);
+  doc.roundedRect(xQR, y, box, box, 10, 10, 'S');
+  doc.addImage(qrs.mainQRUrl, 'PNG', xQR + pad, y + pad, box - pad*2, box - pad*2, undefined, 'FAST');
+  doc.setTextColor(...COLORS.brand); doc.setFont(font,'bold'); doc.setFontSize(9.5);
+  doc.text('Receta', xQR + box/2, y + box + 12, {align:'center'});
 
-  // ===== Hash + Verificación + QR Blockchain (esquina inferior derecha)
-  {
-    // bloque se ubica a partir del mayor de ambas columnas
-    let y = Math.max(yL, yR) + 8;
-    const mini = 90;
-    const rectW = mini, rectH = mini;
-    const qrX = rightX + colW - rectW;   // alineado a la derecha de la columna derecha
-    let qrY = y;
+  // avanza cursor de derecha
+  yR = y + box + 20;
+}
 
-    // Si no cabe, súbelo para no pisar el pie
-    if (qrY + rectH + 30 > availYMax) qrY = availYMax - rectH - 30;
 
-    // Texto (hash + url) se imprimen sobre la columna izquierda hasta llegar a la altura del QR
-    const textW = CW - (colW - 0); // aprovechamos todo el ancho menos el bloque del QR
-    doc.setTextColor(...COLORS.sub); doc.setFont(font,'normal'); doc.setFontSize(9.5);
-    const hashText = 'hash: ' + hashSimulado(receta);
-    const hashWrapped = wrap(hashText, rightX - leftX + (colW - mini) - 24); // ancho hasta antes del QR
-    doc.text(hashWrapped, leftX, qrY);
+  // ===== Hash + Verificación + QR Blockchain (inferior derecha)
+{
+  // punto base = mayor de ambas columnas tras QR Receta
+  let baseY = Math.max(yL, yR) + 6;
 
-    const urlTitleY = qrY + hashWrapped.length*11 + 16;
-    doc.setTextColor(...COLORS.label); doc.setFont(font,'bold'); doc.setFontSize(9.5);
-    doc.text('Verificación en cadena (pública)', leftX, urlTitleY);
-    doc.setTextColor(...COLORS.sub); doc.setFont(font,'normal'); doc.setFontSize(9);
-    const urlWrapped = wrap(receta.urlBlockchain, rightX - leftX + (colW - mini) - 24);
-    doc.text(urlWrapped, leftX, urlTitleY + 12);
+  const mini = 84; // un poco más chico
+  const rectW = mini, rectH = mini;
+  const qrX = rightX + colW - rectW;
+  let qrY = baseY;
 
-    // Marco del QR Blockchain
-    doc.setDrawColor(...COLORS.brand); doc.setLineWidth(2.6);
-    doc.roundedRect(qrX, qrY - 8, rectW, rectH, 8, 8, 'S');
-    doc.addImage(qrs.chainQRUrl, 'PNG', qrX + 8, qrY + 2, rectW - 16, rectH - 16, undefined, 'FAST');
-    doc.setTextColor(...COLORS.brand); doc.setFont(font,'bold'); doc.setFontSize(8.5);
-    doc.text('Blockchain', qrX + rectW/2, qrY + rectH + 10, {align:'center'});
+  // Si se pasa, súbelo hasta que quepa antes del footer
+  const qrBottom = qrY + rectH + 26;
+  const limit = availYMax;
+  if (qrBottom > limit) qrY -= (qrBottom - limit);
+
+  // Texto a la izquierda (usa TODO el ancho menos el bloque del QR)
+  const textW = (qrX - leftX) - 16; // hasta antes del QR
+  doc.setTextColor(...COLORS.sub); doc.setFont(font,'normal'); doc.setFontSize(9.5);
+  const hashText = 'hash: ' + hashSimulado(receta);
+  const hashWrapped = wrap(hashText, textW);
+  doc.text(hashWrapped, leftX, qrY);
+
+  const urlTitleY = qrY + hashWrapped.length*11 + 14;
+  doc.setTextColor(...COLORS.label); doc.setFont(font,'bold'); doc.setFontSize(9.5);
+  doc.text('Verificación en cadena (pública)', leftX, urlTitleY);
+  doc.setTextColor(...COLORS.sub); doc.setFont(font,'normal'); doc.setFontSize(9);
+  const urlWrapped = wrap(receta.urlBlockchain, textW);
+  doc.text(urlWrapped, leftX, urlTitleY + 12);
+
+  // Marco + QR Blockchain (anclado a la derecha)
+  doc.setDrawColor(...COLORS.brand); doc.setLineWidth(2.4);
+  doc.roundedRect(qrX, qrY - 8, rectW, rectH, 8, 8, 'S');
+  doc.addImage(qrs.chainQRUrl, 'PNG', qrX + 8, qrY + 2, rectW - 16, rectH - 16, undefined, 'FAST');
+  doc.setTextColor(...COLORS.brand); doc.setFont(font,'bold'); doc.setFontSize(8.5);
+  doc.text('Blockchain', qrX + rectW/2, qrY + rectH + 10, {align:'center'});
+}
 
     // no avanzamos y más: queremos que el pie vaya centrado al final
   }
