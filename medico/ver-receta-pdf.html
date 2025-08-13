@@ -724,7 +724,7 @@ if (!window.__kodrx_booted__) {
       const receta = await cargarRecetaDesdeQuery();
       RECETA_ACTUAL = receta;
       QRS = await prepararReceta(receta);
-    })();
+    });
   });
 }
 
