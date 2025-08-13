@@ -590,7 +590,7 @@ async function generarPDF(receta, qrs){
 
   // ===== PACIENTE (izquierda, alto controlado) =====
 {
-  const Hfixed = 140; // un poco más alto para que quepa Fecha+ID debajo
+  const Hfixed = 100; // un poco más alto para que quepa Fecha+ID debajo
   const s = sectionBox(leftX, yL, colW, Hfixed, 'PACIENTE');
 
   // Nombre (puede ser largo)
@@ -612,12 +612,11 @@ async function generarPDF(receta, qrs){
   cy += 13;
   lv(s.cx,      cy, 'Peso:', receta.paciente?.peso);
   lv(s.cx+120,  cy, 'Talla:', receta.paciente?.talla);
-  lv(s.cx+220,  cy, 'IMC:',  receta.paciente?.imc);
   cy += 13;
   lv(s.cx,      cy, 'Temp:', receta.paciente?.temperatura);
   lv(s.cx+120,  cy, 'PA:',   receta.paciente?.presion);
   cy += 16;
-
+  lv(s.cx,      cy, 'IMC:',  receta.paciente?.imc);
   // ↓↓↓ Fecha + ID debajo de Temp/PA (con wrap y sin desbordar) ↓↓↓
   const lineH = 11;
   const fechaId = `${fechaStrSafe(receta.timestamp)}    ID: ${receta.id}`;
