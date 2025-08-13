@@ -699,6 +699,33 @@ async function generarPDF(receta, qrs){
   };
 }
 
+// === QR -> DataURL (usado por prepararReceta/generarPDF) ===
+function makeQRDataURL(text, size = 260){
+  return new Promise((resolve)=>{
+    if (typeof QRCode === 'undefined'){ console.error('QRCode no está disponible'); resolve(''); return; }
+    const div = document.createElement('div');
+    new QRCode(div, { text, width:size, height:size, correctLevel: QRCode.CorrectLevel.M });
+    setTimeout(()=>{
+      const img = div.querySelector('img');
+      if (img && img.src) return resolve(img.src);
+      const canvas = div.querySelector('canvas');
+      resolve(canvas ? canvas.toDataURL('image/png') : '');
+    }, 0);
+  });
+}
+
+// === Render de vista (asegúrate que esta función YA exista arriba) ===
+// function renderPreview(receta, mainQRDataURL, chainQRDataURL){ ... }
+
+// === Preparar QRs y pintar vista ===
+function prepararReceta(receta){
+  return (async ()=>{
+    const mainQRUrl  = await makeQRDataURL(receta.urlVerificacion, 520);
+    const chainQRUrl = await makeQRDataURL(receta.urlBlockchain, 260);
+    renderPreview(receta, mainQRUrl, chainQRUrl);
+    return { mainQRUrl, chainQRUrl };
+  })();
+}
 // Evita doble boot/listeners si el script se inyecta dos veces
 if (!window.__kodrx_booted__) {
   window.__kodrx_booted__ = true;
