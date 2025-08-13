@@ -473,7 +473,7 @@ async function generarPDF(receta, qrs){
   const rightX = Mx + colW + gutter;
 
   // Pie delgado → más espacio útil
-  const footerH = 20;                      // solo una línea
+  const footerH = 30;                      // solo una línea
   const availYMax = H - My - footerH - 8;  // límite inferior de contenido
 
   // Estilos base
@@ -636,27 +636,25 @@ async function generarPDF(receta, qrs){
     yL = s.ny;
   }
 
-  // OBSERVACIONES (no encimar)
-  {
-    const lineH = 11;
-    const obsLines = wrap(receta.observaciones, colW - 16);
-    const Hneed = Math.max(60, obsLines.length*lineH + 6);
-    const s = sectionBox(leftX, yL, colW, Hneed, 'OBSERVACIONES');
-    doc.setFont(font,'normal'); doc.setFontSize(9.5); doc.setTextColor(...COLORS.text);
-    drawClampedParagraph(s.cx, s.cy, colW - 16, s.innerH, receta.observaciones, lineH);
-    yL = s.ny;
-  }
+  // antes de OBSERVACIONES y DIAGNÓSTICO
+{
+  const lineH = 11;
+  const spaceRestante = availYMax - yL; // espacio real libre en la izquierda
+  const mitad = Math.floor(spaceRestante / 2) - 8; // mitad para cada uno con margen
 
-  // DIAGNÓSTICO (no encimar)
-  {
-    const lineH = 11;
-    const dxLines = wrap(receta.diagnostico, colW - 16);
-    const Hneed = Math.max(60, dxLines.length*lineH + 6);
-    const s = sectionBox(leftX, yL, colW, Hneed, 'DIAGNÓSTICO');
-    doc.setFont(font,'normal'); doc.setFontSize(9.5); doc.setTextColor(...COLORS.text);
-    drawClampedParagraph(s.cx, s.cy, colW - 16, s.innerH, receta.diagnostico, lineH);
-    yL = s.ny;
-  }
+  // OBSERVACIONES
+  const sObs = sectionBox(leftX, yL, colW, mitad, 'OBSERVACIONES');
+  doc.setFont(font,'normal'); doc.setFontSize(9.5); doc.setTextColor(...COLORS.text);
+  drawClampedParagraph(sObs.cx, sObs.cy, colW - 16, sObs.innerH, receta.observaciones, lineH);
+  yL = sObs.ny;
+
+  // DIAGNÓSTICO
+  const sDx = sectionBox(leftX, yL, colW, mitad, 'DIAGNÓSTICO');
+  doc.setFont(font,'normal'); doc.setFontSize(9.5); doc.setTextColor(...COLORS.text);
+  drawClampedParagraph(sDx.cx, sDx.cy, colW - 16, sDx.innerH, receta.diagnostico, lineH);
+  yL = sDx.ny;
+}
+
 
   // ===== DERECHA =====
 
