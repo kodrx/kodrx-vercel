@@ -594,7 +594,7 @@ async function generarPDF(receta, qrs){
 
   // PACIENTE (fecha e ID debajo del nombre; IMC debajo de Temp)
   {
-    const Hfixed = 140; // más compacto para no empujar
+    const Hfixed = 100; // más compacto para no empujar
     const s = sectionBox(leftX, yL, colW, Hfixed, 'PACIENTE');
 
     // Nombre (2 líneas máx)
