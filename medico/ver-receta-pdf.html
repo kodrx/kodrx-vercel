@@ -597,6 +597,26 @@ async function generarPDF(receta, qrs){
   doc.setFont(font,'bold'); doc.setFontSize(11.5); doc.setTextColor(...COLORS.text);
   drawClampedParagraph(s.cx, s.cy, colW - 16, 13*2, String(receta.paciente?.nombre || '—'), 13);
 
+// ↓↓↓ Fecha + ID debajo de Temp/PA (con wrap y sin desbordar) ↓↓↓
+  const lineH = 11;
+  const fechaId = `${fechaStrSafe(receta.timestamp)}    ID: ${receta.id}`;
+  const restante = (s.cy + Hfixed) - cy; // alto que queda dentro del panel
+  // si no cabe en una línea, lo partimos en dos: Fecha en 1a, ID en 2a
+  const fechaLinea = fechaStrSafe(receta.timestamp);
+  const idLinea    = `ID: ${receta.id}`;
+  if (restante >= lineH*2) {
+    doc.setFont(font,'normal'); doc.setTextColor(...COLORS.sub);
+    doc.text(fechaLinea, s.cx, cy);
+    doc.text(idLinea,    s.cx, cy + lineH);
+  } else {
+    // fallback compacto en una línea con clamp
+    drawClampedParagraph(s.cx, cy, colW - 16, lineH, fechaId, lineH);
+  }
+
+  yL = s.ny;
+}
+
+  
   // Vitals (dos filas)
   let cy = s.cy + 13*2 + 8;
   const lv = (x,y,lbl,val)=>{ 
@@ -617,25 +637,7 @@ async function generarPDF(receta, qrs){
   lv(s.cx+120,  cy, 'PA:',   receta.paciente?.presion);
   cy += 16;
   lv(s.cx,      cy, 'IMC:',  receta.paciente?.imc);
-  // ↓↓↓ Fecha + ID debajo de Temp/PA (con wrap y sin desbordar) ↓↓↓
-  const lineH = 11;
-  const fechaId = `${fechaStrSafe(receta.timestamp)}    ID: ${receta.id}`;
-  const restante = (s.cy + Hfixed) - cy; // alto que queda dentro del panel
-  // si no cabe en una línea, lo partimos en dos: Fecha en 1a, ID en 2a
-  const fechaLinea = fechaStrSafe(receta.timestamp);
-  const idLinea    = `ID: ${receta.id}`;
-  if (restante >= lineH*2) {
-    doc.setFont(font,'normal'); doc.setTextColor(...COLORS.sub);
-    doc.text(fechaLinea, s.cx, cy);
-    doc.text(idLinea,    s.cx, cy + lineH);
-  } else {
-    // fallback compacto en una línea con clamp
-    drawClampedParagraph(s.cx, cy, colW - 16, lineH, fechaId, lineH);
-  }
-
-  yL = s.ny;
-}
-
+  
 
   // OBSERVACIONES
   {
