@@ -677,7 +677,7 @@ async function generarPDF(receta, qrs){
   doc.addImage(qrs.chainQRUrl, 'PNG', qrX + 8, qrY + 2, rectW - 16, rectH - 16, undefined, 'FAST');
   doc.setTextColor(...COLORS.brand); doc.setFont(font,'bold'); doc.setFontSize(8.5);
   doc.text('Blockchain', qrX + rectW/2, qrY + rectH + 10, {align:'center'});
-}
+
 
     // no avanzamos y más: queremos que el pie vaya centrado al final
   }
