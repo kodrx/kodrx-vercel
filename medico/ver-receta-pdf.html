@@ -600,7 +600,7 @@ async function generarPDF(receta, qrs){
   {
     const diagWrapped = wrap(receta.diagnostico, colW - 20);
     const contentH = Math.max(40, diagWrapped.length * 11 + 6);
-    const s = sectionBoxCol(rightX, yR, colW, contentH, 'DIAGNÓSTICO');
+    const s = sectionBoxCol(leftX, yL, colW, contentH, 'DIAGNÓSTICO');
     doc.text(diagWrapped, s.cx, s.cy);
     yR = s.ny;
   }
