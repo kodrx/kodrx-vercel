@@ -457,80 +457,73 @@ function renderPreview(receta, mainQRDataURL, chainQRDataURL){
 
 async function generarPDF(receta, qrs){
   const { jsPDF } = window.jspdf;
-  const doc = new jsPDF({ unit:'pt', format:'letter', compress:true }); // 612 x 792 aprox
-
-  // ===== medidas base =====
+  const doc = new jsPDF({ unit:'pt', format:'letter', compress:true }); // 612x792
   const W = doc.internal.pageSize.getWidth();
   const H = doc.internal.pageSize.getHeight();
 
-  // Márgenes y columnas
-  const Mx = 40;                 // margen lateral
-  const My = 50;                 // margen superior aprox (el header ajusta)
-  const gutter = 16;             // separación entre columnas
-  const CW = W - 2*Mx;           // ancho de contenido
-  const colW = (CW - gutter)/2;  // ancho de cada columna
+  // --- Layout base ---
+  const Mx = 40;               // margen lateral
+  const gutter = 16;           // separación entre columnas
+  const CW = W - 2*Mx;         // ancho útil
+  const colW = (CW - gutter)/2;
   const leftX  = Mx;
   const rightX = Mx + colW + gutter;
 
-  const footerH = 52;                      // alto del pie
-const availYMax = H - My - footerH - 10; // límite inferior de contenido
+  // Pie alto y límite inferior SIEMPRE respetado
+  const footerH = 52;
+  const My = 50;                              // top base (header devuelve startY)
+  const availYMax = H - My - footerH - 10;    // límite inferior duro
 
-
-  // Estilos base
-  const font = 'helvetica';
+  // --- Colores / fuente ---
   const COLORS = {
-    panelFill: [248,250,252],
-    panelStroke: [224,231,240],
-    text: [17,24,39],
-    sub: [55,65,81],
-    label: [107,114,128],
-    brand: [11,91,211]
+    panelFill: [248,250,252], panelStroke:[224,231,240],
+    text:[17,24,39], sub:[55,65,81], label:[107,114,128], brand:[11,91,211]
   };
-  doc.setFont(font,'normal');
+  const FONT = 'helvetica';
+  doc.setFont(FONT,'normal');
 
-  // ====== helpers ======
+  // --- Helpers locales (autocontenidos) ---
   function header(){
     const headY = 18, headH = 50;
     doc.setFillColor(240,245,255);
     doc.roundedRect(18, headY, W-36, headH, 9, 9, 'F');
     doc.setTextColor(11,27,43);
-    doc.setFont(font,'bold'); doc.setFontSize(13);
+    doc.setFont(FONT,'bold'); doc.setFontSize(13);
     doc.text('KodRx — Receta médica digital', Mx, headY + 30);
-    doc.setFont(font,'normal');
+    doc.setFont(FONT,'normal');
     return headY + headH + 12; // Y segura para arrancar contenido
   }
-
-  function footerLine(){
-    doc.setDrawColor(180); doc.setLineWidth(0.3);
-    doc.line(18, H - 18 - footerH/2, W - 18, H - 18 - footerH/2);
+  function footer(){
+    doc.setFillColor(...COLORS.brand);
+    doc.rect(18, H-18-footerH, W-36, footerH, 'F');
+    doc.setTextColor(255,255,255);
+    doc.setFont(FONT,'bold'); doc.setFontSize(10.5);
+    doc.text('Creada con KodRx. Tecnología que verifica, salud que protege.', W/2, H-22, {align:'center'});
+    doc.setFont(FONT,'normal');
   }
-
+  function wrap(txt, w){ return doc.splitTextToSize(String(txt ?? '—'), w); }
   function sectionBox(x, y, w, contentH, title){
-    const padX = 10, padY = 10, titleH = 18;
-    const boxH = contentH + padY*2 + titleH;
-    const yClamped = Math.min(y, availYMax - boxH); // no invadir pie
+    // Clamp vertical para NO invadir el pie
+    const padX=10, padY=10, titleH=18, boxH = contentH + padY*2 + titleH;
+    const yClamped = Math.min(y, availYMax - boxH);
     doc.setFillColor(...COLORS.panelFill);
     doc.setDrawColor(...COLORS.panelStroke);
     doc.setLineWidth(0.8);
     doc.roundedRect(x, yClamped, w, boxH, 8, 8, 'FD');
     doc.setTextColor(...COLORS.label);
-    doc.setFont(font,'bold'); doc.setFontSize(10);
+    doc.setFont(FONT,'bold'); doc.setFontSize(10);
     doc.text(title, x + padX, yClamped + 14);
-    doc.setFont(font,'normal'); doc.setFontSize(9.5); doc.setTextColor(...COLORS.text);
-    return { cx: x + padX, cy: yClamped + 14 + padY, ny: yClamped + boxH + 10, innerH: contentH };
+    doc.setFont(FONT,'normal'); doc.setFontSize(9.5); doc.setTextColor(...COLORS.text);
+    return { cx:x+padX, cy:yClamped+14+padY, ny:yClamped+boxH+10, innerH:contentH };
   }
-
-  function wrap(text, width){ return doc.splitTextToSize(String(text ?? '—'), width); }
-
-  // pinta párrafo “con tijera”: respeta maxH y agrega “…” si se excede
-  function drawClampedParagraph(x, y, maxW, maxH, text, lineH = 11){
-    const lines = doc.splitTextToSize(String(text ?? '—'), maxW);
+  function drawClamp(x,y,maxW,maxH,text,lineH=11){
+    const lines = wrap(text, maxW);
     let used = 0, lastY = y;
     for (let i=0;i<lines.length;i++){
       if (used + lineH > maxH){
         if (i>0){
           const prev = lines[i-1];
-          const trimmed = prev.length > 1 ? prev.slice(0, Math.max(1, prev.length-1)) + '…' : prev + '…';
+          const trimmed = prev.length>1 ? prev.slice(0, prev.length-1)+'…' : prev+'…';
           doc.text(trimmed, x, lastY);
         }
         return;
@@ -540,13 +533,7 @@ const availYMax = H - My - footerH - 10; // límite inferior de contenido
       used += lineH;
     }
   }
-
-  function medsToText(meds){
-    if(!Array.isArray(meds) || meds.length===0) return '—';
-    return meds.map((m,i)=>`${i+1}. ${m.nombre}\n   Dosis: ${m.dosis}\n   Duración: ${m.duracion}`).join('\n\n');
-  }
-
-  function fechaStrSafe(ts){
+  function fechaStr(ts){
     try{
       if (ts && typeof ts.toDate === 'function') ts = ts.toDate();
       else if (ts && typeof ts.seconds === 'number') ts = new Date(ts.seconds*1000 + Math.floor((ts.nanoseconds||0)/1e6));
@@ -554,200 +541,165 @@ const availYMax = H - My - footerH - 10; // límite inferior de contenido
       return ts.toLocaleString('es-MX',{year:'numeric',month:'long',day:'numeric',hour:'2-digit',minute:'2-digit'});
     }catch(_){ return ''; }
   }
-
-  function getBlockNumber(receta){
-    if (receta.bloque != null) return String(receta.bloque);
-    try{
-      const u = new URL(receta.urlBlockchain);
-      const v = u.searchParams.get('id') || u.searchParams.get('block');
-      return v ? String(v) : '—';
-    }catch(_){ return '—'; }
+  function medsText(meds){
+    if(!Array.isArray(meds)||!meds.length) return '—';
+    return meds.map((m,i)=>`${i+1}. ${m.nombre}\n   Dosis: ${m.dosis}\n   Duración: ${m.duracion}`).join('\n\n');
+  }
+  function blockNumber(r){
+    if (r.bloque!=null) return String(r.bloque);
+    try{ const u=new URL(r.urlBlockchain); return u.searchParams.get('id')||u.searchParams.get('block')||'—'; }
+    catch(_){ return '—'; }
   }
 
-  // ===== header y cursores =====
+  // === Arranque y cursores ===
   const startY = header();
-  let yL = startY; // izquierda
-  let yR = startY; // derecha
+  let yL = startY, yR = startY;
 
-  // ===== IZQUIERDA =====
-
-  // MÉDICO (alto controlado + clamp)
+  // ------- IZQUIERDA -------
+  // MÉDICO (compacto, con clamp)
   {
     const Hfixed = 108;
     const s = sectionBox(leftX, yL, colW, Hfixed, 'MÉDICO');
-
-    // Nombre (máx 2 líneas)
-    doc.setFont(font,'bold'); doc.setFontSize(11.5); doc.setTextColor(...COLORS.text);
-    drawClampedParagraph(s.cx, s.cy, colW - 16, 13*2, receta.medico?.nombre ? `${prefixMedico(receta.medico.nombre, receta.medico.genero)}` : '—', 13);
-
-    // Resto
-    let cy = s.cy + 13*2 + 6;
-    doc.setFont(font,'normal'); doc.setFontSize(9.5); doc.setTextColor(...COLORS.sub);
-    const infoTxt =
-      `Cédula: ${receta.medico?.cedula || '—'}    Especialidad: ${receta.medico?.especialidad || '—'}\n`+
-      `Tel: ${receta.medico?.telefono || '—'}\n`+
-      `Dirección: ${receta.medico?.direccion || '—'}`;
-    drawClampedParagraph(s.cx, cy, colW - 16, Hfixed - (cy - s.cy), infoTxt, 13);
-
+    // nombre (2 líneas máx)
+    doc.setFont(FONT,'bold'); doc.setFontSize(11.5); doc.setTextColor(...COLORS.text);
+    const nombreMed = receta.medico?.nombre ? (typeof prefixMedico==='function' ? prefixMedico(receta.medico.nombre, receta.medico.genero) : receta.medico.nombre) : '—';
+    drawClamp(s.cx, s.cy, colW-16, 26, nombreMed, 13);
+    // datos
+    let cy = s.cy + 26 + 6;
+    doc.setFont(FONT,'normal'); doc.setFontSize(9.5); doc.setTextColor(...COLORS.sub);
+    const info = `Cédula: ${receta.medico?.cedula||'—'}    Especialidad: ${receta.medico?.especialidad||'—'}\n`+
+                 `Tel: ${receta.medico?.telefono||'—'}\n`+
+                 `Dirección: ${receta.medico?.direccion||'—'}`;
+    drawClamp(s.cx, cy, colW-16, Hfixed - (cy - s.cy), info, 13);
     yL = s.ny;
   }
 
-  // PACIENTE (fecha e ID debajo del nombre; IMC debajo de Temp)
+  // PACIENTE (fecha+ID debajo del nombre; IMC debajo de Temp)
   {
-    const Hfixed = 100; // más compacto para no empujar
+    const Hfixed = 140;
     const s = sectionBox(leftX, yL, colW, Hfixed, 'PACIENTE');
+    doc.setFont(FONT,'bold'); doc.setFontSize(11.5); doc.setTextColor(...COLORS.text);
+    drawClamp(s.cx, s.cy, colW-16, 26, String(receta.paciente?.nombre||'—'), 13);
 
-    // Nombre (2 líneas máx)
-    doc.setFont(font,'bold'); doc.setFontSize(11.5); doc.setTextColor(...COLORS.text);
-    drawClampedParagraph(s.cx, s.cy, colW - 16, 13*2, String(receta.paciente?.nombre || '—'), 13);
+    // fecha + ID
+    let cy = s.cy + 26 + 6;
+    doc.setFont(FONT,'normal'); doc.setFontSize(9.5); doc.setTextColor(...COLORS.sub);
+    doc.text(fechaStr(receta.timestamp), s.cx, cy); cy += 13;
+    doc.text(`ID: ${receta.id}`,          s.cx, cy); cy += 16;
 
-    // ↓ Fecha e ID justo debajo del nombre (dos líneas fijas)
-    let cy = s.cy + 13*2 + 6;
-    doc.setFont(font,'normal'); doc.setFontSize(9.5); doc.setTextColor(...COLORS.sub);
-    const fechaLinea = fechaStrSafe(receta.timestamp);
-    const idLinea    = `ID: ${receta.id}`;
-    doc.text(fechaLinea, s.cx, cy); cy += 13;
-    doc.text(idLinea,    s.cx, cy); cy += 16;
-
-    // Vitals:
-    // Fila 1: Edad | Sexo
-    // Fila 2: Peso | Talla
-    // Fila 3: Temp | PA
-    // Fila 4: IMC (debajo de Temp)
-    const lv = (x,y,lbl,val)=>{ 
-      doc.setFont(font,'bold'); doc.setTextColor(...COLORS.sub); 
-      doc.text(lbl, x,y);
-      const w=doc.getTextWidth(lbl); 
-      doc.setFont(font,'normal'); doc.setTextColor(...COLORS.text); 
-      doc.text(String(val ?? '—'), x+w+4, y); 
-    };
-
-    lv(s.cx,      cy, 'Edad:', receta.paciente?.edad);
-    lv(s.cx+120,  cy, 'Sexo:', receta.paciente?.sexo);
+    // vitals
+    const lv = (x,y,lbl,val)=>{ doc.setFont(FONT,'bold'); doc.setTextColor(...COLORS.sub); doc.text(lbl,x,y);
+      const w=doc.getTextWidth(lbl); doc.setFont(FONT,'normal'); doc.setTextColor(...COLORS.text); doc.text(String(val??'—'), x+w+4, y); };
+    lv(s.cx,     cy, 'Edad:', receta.paciente?.edad);
+    lv(s.cx+120, cy, 'Sexo:', receta.paciente?.sexo);
     cy += 13;
-    lv(s.cx,      cy, 'Peso:', receta.paciente?.peso);
-    lv(s.cx+120,  cy, 'Talla:', receta.paciente?.talla);
+    lv(s.cx,     cy, 'Peso:', receta.paciente?.peso);
+    lv(s.cx+120, cy, 'Talla:', receta.paciente?.talla);
     cy += 13;
-    lv(s.cx,      cy, 'Temp:', receta.paciente?.temperatura);
-    lv(s.cx+120,  cy, 'PA:',   receta.paciente?.presion);
+    lv(s.cx,     cy, 'Temp:',  receta.paciente?.temperatura);
+    lv(s.cx+120, cy, 'PA:',    receta.paciente?.presion);
     cy += 13;
-    lv(s.cx,      cy, 'IMC:',  receta.paciente?.imc);
+    lv(s.cx,     cy, 'IMC:',   receta.paciente?.imc);
 
     yL = s.ny;
   }
 
-// ===== IZQUIERDA: OBSERVACIONES + DIAGNÓSTICO (sin encimarse) =====
-{
-  const lineH = 11;
-  const minObs = 60, minDx = 60;
-  const gapOD = 10; // separación extra entre ambos paneles
+  // *** OBSERVACIONES + DIAGNÓSTICO: reparto del espacio restante SIN encimar ***
+  {
+    const lineH = 11, minObs = 60, minDx = 60, gapOD = 10;
+    const leftSpace = Math.max(0, availYMax - yL);   // espacio libre real en la izquierda
 
-  // espacio real libre que queda en la columna izquierda
-  const leftSpace = Math.max(0, availYMax - yL);
+    const obsLines = wrap(receta.observaciones, colW-16);
+    const dxLines  = wrap(receta.diagnostico,   colW-16);
+    const idealObsH = Math.max(minObs, obsLines.length*lineH + 6);
+    const idealDxH  = Math.max(minDx,  dxLines.length *lineH + 6);
 
-  // alturas "ideales" según contenido
-  const obsLines = wrap(receta.observaciones, colW - 16);
-  const dxLines  = wrap(receta.diagnostico,   colW - 16);
-  const idealObsH = Math.max(minObs, obsLines.length * lineH + 6);
-  const idealDxH  = Math.max(minDx,  dxLines.length  * lineH + 6);
+    // presupuesto: reparte (reservando un gap entre paneles)
+    let budget = Math.max(0, leftSpace - gapOD);
+    let obsH = idealObsH, dxH = idealDxH;
+    if (idealObsH + idealDxH > budget){
+      const totalIdeal = idealObsH + idealDxH;
+      obsH = Math.max(minObs, Math.floor(budget * (idealObsH / totalIdeal)));
+      dxH  = Math.max(minDx,  budget - obsH);
+      const over = (obsH + dxH) - budget; // ajuste por redondeo
+      if (over > 0) dxH = Math.max(minDx, dxH - over);
+    }
 
-  // presupuesto: reparte el espacio restante entre ambos (reserva gap)
-  let budget = Math.max(0, leftSpace - gapOD);
-  let obsH = idealObsH, dxH = idealDxH;
+    // OBSERVACIONES
+    const sObs = sectionBox(leftX, yL, colW, obsH, 'OBSERVACIONES');
+    doc.setFont(FONT,'normal'); doc.setFontSize(9.5); doc.setTextColor(...COLORS.text);
+    drawClamp(sObs.cx, sObs.cy, colW-16, sObs.innerH, receta.observaciones, lineH);
+    yL = sObs.ny + gapOD; // separación real
 
-  if (idealObsH + idealDxH > budget) {
-    const totalIdeal = idealObsH + idealDxH;
-    // reparto proporcional al peso del contenido, respetando mínimos
-    obsH = Math.max(minObs, Math.floor(budget * (idealObsH / totalIdeal)));
-    dxH  = Math.max(minDx,  budget - obsH);
-    // corrige posible desbordamiento por redondeo
-    const over = (obsH + dxH) - budget;
-    if (over > 0) dxH = Math.max(minDx, dxH - over);
+    // DIAGNÓSTICO
+    const sDx = sectionBox(leftX, yL, colW, dxH, 'DIAGNÓSTICO');
+    doc.setFont(FONT,'normal'); doc.setFontSize(9.5); doc.setTextColor(...COLORS.text);
+    drawClamp(sDx.cx, sDx.cy, colW-16, sDx.innerH, receta.diagnostico, lineH);
+    yL = sDx.ny;
   }
 
-  // OBSERVACIONES
-  const sObs = sectionBox(leftX, yL, colW, obsH, 'OBSERVACIONES');
-  doc.setFont('helvetica','normal'); doc.setFontSize(9.5); doc.setTextColor(17,24,39);
-  drawClampedParagraph(sObs.cx, sObs.cy, colW - 16, sObs.innerH, receta.observaciones, lineH);
-  yL = sObs.ny + gapOD; // ← añade separación real entre ambos paneles
-
-  // DIAGNÓSTICO
-  const sDx = sectionBox(leftX, yL, colW, dxH, 'DIAGNÓSTICO');
-  doc.setFont('helvetica','normal'); doc.setFontSize(9.5); doc.setTextColor(17,24,39);
-  drawClampedParagraph(sDx.cx, sDx.cy, colW - 16, sDx.innerH, receta.diagnostico, lineH);
-  yL = sDx.ny;
-}
-
-  // ===== DERECHA =====
-
+  // ------- DERECHA -------
   // MEDICAMENTOS
   {
     const lineH = 11;
-    const medsTxt = medsToText(receta.medicamentos);
-    const tmp = wrap(medsTxt, colW - 16);
-    const Hneed = Math.max(90, tmp.length*lineH + 6);
-    const s = sectionBox(rightX, yR, colW, Hneed, 'MEDICAMENTOS');
-    doc.setFont(font,'normal'); doc.setFontSize(9.5); doc.setTextColor(...COLORS.text);
-    drawClampedParagraph(s.cx, s.cy, colW - 16, s.innerH, medsTxt, lineH);
+    const medsTxt = medsText(receta.medicamentos);
+    const tmp = wrap(medsTxt, colW-16);
+    const need = Math.max(90, tmp.length*lineH + 6);
+    const s = sectionBox(rightX, yR, colW, need, 'MEDICAMENTOS');
+    doc.setFont(FONT,'normal'); doc.setFontSize(9.5); doc.setTextColor(...COLORS.text);
+    drawClamp(s.cx, s.cy, colW-16, s.innerH, medsTxt, lineH);
     yR = s.ny;
   }
 
-  // QR RECETA
+  // QR Receta
   {
-    const box = 120, pad = 10;
+    const box = 120, pad=10;
     let y = yR;
     const yMax = availYMax - (box + 20);
-    y = Math.min(Math.max(y, startY), yMax); // no sube sobre header, no invade pie
+    y = Math.min(Math.max(y, startY), yMax); // nunca sobre header, nunca invade pie
     const xQR = rightX + (colW - box)/2;
     doc.setDrawColor(...COLORS.brand); doc.setLineWidth(2.2);
     doc.roundedRect(xQR, y, box, box, 10, 10, 'S');
-    doc.addImage(qrs.mainQRUrl, 'PNG', xQR + pad, y + pad, box - pad*2, box - pad*2, undefined, 'FAST');
-    doc.setTextColor(...COLORS.brand); doc.setFont(font,'bold'); doc.setFontSize(9.5);
+    doc.addImage(qrs.mainQRUrl, 'PNG', xQR+pad, y+pad, box-2*pad, box-2*pad, undefined, 'FAST');
+    doc.setTextColor(...COLORS.brand); doc.setFont(FONT,'bold'); doc.setFontSize(9.5);
     doc.text('Receta', xQR + box/2, y + box + 12, {align:'center'});
     yR = y + box + 20;
   }
 
-  // HASH (compacto, pegado al QR Receta)
+  // HASH
   {
-    const Hfixed = 40;
-    const s = sectionBox(rightX, yR, colW, Hfixed, 'HASH');
-    doc.setFont(font,'normal'); doc.setFontSize(9.5); doc.setTextColor(...COLORS.sub);
-    drawClampedParagraph(s.cx, s.cy, colW - 16, s.innerH, 'hash: ' + hashSimulado(receta), 11);
+    const s = sectionBox(rightX, yR, colW, 40, 'HASH');
+    doc.setFont(FONT,'normal'); doc.setFontSize(9.5); doc.setTextColor(...COLORS.sub);
+    drawClamp(s.cx, s.cy, colW-16, s.innerH, 'hash: ' + (typeof hashSimulado==='function'?hashSimulado(receta):'—'), 11);
     yR = s.ny;
   }
 
-  // QR BLOCKCHAIN + leyenda “Bloque:#” + “Para verificar…”
+  // QR Blockchain + bloque + leyenda
   {
-    const mini = 90, rectW = mini, rectH = mini;
+    const mini=90, rectW=mini, rectH=mini;
     const qrX = rightX + colW - rectW;
     let qrY = Math.max(yL, yR) + 6;
-    // evita invadir pie
-    const limit = availYMax;
-    if (qrY + rectH + 34 > limit) qrY = limit - rectH - 34;
+    if (qrY + rectH + 38 > availYMax) qrY = availYMax - rectH - 38;
 
-    // Marco + QR
     doc.setDrawColor(...COLORS.brand); doc.setLineWidth(2.0);
     doc.roundedRect(qrX, qrY, rectW, rectH, 8, 8, 'S');
-    doc.addImage(qrs.chainQRUrl, 'PNG', qrX + 8, qrY + 8, rectW - 16, rectH - 16, undefined, 'FAST');
+    doc.addImage(qrs.chainQRUrl, 'PNG', qrX+8, qrY+8, rectW-16, rectH-16, undefined, 'FAST');
 
-    // Etiqueta “Blockchain”
-    doc.setTextColor(...COLORS.brand); doc.setFont(font,'bold'); doc.setFontSize(9);
+    doc.setTextColor(...COLORS.brand); doc.setFont(FONT,'bold'); doc.setFontSize(9);
     doc.text('Blockchain', qrX + rectW/2, qrY + rectH + 12, {align:'center'});
 
-    // Número de bloque centrado
-    const blockNum = getBlockNumber(receta);
-    doc.setTextColor(...COLORS.text); doc.setFont(font,'bold'); doc.setFontSize(10);
-    doc.text(`Bloque: ${blockNum}`, qrX + rectW/2, qrY + rectH + 26, {align:'center'});
+    const bnum = blockNumber(receta);
+    doc.setTextColor(...COLORS.text); doc.setFont(FONT,'bold'); doc.setFontSize(10);
+    doc.text(`Bloque: ${bnum}`, qrX + rectW/2, qrY + rectH + 26, {align:'center'});
 
-    // Leyenda “para verificar…”
-    doc.setTextColor(...COLORS.sub); doc.setFont(font,'normal'); doc.setFontSize(8.5);
+    doc.setTextColor(...COLORS.sub); doc.setFont(FONT,'normal'); doc.setFontSize(8.5);
     doc.text('Para verificar receta visitar kodrx.app', qrX + rectW/2, qrY + rectH + 38, {align:'center'});
 
     yR = qrY + rectH + 42;
   }
 
-  // ===== pie delgado =====
-  footerLine();
+  // --- Pie SIEMPRE visible ---
+  footer();
 
   doc.save(`receta_${receta.id}.pdf`);
 }
