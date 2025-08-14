@@ -603,40 +603,72 @@ async function generarPDF(receta, qrs){
 
     yL = s.ny;
   }
+// ===== IZQUIERDA: OBSERVACIONES (flujo) + DIAGNÓSTICO (restante, con separación dura) =====
+{
+  const lineH   = 11;
+  const SEP     = 18;  // ← separación visible entre cajas
+  const MIN_OBS = 60;
+  const MIN_DX  = 60;
 
-  // *** OBSERVACIONES + DIAGNÓSTICO: reparto del espacio restante SIN encimar ***
-  {
-    const lineH = 11, minObs = 60, minDx = 60, gapOD = 10;
-    const leftSpace = Math.max(0, availYMax - yL);   // espacio libre real en la izquierda
+  // Espacio que queda en la columna izquierda hasta el pie
+  const leftSpaceTotal = Math.max(0, availYMax - yL);
 
-    const obsLines = wrap(receta.observaciones, colW-16);
-    const dxLines  = wrap(receta.diagnostico,   colW-16);
-    const idealObsH = Math.max(minObs, obsLines.length*lineH + 6);
-    const idealDxH  = Math.max(minDx,  dxLines.length *lineH + 6);
+  // Altura ideal de OBS según su contenido
+  const obsWrapped = doc.splitTextToSize(String(receta.observaciones ?? '—'), colW - 16);
+  const idealObsH  = Math.max(MIN_OBS, obsWrapped.length * lineH + 6);
 
-    // presupuesto: reparte (reservando un gap entre paneles)
-    let budget = Math.max(0, leftSpace - gapOD);
-    let obsH = idealObsH, dxH = idealDxH;
-    if (idealObsH + idealDxH > budget){
-      const totalIdeal = idealObsH + idealDxH;
-      obsH = Math.max(minObs, Math.floor(budget * (idealObsH / totalIdeal)));
-      dxH  = Math.max(minDx,  budget - obsH);
-      const over = (obsH + dxH) - budget; // ajuste por redondeo
-      if (over > 0) dxH = Math.max(minDx, dxH - over);
+  // OBS no puede comerse el espacio mínimo que debe quedar para DIAG + el gap
+  const obsMaxH = Math.max(MIN_OBS, leftSpaceTotal - (SEP + MIN_DX));
+  const obsH    = Math.min(idealObsH, obsMaxH);
+
+  // --- OBSERVACIONES ---
+  const sObs = sectionBox(leftX, yL, colW, obsH, 'OBSERVACIONES');
+  doc.setFont('helvetica','normal'); doc.setFontSize(9.5); doc.setTextColor(17,24,39);
+  // clamp al alto asignado
+  (function clamp(x,y,maxW,maxH,txt){
+    const lines = doc.splitTextToSize(String(txt ?? '—'), maxW);
+    let used = 0, lastY = y;
+    for (let i=0;i<lines.length;i++){
+      if (used + lineH > maxH){
+        if (i>0){
+          const prev = lines[i-1];
+          doc.text((prev.length>1 ? prev.slice(0,prev.length-1)+'…' : prev+'…'), x, lastY);
+        }
+        return;
+      }
+      lastY = y + used + lineH;
+      doc.text(lines[i], x, lastY);
+      used += lineH;
     }
+  })(sObs.cx, sObs.cy, colW - 16, sObs.innerH, receta.observaciones);
 
-    // OBSERVACIONES
-    const sObs = sectionBox(leftX, yL, colW, obsH, 'OBSERVACIONES');
-    doc.setFont(FONT,'normal'); doc.setFontSize(9.5); doc.setTextColor(...COLORS.text);
-    drawClamp(sObs.cx, sObs.cy, colW-16, sObs.innerH, receta.observaciones, lineH);
-    yL = sObs.ny + gapOD; // separación real
+  // Salto REAL entre paneles (gap visual)
+  yL = sObs.ny + SEP;
 
-    // DIAGNÓSTICO
-    const sDx = sectionBox(leftX, yL, colW, dxH, 'DIAGNÓSTICO');
-    doc.setFont(FONT,'normal'); doc.setFontSize(9.5); doc.setTextColor(...COLORS.text);
-    drawClamp(sDx.cx, sDx.cy, colW-16, sDx.innerH, receta.diagnostico, lineH);
-    yL = sDx.ny;
-  }
+  // Lo que quede es para DIAGNÓSTICO (mínimo garantizado)
+  const dxH = Math.max(MIN_DX, availYMax - yL);
+
+  const sDx = sectionBox(leftX, yL, colW, dxH, 'DIAGNÓSTICO');
+  doc.setFont('helvetica','normal'); doc.setFontSize(9.5); doc.setTextColor(17,24,39);
+  (function clamp(x,y,maxW,maxH,txt){
+    const lines = doc.splitTextToSize(String(txt ?? '—'), maxW);
+    let used = 0, lastY = y;
+    for (let i=0;i<lines.length;i++){
+      if (used + lineH > maxH){
+        if (i>0){
+          const prev = lines[i-1];
+          doc.text((prev.length>1 ? prev.slice(0,prev.length-1)+'…' : prev+'…'), x, lastY);
+        }
+        return;
+      }
+      lastY = y + used + lineH;
+      doc.text(lines[i], x, lastY);
+      used += lineH;
+    }
+  })(sDx.cx, sDx.cy, colW - 16, sDx.innerH, receta.diagnostico);
+
+  yL = sDx.ny;
+}
 
   // ------- DERECHA -------
   // MEDICAMENTOS
