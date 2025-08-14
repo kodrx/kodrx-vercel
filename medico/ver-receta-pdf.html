@@ -472,9 +472,9 @@ async function generarPDF(receta, qrs){
   const leftX  = Mx;
   const rightX = Mx + colW + gutter;
 
-  // Pie delgado → más espacio útil
-  const footerH = 40;                      // solo una línea
-  const availYMax = H - My - footerH - 8;  // límite inferior de contenido
+  const footerH = 52;                      // alto del pie
+const availYMax = H - My - footerH - 10; // límite inferior de contenido
+
 
   // Estilos base
   const font = 'helvetica';
@@ -636,29 +636,32 @@ async function generarPDF(receta, qrs){
     yL = s.ny;
   }
 
- // ===== IZQUIERDA: OBSERVACIONES + DIAGNÓSTICO (sin encimarse) =====
+// ===== IZQUIERDA: OBSERVACIONES + DIAGNÓSTICO (sin encimarse) =====
 {
   const lineH = 11;
   const minObs = 60, minDx = 60;
+  const gapOD = 10; // separación extra entre ambos paneles
 
-  // espacio disponible real que queda en la columna izquierda
+  // espacio real libre que queda en la columna izquierda
   const leftSpace = Math.max(0, availYMax - yL);
 
-  // textos y alturas "ideales" por contenido
+  // alturas "ideales" según contenido
   const obsLines = wrap(receta.observaciones, colW - 16);
   const dxLines  = wrap(receta.diagnostico,   colW - 16);
   const idealObsH = Math.max(minObs, obsLines.length * lineH + 6);
   const idealDxH  = Math.max(minDx,  dxLines.length  * lineH + 6);
 
-  // si cabe todo ideal, úsalo; si no, reparte proporcionalmente
+  // presupuesto: reparte el espacio restante entre ambos (reserva gap)
+  let budget = Math.max(0, leftSpace - gapOD);
   let obsH = idealObsH, dxH = idealDxH;
-  if (idealObsH + idealDxH > leftSpace) {
+
+  if (idealObsH + idealDxH > budget) {
     const totalIdeal = idealObsH + idealDxH;
-    // reparto proporcional al peso del contenido (mínimos respetados)
-    obsH = Math.max(minObs, Math.floor(leftSpace * (idealObsH / totalIdeal)));
-    dxH  = Math.max(minDx,  leftSpace - obsH);
-    // si por redondeo se pasan, corrige
-    const over = (obsH + dxH) - leftSpace;
+    // reparto proporcional al peso del contenido, respetando mínimos
+    obsH = Math.max(minObs, Math.floor(budget * (idealObsH / totalIdeal)));
+    dxH  = Math.max(minDx,  budget - obsH);
+    // corrige posible desbordamiento por redondeo
+    const over = (obsH + dxH) - budget;
     if (over > 0) dxH = Math.max(minDx, dxH - over);
   }
 
@@ -666,15 +669,14 @@ async function generarPDF(receta, qrs){
   const sObs = sectionBox(leftX, yL, colW, obsH, 'OBSERVACIONES');
   doc.setFont('helvetica','normal'); doc.setFontSize(9.5); doc.setTextColor(17,24,39);
   drawClampedParagraph(sObs.cx, sObs.cy, colW - 16, sObs.innerH, receta.observaciones, lineH);
-  yL = sObs.ny;
+  yL = sObs.ny + gapOD; // ← añade separación real entre ambos paneles
 
-  // DIAGNÓSTICO (empieza exactamente donde terminó OBS)
+  // DIAGNÓSTICO
   const sDx = sectionBox(leftX, yL, colW, dxH, 'DIAGNÓSTICO');
   doc.setFont('helvetica','normal'); doc.setFontSize(9.5); doc.setTextColor(17,24,39);
   drawClampedParagraph(sDx.cx, sDx.cy, colW - 16, sDx.innerH, receta.diagnostico, lineH);
   yL = sDx.ny;
 }
-
 
   // ===== DERECHA =====
 
