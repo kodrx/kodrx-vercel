@@ -604,39 +604,72 @@ async function generarPDF(receta, qrs){
     yL = s.ny;
   }
 
-  // *** OBSERVACIONES + DIAGNÓSTICO: reparto del espacio restante SIN encimar ***
-  {
-    const lineH = 11, minObs = 60, minDx = 60, gapOD = 10;
-    const leftSpace = Math.max(0, availYMax - yL);   // espacio libre real en la izquierda
+// ===== IZQUIERDA: OBSERVACIONES (flujo) + DIAGNÓSTICO (restante) =====
+{
+  const lineH = 11;
+  const gapOD = 10;    // separación real entre ambos paneles
+  const minObs = 60;   // mínimos visuales
+  const minDx  = 60;
 
-    const obsLines = wrap(receta.observaciones, colW-16);
-    const dxLines  = wrap(receta.diagnostico,   colW-16);
-    const idealObsH = Math.max(minObs, obsLines.length*lineH + 6);
-    const idealDxH  = Math.max(minDx,  dxLines.length *lineH + 6);
+  // 1) Calcula cuánto espacio queda en la columna izquierda hasta el pie
+  const leftSpaceTotal = Math.max(0, availYMax - yL);
 
-    // presupuesto: reparte (reservando un gap entre paneles)
-    let budget = Math.max(0, leftSpace - gapOD);
-    let obsH = idealObsH, dxH = idealDxH;
-    if (idealObsH + idealDxH > budget){
-      const totalIdeal = idealObsH + idealDxH;
-      obsH = Math.max(minObs, Math.floor(budget * (idealObsH / totalIdeal)));
-      dxH  = Math.max(minDx,  budget - obsH);
-      const over = (obsH + dxH) - budget; // ajuste por redondeo
-      if (over > 0) dxH = Math.max(minDx, dxH - over);
+  // 2) Altura ideal de OBS según su contenido (con mínimo)
+  const obsWrapped  = doc.splitTextToSize(String(receta.observaciones ?? '—'), colW - 16);
+  const idealObsH   = Math.max(minObs, obsWrapped.length * lineH + 6);
+
+  // 3) OBS usa: mínimo entre su ideal y el tope que deja espacio al DIAG mínimo
+  const obsMaxH = Math.max(minObs, leftSpaceTotal - gapOD - minDx);
+  const obsH    = Math.min(idealObsH, obsMaxH);
+
+  // --- OBSERVACIONES ---
+  const sObs = sectionBox(leftX, yL, colW, obsH, 'OBSERVACIONES');
+  doc.setFont('helvetica','normal'); doc.setFontSize(9.5); doc.setTextColor(17,24,39);
+  // clamp estricto al alto asignado
+  (function drawClamp(x, y, maxW, maxH, text){
+    const lines = doc.splitTextToSize(String(text ?? '—'), maxW);
+    let used = 0, lastY = y;
+    for (let i=0;i<lines.length;i++){
+      if (used + lineH > maxH){
+        if (i>0){
+          const prev = lines[i-1];
+          doc.text((prev.length>1? prev.slice(0,prev.length-1)+'…' : prev+'…'), x, lastY);
+        }
+        return;
+      }
+      lastY = y + used + lineH;
+      doc.text(lines[i], x, lastY);
+      used += lineH;
     }
+  })(sObs.cx, sObs.cy, colW - 16, sObs.innerH, receta.observaciones);
 
-    // OBSERVACIONES
-    const sObs = sectionBox(leftX, yL, colW, obsH, 'OBSERVACIONES');
-    doc.setFont(FONT,'normal'); doc.setFontSize(9.5); doc.setTextColor(...COLORS.text);
-    drawClamp(sObs.cx, sObs.cy, colW-16, sObs.innerH, receta.observaciones, lineH);
-    yL = sObs.ny + gapOD; // separación real
+  // >>> salto REAL entre paneles
+  yL = sObs.ny + gapOD;
 
-    // DIAGNÓSTICO
-    const sDx = sectionBox(leftX, yL, colW, dxH, 'DIAGNÓSTICO');
-    doc.setFont(FONT,'normal'); doc.setFontSize(9.5); doc.setTextColor(...COLORS.text);
-    drawClamp(sDx.cx, sDx.cy, colW-16, sDx.innerH, receta.diagnostico, lineH);
-    yL = sDx.ny;
-  }
+  // 4) Lo que quede es SOLO para DIAGNÓSTICO (con mínimo y clamp)
+  const dxSpace = Math.max(minDx, availYMax - yL);
+  const sDx = sectionBox(leftX, yL, colW, dxSpace, 'DIAGNÓSTICO');
+  doc.setFont('helvetica','normal'); doc.setFontSize(9.5); doc.setTextColor(17,24,39);
+  (function drawClamp(x, y, maxW, maxH, text){
+    const lines = doc.splitTextToSize(String(text ?? '—'), maxW);
+    let used = 0, lastY = y;
+    for (let i=0;i<lines.length;i++){
+      if (used + lineH > maxH){
+        if (i>0){
+          const prev = lines[i-1];
+          doc.text((prev.length>1? prev.slice(0,prev.length-1)+'…' : prev+'…'), x, lastY);
+        }
+        return;
+      }
+      lastY = y + used + lineH;
+      doc.text(lines[i], x, lastY);
+      used += lineH;
+    }
+  })(sDx.cx, sDx.cy, colW - 16, sDx.innerH, receta.diagnostico);
+
+  yL = sDx.ny; // cursor izquierda listo
+}
+
 
   // ------- DERECHA -------
   // MEDICAMENTOS
