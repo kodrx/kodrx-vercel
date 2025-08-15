@@ -5,176 +5,204 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>KodRx | ver-receta-pdf-puro (jsPDF)</title>
   <style>
-    :root{ --kodrx-blue:#0b5bd3; --kodrx-dark:#0b1b2b; --muted:#6b7280; --ok:#059669; --warn:#b45309 }
-    *{box-sizing:border-box}
-    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial,"Noto Sans",sans-serif;background:#0f172a;color:#0f172a}
-    .wrap{max-width:900px;margin:32px auto;padding:20px}
-    .card{background:#fff;border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.15);overflow:hidden}
-    .card-header{display:flex;gap:16px;align-items:center;padding:16px 20px;border-bottom:1px solid #e5e7eb}
-    .logo{width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg,#83fbc9,#0b5bd3);display:flex;align-items:center;justify-content:center;color:#001b3b;font-weight:800}
-    .title{font-size:18px;font-weight:700;color:var(--kodrx-dark)}
-    .sub{font-size:12px;color:var(--muted)}
-    .badge{margin-left:auto;font-size:11px;padding:4px 8px;border-radius:999px;font-weight:700}
-    .badge.ok{background:#ecfdf5;color:var(--ok);border:1px solid #a7f3d0}
-    .badge.warn{background:#fffbeb;color:var(--warn);border:1px solid #fcd34d}
-
-    /* Layout de dos columnas con derecha fija para que los QR no se muevan */
-.canvas{
-  display: grid;
-  grid-template-columns: 1fr 320px; /* izquierda fluye, derecha fija */
-  gap: 16px;
-}
-.right{ display:flex; flex-direction:column; align-items:center; }
-.qr-frame{ flex:0 0 auto; }          /* evita que el QR cambie de tamaño */
-#qrMain img{ width:200px; height:200px }
-#qrChain img{ width:100px; height:100px }
-
-    .left{display:flex;flex-direction:column;gap:8px}
-    .doc-label{font-size:12px;color:var(--muted);letter-spacing:.04em;text-transform:uppercase}
-    .doc-val{font-size:16px;font-weight:700;color:#111827}
-
-    .qr-frame{position:relative;display:flex;align-items:center;justify-content:center;background:#f8fafc;border:4px solid var(--kodrx-blue);border-radius:14px;min-height:280px}
-    .qr-frame.small{min-height:140px;border-width:3px;border-radius:12px}
-    .qr-legend{position:absolute;bottom:-10px;left:50%;transform:translateX(-50%);background:#fff;color:var(--kodrx-blue);font-size:12px;padding:4px 10px;border-radius:999px;border:1px solid var(--kodrx-blue);font-weight:700}
-
-    .hash{margin-top:8px;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;font-size:12px;color:#111827;background:#f3f4f6;border-radius:10px;padding:10px;word-break:break-all}
-
-    .footer{background:var(--kodrx-blue);color:#fff;padding:12px 16px;text-align:center;font-weight:600}
-
-    .actions{display:flex;gap:12px;padding:16px;border-top:1px solid #e5e7eb;flex-wrap:wrap}
-    button{appearance:none;border:0;border-radius:12px;padding:10px 14px;font-weight:700;cursor:pointer}
-    .primary{background:var(--kodrx-blue);color:#fff}
-    .ghost{background:#eef2ff;color:#111827}
-    .meta{display:flex;gap:24px;color:#374151;font-size:13px;margin-top:6px}
-/* === PANELS (screen + print) === */
-.panel{
-  background: #f8fafc;              /* mismo tono que en jsPDF */
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
+/* ===== Layout general ===== */
+.receta-wrap{
+  max-width: 940px;   /* ancho cómodo en desktop */
+  margin: 16px auto;
   padding: 12px;
-  margin-bottom: 12px;
 }
-.panel h5{ margin: 0 0 6px; font-size: 12px; color:#6b7280; letter-spacing:.04em; text-transform:uppercase; }
 
-    @media (max-width:720px){ .canvas{grid-template-columns:1fr} }
-   /* === PRINT FIX A4 === */
-@page { size: A4; margin: 10mm; }
+.receta{
+  display: grid;
+  grid-template-columns: 1fr 340px; /* izquierda flexible + derecha fija */
+  gap: 16px;
+  align-items: start;
+}
 
-@media print{
-  html, body { height: auto; background: #fff !important; }
-  .wrap{ margin:0; padding:0 }
-  .card{ width: 190mm; margin: 0 auto; box-shadow:none; border-radius:0 }
-  .actions,.card-header{ display:none !important }
+/* Header */
+.receta-header{
+  grid-column: 1 / -1;
+  background: #F0F5FF;
+  color: #0b1b2b;
+  padding: 14px 16px;
+  border-radius: 12px;
+  font-weight: 700;
+}
 
-  /* Compactar layout y evitar empujones */
-  .canvas{ display:block }
-  section.left, section.right{ break-inside: avoid; page-break-inside: avoid }
+/* Badge origen */
+.badge{
+  display:inline-block; padding:4px 10px; border-radius:999px;
+  font-size:12px; font-weight:700; margin-left:8px;
+}
+.badge.ok{ background:#e7f6e8; color:#0b8b2b; }
+.badge.warn{ background:#fff3cd; color:#7a5a00; }
 
-  /* Módulos en una sola página */
-  .panel, .qr-frame, #listaMeds, #obsTexto, #diagTexto{
-    break-inside: avoid; page-break-inside: avoid; 
-  }
+/* ===== Paneles (cards) ===== */
+.card{
+  background: #f8fafc;
+  border:1px solid #e0e7f0;
+  border-radius: 14px;
+  padding: 12px;
+}
+.card .title{
+  color:#6b7280;
+  font-weight:800;
+  letter-spacing:.02em;
+  margin: 2px 0 8px;
+  text-transform: uppercase;
+}
+.card .kv{ color:#374151; font-size:14px; line-height:1.35; }
+.card .kv b{ color:#6b7280; margin-right:6px; }
 
-  /* QRs fijos y centrados */
-  .qr-frame{ 
-    width:auto; min-width: 0; 
-    border-width:3px; 
-    margin: 8px auto; 
-    display:inline-flex; align-items:center; justify-content:center;
-  }
-  #qrMain img{ width:200px; height:200px }
-  #qrChain img{ width:100px; height:100px }
+/* Evitar desbordes de textos largos */
+.card, .kv, .sub{
+  overflow-wrap:anywhere; word-break:break-word;
+}
+
+/* ===== Columna derecha como columna flexible ===== */
+.col-right{
+  display:flex; flex-direction:column; gap:16px; min-height:100%;
+}
+.col-right .spacer{ flex:1 1 auto; } /* empuja blockchain hacia abajo si hay espacio */
+
+/* Medicamentos en formato lista bloque */
+.meds{
+  white-space:pre-wrap; /* respeta saltos */
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  font-size: 14px; line-height:1.35; color:#111827;
+}
+
+/* ===== QRs ===== */
+.qr-frame{
+  border:2px solid #0b5bd3; border-radius:12px; padding:8px;
+  display:flex; align-items:center; justify-content:center; background:#fff;
+}
+.qr-legend{
+  color:#0b5bd3; font-weight:700; font-size:12px; text-align:center; margin-top:6px;
+}
+.qr-main img{ width: 220px; height: 220px; }       /* Receta */
+.qr-chain img{ width: 110px; height: 110px; }      /* Blockchain */
+
+/* Hash */
+.hash{
+  background:#f3f4f6; border:1px solid #e5e7eb; border-radius:10px;
+  padding:6px 8px; color:#374151; font-size:12px; white-space:normal;
+}
+
+/* Pie de página */
+.footer{
+  grid-column: 1 / -1;
+  background:#0b5bd3; color:#fff;
+  border-radius:12px;
+  padding: 12px 16px;
+  text-align:center; font-weight:700; margin-top:6px;
+}
+
+/* ===== Responsive ===== */
+@media (max-width: 920px){
+  .receta{ grid-template-columns: 1fr; }
+  .col-right{ order: 2; }  /* si quieres, puedes moverla */
+  .qr-main img{ width: 200px; height:200px; }
+  .qr-chain img{ width: 100px; height:100px; }
+}
+@media (max-width: 520px){
+  .qr-main img{ width: 180px; height:180px; }
+  .qr-chain img{ width: 90px; height:90px; }
 }
 
   </style>
 </head>
 <body class="page-border">
-  <div class="wrap">
-    <div class="card" id="previewCard">
-      <div class="card-header">
-        <div class="logo">K</div>
-        <div>
-          <div class="title">KodRx — Receta médica digital</div>
-          <div class="sub">Vista previa en pantalla </div>
+  <div class="receta-wrap">
+  <div class="receta">
+
+    <!-- Header -->
+    <div class="receta-header">
+      KodRx — Receta médica digital
+      <span id="badgeOrigen" class="badge ok">FIRESTORE</span>
+    </div>
+
+    <!-- Columna IZQUIERDA -->
+    <div class="col-left" style="display:flex;flex-direction:column;gap:16px">
+
+      <section class="card">
+        <div class="title">MÉDICO</div>
+        <div class="kv" id="doctorNombre">—</div>
+        <div class="kv"><b>Cédula:</b> <span id="doctorCedula">—</span> &nbsp;&nbsp; <b>Especialidad:</b> <span id="doctorEsp">—</span></div>
+        <div class="kv"><b>Tel:</b> <span id="doctorTel">—</span></div>
+        <div class="kv"><b>Dirección:</b> <span id="doctorDir">—</span></div>
+      </section>
+
+      <section class="card">
+        <div class="title">PACIENTE</div>
+        <div class="kv" id="pacienteNombre">—</div>
+        <div class="kv sub" style="margin-top:6px">
+          <span id="fechaEmision">—</span> &nbsp;&nbsp; <span id="recetaId">ID: —</span>
         </div>
-        <span id="badgeOrigen" class="badge warn">MOCK</span>
-      </div>
+        <div class="kv" style="margin-top:8px">
+          <b>Edad:</b> <span id="pacEdad">—</span> &nbsp;&nbsp;
+          <b>Sexo:</b> <span id="pacSexo">—</span>
+        </div>
+        <div class="kv">
+          <b>Peso:</b> <span id="pacPeso">—</span> &nbsp;&nbsp;
+          <b>Talla:</b> <span id="pacTalla">—</span>
+        </div>
+        <div class="kv">
+          <b>Temp:</b> <span id="pacTemp">—</span> &nbsp;&nbsp;
+          <b>PA:</b> <span id="pacPresion">—</span>
+        </div>
+        <div class="kv">
+          <b>IMC:</b> <span id="pacIMC">—</span>
+        </div>
+      </section>
 
-      <div class="canvas">
-        <section class="left">
-         <div>
-  <div class="doc-label">Médico</div>
-  <div class="doc-val" id="doctorNombre">—</div>
-  <div class="meta">
-    <div id="doctorCedula">Cédula: —</div>
-    <div id="doctorEsp">Especialidad: —</div>
-  </div>
-  <div class="meta">
-    <div id="doctorTel">Tel: —</div>
-    <div id="doctorDir">Dirección: —</div>
-  </div>
-</div>
+      <section class="card">
+        <div class="title">OBSERVACIONES</div>
+        <div class="kv" id="obsTexto">—</div>
+      </section>
 
+      <section class="card">
+        <div class="title">DIAGNÓSTICO</div>
+        <div class="kv" id="diagTexto">—</div>
+      </section>
+    </div>
 
-          <div>
-  <div class="doc-label">Paciente</div>
-  <div class="doc-val" id="pacienteNombre">—</div>
-  <div class="meta">
-    <div id="fechaEmision">—</div>
-    <div id="recetaId">ID: —</div>
-  </div>
-  <div class="meta" id="pacienteVitals">
-    <div id="pacEdad">Edad: —</div>
-    <div id="pacSexo">Sexo: —</div>
-    <div id="pacPeso">Peso: —</div>
-    <div id="pacTalla">Talla: —</div>
-    <div id="pacIMC">IMC: —</div>
-    <div id="pacTemp">Temp: —</div>
-    <div id="pacPresion">PA: —</div>
-  </div>
-</div>
+    <!-- Columna DERECHA -->
+    <div class="col-right">
+      <section class="card">
+        <div class="title">MEDICAMENTOS</div>
+        <pre class="meds" id="listaMedsDerecha">—</pre>
+      </section>
 
-<div>
-  <div class="doc-label">Observaciones</div>
-  <div id="obsTexto" class="hash" style="white-space:pre-wrap">—</div>
-</div>
+      <section class="card" style="text-align:center">
+        <div class="qr-frame qr-main"><div id="qrMain"></div></div>
+        <div class="qr-legend">Receta</div>
+      </section>
 
-<div>
-  <div class="doc-label">Diagnóstico</div>
-  <div id="diagTexto" class="hash" style="white-space:pre-wrap">—</div>
-</div>
+      <section class="card">
+        <div class="title">HASH</div>
+        <div class="hash" id="hashTexto">hash: —</div>
+      </section>
 
-          
+      <div class="spacer"></div> <!-- empuja blockchain hacia abajo si hay espacio -->
 
-          
-        </section>
+      <section class="card" style="text-align:center">
+        <div class="qr-frame qr-chain"><div id="qrChain"></div></div>
+        <div class="qr-legend">
+          Blockchain<br>
+          <span id="blockNum" style="color:#111827;font-weight:800"></span><br>
+          <span class="sub" style="color:#6b7280;font-weight:400">Para verificar receta visitar kodrx.app</span>
+        </div>
+      </section>
+    </div>
 
-      
-          <section class="right">
- <div class="panel" id="panelMedsRight" style="margin-bottom:12px">
-  <div class="doc-label">Medicamentos</div>
-  <pre id="listaMedsDerecha" style="white-space:pre-wrap; margin:0">—</pre>
-</div>
+    <!-- Footer -->
+    <div class="footer">
+      Creada con KodRx. Tecnología que verifica, salud que protege.
+    </div>
 
-<div class="qr-frame">
-  <div id="qrMain"></div>
-  <div class="qr-legend">Receta</div>
-</div>
-<div class="hash" id="hashTexto">hash: —</div>
-
-<div style="display:grid;grid-template-columns:1fr auto;gap:14px;align-items:center;margin-top:6px">
-  <div>
-    <div class="doc-label">Verificación en cadena (pública)</div>
-    <div class="sub" id="verifUrl">—</div>
-  </div>
-  <div class="qr-frame small" style="width:150px;height:150px">
-    <div id="qrChain"></div>
-    <div class="qr-legend" style="bottom:-12px;font-size:10px">Blockchain</div>
   </div>
 </div>
-          </section>
-
-      <div class="footer">Creada con KodRx. Tecnología que verifica, salud que protege.</div>
 
       <div class="actions">
         <button class="primary" id="btnDescargar">Descargar PDF</button>
@@ -429,21 +457,27 @@ function renderPreview(receta, mainQRDataURL, chainQRDataURL){
   setTextById('hashTexto', 'hash: ' + hashSimulado(receta));
   setTextById('verifUrl', receta.urlBlockchain);
 
-  // QRs (solo si existen contenedores)
-  const qrMain = document.getElementById('qrMain');
-  if (qrMain){
-    qrMain.innerHTML = '';
-    const img1 = new Image();
-    img1.alt = 'QR Receta'; img1.width = 200; img1.height = 200; img1.src = mainQRDataURL;
-    qrMain.appendChild(img1);
-  }
-  const qrChain = document.getElementById('qrChain');
-  if (qrChain){
-    qrChain.innerHTML = '';
-    const img2 = new Image();
-    img2.alt = 'QR Blockchain'; img2.width = 100; img2.height = 100; img2.src = chainQRDataURL;
-    qrChain.appendChild(img2);
-  }
+ // Dentro de renderPreview(receta, mainQRDataURL, chainQRDataURL)
+const qrMain = document.getElementById('qrMain');
+qrMain.innerHTML = '';
+const i1 = new Image();
+i1.src = mainQRDataURL; i1.alt = 'QR Receta';
+i1.style.width = '220px'; i1.style.height = '220px';
+qrMain.appendChild(i1);
+
+const qrChain = document.getElementById('qrChain');
+qrChain.innerHTML = '';
+const i2 = new Image();
+i2.src = chainQRDataURL; i2.alt = 'QR Blockchain';
+i2.style.width = '110px'; i2.style.height = '110px';
+qrChain.appendChild(i2);
+
+// número de bloque si lo tienes
+const blockSpan = document.getElementById('blockNum');
+if (blockSpan){
+  const num = (receta.bloque!=null) ? receta.bloque : (new URL(receta.urlBlockchain).searchParams.get('id') || '—');
+  blockSpan.textContent = `Bloque: ${num}`;
+}
 
   // Badge
   const badge = document.getElementById('badgeOrigen');
