@@ -558,7 +558,7 @@ async function generarPDF(receta, qrs){
   // ------- IZQUIERDA -------
   // MÉDICO (compacto, con clamp)
   {
-    const Hfixed = 108;
+    const Hfixed = 90;
     const s = sectionBox(leftX, yL, colW, Hfixed, 'MÉDICO');
     // nombre (2 líneas máx)
     doc.setFont(FONT,'bold'); doc.setFontSize(11.5); doc.setTextColor(...COLORS.text);
@@ -576,7 +576,7 @@ async function generarPDF(receta, qrs){
 
   // PACIENTE (fecha+ID debajo del nombre; IMC debajo de Temp)
   {
-    const Hfixed = 140;
+    const Hfixed = 100;
     const s = sectionBox(leftX, yL, colW, Hfixed, 'PACIENTE');
     doc.setFont(FONT,'bold'); doc.setFontSize(11.5); doc.setTextColor(...COLORS.text);
     drawClamp(s.cx, s.cy, colW-16, 26, String(receta.paciente?.nombre||'—'), 13);
