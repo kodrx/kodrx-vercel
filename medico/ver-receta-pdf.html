@@ -109,6 +109,66 @@
   .qr-main img{ width: 180px; height:180px; }
   .qr-chain img{ width: 90px; height:90px; }
 }
+/* ===== PRINT: forzar 1 página A4 compacta ===== */
+@page{
+  size: A4 portrait;
+  margin: 8mm;                  /* menos margen físico */
+}
+
+@media print{
+  /* colores sólidos en impresión */
+  body{ -webkit-print-color-adjust: exact; print-color-adjust: exact; background:#fff !important; }
+
+  /* contenedor principal ajustado al ancho de página */
+  .wrap{ margin:0 auto; padding:0 }
+  .card{ width: 185mm; margin: 0 auto; box-shadow:none; border-radius:0 } /* 185mm + márgenes ≈ A4 */
+
+  /* 2 columnas compactas que caben en A4 */
+  .canvas{
+    display:grid !important;
+    grid-template-columns: 1fr 290px !important; /* derecha más angosta */
+    gap: 10px !important;
+    align-items:start;
+  }
+  .left{ gap:8px !important }
+  .right{ gap:10px !important }
+
+  /* tipografía/padding más compactos para todo */
+  .panel{
+    padding: 8px !important;
+    margin-bottom: 8px !important;
+    border-radius: 10px !important;
+    break-inside: avoid; page-break-inside: avoid;
+  }
+  .panel h5{ font-size: 11px !important; margin-bottom: 5px !important }
+  .kv, .meds{ font-size: 12px !important; line-height: 1.25 !important }
+
+  /* QRs más pequeños en print */
+  .qr-main img{ width: 180px !important; height: 180px !important }
+  .qr-chain img{ width: 90px !important; height: 90px !important }
+  .qr-frame{ padding:6px !important; border-width:2px !important }
+  .qr-legend{ font-size:11px !important; padding:3px 8px !important; bottom:-9px !important }
+
+  /* hash y textos largos más densos */
+  .hash{ font-size:11px !important; padding:6px 8px !important }
+
+  /* encabezado/acciones fuera en impresión */
+  .card-header, .actions{ display:none !important }
+
+  /* footer ocupa todo el ancho, delgado */
+  .footer{
+    grid-column: 1 / -1 !important;
+    padding: 8px 10px !important;
+    border-radius: 8px !important;
+    font-size: 12px !important;
+    margin-top: 6px !important;
+  }
+
+  /* evita cortes extraños */
+  #obsTexto, #diagTexto, #listaMedsDerecha, .qr-frame{
+    break-inside: avoid; page-break-inside: avoid;
+  }
+}
 
   </style>
 </head>
