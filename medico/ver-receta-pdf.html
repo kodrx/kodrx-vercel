@@ -644,12 +644,34 @@ async function generarPDF(receta, qrs){
 
   // Salto REAL entre paneles (gap visual)
   yL = sObs.ny + SEP;
+// === OBSERVACIONES (ya la dibujaste en sObs) ===
+// ...tu código de OBS aquí...
 
-  // Lo que quede es para DIAGNÓSTICO (mínimo garantizado)
+// 🔧 Separador visual DURO entre cajas (franja blanca)
+{
+  const SEP = 16;                 // altura visible del espacio
+  const gapY = sObs.ny - 8;       // -8 para tapar el borde inferior curvo de OBS
+  doc.setFillColor(255,255,255);  // color de papel
+  doc.setDrawColor(255,255,255);
+  doc.rect(leftX, gapY, colW, SEP, 'F'); // pinta una “franja” blanca
+  // avanza el cursor por ENCIMA del separador
+  yL = gapY + SEP;
+}
+
+// === DIAGNÓSTICO (arranca SIEMPRE después del separador) ===
+{
+  const lineH = 11;
+  const MIN_DX = 60;
+  // altura disponible hasta el pie
   const dxH = Math.max(MIN_DX, availYMax - yL);
+  // si por cualquier clamp el rectángulo pudiera tocar el pie,
+  // baja un poco el alto para mantener aire
+  const safeDxH = Math.max(MIN_DX, Math.min(dxH, availYMax - yL));
 
-  const sDx = sectionBox(leftX, yL, colW, dxH, 'DIAGNÓSTICO');
+  const sDx = sectionBox(leftX, yL, colW, safeDxH, 'DIAGNÓSTICO');
   doc.setFont('helvetica','normal'); doc.setFontSize(9.5); doc.setTextColor(17,24,39);
+
+  // clamp del texto al alto asignado
   (function clamp(x,y,maxW,maxH,txt){
     const lines = doc.splitTextToSize(String(txt ?? '—'), maxW);
     let used = 0, lastY = y;
@@ -669,7 +691,7 @@ async function generarPDF(receta, qrs){
 
   yL = sDx.ny;
 }
-
+ 
   // ------- DERECHA -------
   // MEDICAMENTOS
   {
