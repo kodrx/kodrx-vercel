@@ -605,13 +605,26 @@ async function generarPDF(receta, qrs){
   }
 // ===== IZQUIERDA: OBSERVACIONES + DIAGNÓSTICO con separador duro =====
 {
-  const lineH = 11;
+  const lineH   = 11;
+  const SEP     = 16;  // espacio visible entre cajas (sube a 20 si quieres más aire)
+  const MIN_OBS = 60;
+  const MIN_DX  = 60;
 
-  // --- OBSERVACIONES ---
+  // --- 1) Calcula altura para OBSERVACIONES ---
+  // espacio disponible TOTAL en la columna izquierda hasta el pie
+  const leftSpaceTotal = Math.max(0, availYMax - yL);
+
+  // altura ideal de OBS (según contenido)
+  const obsWrapped = doc.splitTextToSize(String(receta.observaciones ?? '—'), colW - 16);
+  const idealObsH  = Math.max(MIN_OBS, obsWrapped.length * lineH + 6);
+
+  // OBS no puede comerse el mínimo de DIAG + el gap
+  const obsMaxH = Math.max(MIN_OBS, leftSpaceTotal - (SEP + MIN_DX));
+  const obsH    = Math.min(idealObsH, obsMaxH);   // ← **AQUÍ definimos obsH**
+
+  // --- 2) OBSERVACIONES ---
   const sObs = sectionBox(leftX, yL, colW, obsH, 'OBSERVACIONES');
   doc.setFont('helvetica','normal'); doc.setFontSize(9.5); doc.setTextColor(17,24,39);
-
-  // clamp al alto asignado (OBS)
   (function clamp(x,y,maxW,maxH,txt){
     const lines = doc.splitTextToSize(String(txt ?? '—'), maxW);
     let used = 0, lastY = y;
@@ -629,47 +642,39 @@ async function generarPDF(receta, qrs){
     }
   })(sObs.cx, sObs.cy, colW - 16, sObs.innerH, receta.observaciones);
 
-  // 🔧 Separador visual DURO entre cajas (franja blanca)
+  // --- 3) Separador visual DURO (franja blanca) ---
   {
-    const SEP = 16;                 // altura visible del espacio (sube a 20–22 si quieres más aire)
-    const gapY = sObs.ny - 8;       // -8 para tapar el borde inferior curvo de OBS
-    doc.setFillColor(255,255,255);
+    const gapY = sObs.ny - 8;                 // tapa el borde inferior curvo
+    doc.setFillColor(255,255,255);            // papel
     doc.setDrawColor(255,255,255);
     doc.rect(leftX, gapY, colW, SEP, 'F');
-    // avanza el cursor por ENCIMA del separador
-    yL = gapY + SEP;
+    yL = gapY + SEP;                          // cursor después del separador
   }
 
-  // --- DIAGNÓSTICO (arranca SIEMPRE después del separador) ---
-  {
-    const MIN_DX = 60;
-    // altura disponible hasta el pie (clamp para proteger el footer)
-    const dxH = Math.max(MIN_DX, Math.min(availYMax - yL, availYMax - yL));
-    const sDx = sectionBox(leftX, yL, colW, dxH, 'DIAGNÓSTICO');
-
-    doc.setFont('helvetica','normal'); doc.setFontSize(9.5); doc.setTextColor(17,24,39);
-
-    // clamp del texto al alto asignado (DX)
-    (function clamp(x,y,maxW,maxH,txt){
-      const lines = doc.splitTextToSize(String(txt ?? '—'), maxW);
-      let used = 0, lastY = y;
-      for (let i=0;i<lines.length;i++){
-        if (used + lineH > maxH){
-          if (i>0){
-            const prev = lines[i-1];
-            doc.text((prev.length>1 ? prev.slice(0,prev.length-1)+'…' : prev+'…'), x, lastY);
-          }
-          return;
+  // --- 4) DIAGNÓSTICO: usa TODO lo que queda antes del pie, con mínimo ---
+  const dxH = Math.max(MIN_DX, availYMax - yL);
+  const sDx = sectionBox(leftX, yL, colW, dxH, 'DIAGNÓSTICO');
+  doc.setFont('helvetica','normal'); doc.setFontSize(9.5); doc.setTextColor(17,24,39);
+  (function clamp(x,y,maxW,maxH,txt){
+    const lines = doc.splitTextToSize(String(txt ?? '—'), maxW);
+    let used = 0, lastY = y;
+    for (let i=0;i<lines.length;i++){
+      if (used + lineH > maxH){
+        if (i>0){
+          const prev = lines[i-1];
+          doc.text((prev.length>1 ? prev.slice(0,prev.length-1)+'…' : prev+'…'), x, lastY);
         }
-        lastY = y + used + lineH;
-        doc.text(lines[i], x, lastY);
-        used += lineH;
+        return;
       }
-    })(sDx.cx, sDx.cy, colW - 16, sDx.innerH, receta.diagnostico);
+      lastY = y + used + lineH;
+      doc.text(lines[i], x, lastY);
+      used += lineH;
+    }
+  })(sDx.cx, sDx.cy, colW - 16, sDx.innerH, receta.diagnostico);
 
-    yL = sDx.ny;
-  }
+  yL = sDx.ny; // cursor izquierda listo
 }
+ 
 
  
   // ------- DERECHA -------
