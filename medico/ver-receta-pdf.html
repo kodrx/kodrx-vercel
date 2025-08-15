@@ -642,19 +642,38 @@ async function generarPDF(receta, qrs){
     }
   })(sObs.cx, sObs.cy, colW - 16, sObs.innerH, receta.observaciones);
 
-  // --- 3) Separador visual DURO (franja blanca) ---
-  {
-    const gapY = sObs.ny - 8;                 // tapa el borde inferior curvo
-    doc.setFillColor(255,255,255);            // papel
-    doc.setDrawColor(255,255,255);
-    doc.rect(leftX, gapY, colW, SEP, 'F');
-    yL = gapY + SEP;                          // cursor después del separador
-  }
+// 🔧 Separador visual DURO entre OBS y DIAG (franja + línea tenue)
+{
+  const SEP   = 26;              // ← más alto para que respire (prueba 26–30)
+  const gapY  = sObs.ny - 2;     // apenas tapa la curva inferior de OBS
+  const midY  = gapY + SEP/2;
 
-  // --- 4) DIAGNÓSTICO: usa TODO lo que queda antes del pie, con mínimo ---
+  // franja blanca (papel)
+  doc.setFillColor(255,255,255);
+  doc.setDrawColor(255,255,255);
+  doc.rect(leftX, gapY, colW, SEP, 'F');
+
+  // línea divisoria muy tenue (gris borde)
+  doc.setDrawColor(224,231,240);
+  doc.setLineWidth(0.8);
+  doc.line(leftX + 6, midY, leftX + colW - 6, midY);
+
+  // cursor: arranca DIAGNÓSTICO después del separador con un pelín extra
+  yL = gapY + SEP + 6;
+}
+
+// === DIAGNÓSTICO (arranca SIEMPRE después del separador) ===
+{
+  const lineH = 11;
+  const MIN_DX = 60;
+
+  // altura disponible hasta el pie (respetando footer)
   const dxH = Math.max(MIN_DX, availYMax - yL);
+
   const sDx = sectionBox(leftX, yL, colW, dxH, 'DIAGNÓSTICO');
   doc.setFont('helvetica','normal'); doc.setFontSize(9.5); doc.setTextColor(17,24,39);
+
+  // clamp del texto al alto asignado
   (function clamp(x,y,maxW,maxH,txt){
     const lines = doc.splitTextToSize(String(txt ?? '—'), maxW);
     let used = 0, lastY = y;
@@ -672,9 +691,9 @@ async function generarPDF(receta, qrs){
     }
   })(sDx.cx, sDx.cy, colW - 16, sDx.innerH, receta.diagnostico);
 
-  yL = sDx.ny; // cursor izquierda listo
+  yL = sDx.ny;
 }
- 
+
 
  
   // ------- DERECHA -------
