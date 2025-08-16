@@ -109,53 +109,71 @@
   .qr-main img{ width: 180px; height:180px; }
   .qr-chain img{ width: 90px; height:90px; }
 }
-/* ===== PRINT: forzar grid real de 2 columnas ===== */
+/* ===== PRINT: 2 columnas estables usando fallback tipo tabla ===== */
 @page{ size: A4 portrait; margin: 8mm; }
 
 @media print{
-  /* que no se cuele ningún display:block anterior */
+  /* Anula cualquier display:block previo en .canvas */
   .canvas{
-    display: grid !important;                    /* fuerza grid */
-    grid-template-columns: 1fr 290px !important; /* derecha fija compacta */
-    gap: 10px !important;
-    align-items: start !important;
+    display: table !important;
+    width: 185mm !important;           /* cabe con márgenes de 8mm */
+    table-layout: fixed !important;
+    border-collapse: separate !important;
+    border-spacing: 0 0 !important;
   }
 
-  /* asegúrate de que left/right no rompan la grid */
+  /* Dos celdas de tabla: izquierda fluida, derecha fija */
   .left, .right{
-    display: block !important;      /* el layout lo maneja la grid */
-    break-inside: avoid !important; /* no cortar grupos */
+    display: table-cell !important;
+    vertical-align: top !important;
     page-break-inside: avoid !important;
-  }
-
-  /* paneles y contenidos no se parten */
-  .panel, .qr-frame, #listaMedsDerecha, #obsTexto, #diagTexto{
     break-inside: avoid !important;
-    page-break-inside: avoid !important;
+    -webkit-column-break-inside: avoid !important;
   }
 
-  /* ancho fijo que sí cabe en A4 con márgenes de 8mm */
-  .wrap{ margin:0 auto !important; padding:0 !important; }
-  .card{ width:185mm !important; margin:0 auto !important; box-shadow:none !important; border-radius:0 !important; }
+  /* Gutter: 8mm entre columnas (4+4 de padding) */
+  .left{
+    width: calc(185mm - 82mm - 8mm) !important;  /* 185 total - 82 derecha - 8 gutter */
+    padding-right: 4mm !important;
+  }
+  .right{
+    width: 82mm !important;                       /* ≈ 320px */
+    padding-left: 4mm !important;
+  }
 
-  /* compactar para ganar altura */
+  /* Compacta un poco para asegurar 1 página */
   .panel{ padding:8px !important; margin-bottom:8px !important; border-radius:10px !important; }
   .panel h5{ font-size:11px !important; margin-bottom:5px !important; }
   .kv, .meds{ font-size:12px !important; line-height:1.25 !important; }
 
-  /* QRs más chicos en print */
-  .qr-main img{ width:180px !important; height:180px !important; }
-  .qr-chain img{ width:90px !important; height:90px !important; }
-  .qr-frame{ padding:6px !important; border-width:2px !important; }
+  /* QRs en milímetros (más fiable en print) */
+  .qr-main img{ width: 60mm !important; height: 60mm !important; }   /* ~236px */
+  .qr-chain img{ width: 32mm !important; height: 32mm !important; }  /* ~121px */
+  .qr-frame{ padding: 5px !important; border-width: 2px !important; }
   .qr-legend{ font-size:11px !important; padding:3px 8px !important; bottom:-9px !important; }
 
-  /* footer a todo lo ancho de la grid */
+  /* Footer a todo lo ancho de la “tabla” */
   .footer{
-    grid-column: 1 / -1 !important;
-    padding:8px 10px !important; border-radius:8px !important; font-size:12px !important; margin-top:6px !important;
+    display: table-caption !important;  /* ocupa el ancho total */
+    caption-side: bottom !important;
+    padding:8px 10px !important;
+    border-radius:8px !important;
+    font-size:12px !important;
+    margin-top:6px !important;
   }
 
-  /* color en impresión WebKit */
+  /* Contenedor principal */
+  .wrap{ margin:0 auto !important; padding:0 !important; }
+  .card{ width:185mm !important; margin:0 auto !important; box-shadow:none !important; border-radius:0 !important; }
+
+  /* No cortes dentro de paneles ni bloques largos */
+  .panel, .qr-frame, #listaMedsDerecha, #obsTexto, #diagTexto{
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    -webkit-column-break-inside: avoid !important;
+  }
+
+  /* Colores en WebKit */
   body{ -webkit-print-color-adjust: exact; print-color-adjust: exact; background:#fff !important; }
 }
 
