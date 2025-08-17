@@ -103,6 +103,16 @@ button:active{ transform:translateY(1px) }
 }
 .qr-main img{ width: 220px; height: 220px; }       /* Receta */
 .qr-chain img{ width: 110px; height: 110px; }      /* Blockchain */
+/* Código de barras */
+#panelBarcode canvas{
+  max-width: 100%;
+}
+@media print{
+  #panelBarcode canvas{
+    width: 70mm !important;   /* ~ 265 px */
+    height: 22mm !important;  /* ~ 83 px */
+  }
+}
 
 /* Hash */
 .hash{
@@ -295,6 +305,16 @@ button:active{ transform:translateY(1px) }
         <div class="qr-frame qr-main"><div id="qrMain"></div></div>
         <div class="qr-legend">Receta</div>
       </section>
+<!-- === CÓDIGO DE BARRAS (ID) === -->
+<section class="card" id="panelBarcode">
+  <div class="title">CÓDIGO DE BARRAS (ID)</div>
+  <div style="display:flex;justify-content:center">
+    <canvas id="barcodeCanvas" width="320" height="90"></canvas>
+  </div>
+  <div class="sub" style="text-align:center;margin-top:4px">
+    <span id="barcodeLabel">—</span>
+  </div>
+</section>
 
       <section class="card">
         <div class="title">HASH</div>
@@ -583,7 +603,31 @@ const i1 = new Image();
 i1.src = mainQRDataURL; i1.alt = 'QR Receta';
 i1.style.width = '220px'; i1.style.height = '220px';
 qrMain.appendChild(i1);
+// === Código de barras del ID (pantalla) ===
+try{
+  await ensureJsBarcode();
+  const c = document.getElementById('barcodeCanvas');
+  if (c){
+    // Limpia y dibuja
+    const ctx = c.getContext('2d');
+    ctx.clearRect(0,0,c.width,c.height);
+    JsBarcode(c, String(receta.id || ''), {
+      format: 'CODE128',
+      height: 60,          // alto de barras (px)
+      width: 2,            // ancho de barra (px)
+      margin: 4,
+      displayValue: true,  // imprime el valor abajo
+      fontSize: 14,
+      textMargin: 4
+    });
+  }
+  const lbl = document.getElementById('barcodeLabel');
+  if (lbl) lbl.textContent = String(receta.id || '—');
+}catch(e){
+  console.warn('[KodRx] No se pudo generar el código de barras:', e);
+}
 
+  
 const qrChain = document.getElementById('qrChain');
 qrChain.innerHTML = '';
 const i2 = new Image();
@@ -862,6 +906,34 @@ async function generarPDF(receta, qrs){
     doc.text('Receta', xQR + box/2, y + box + 12, {align:'center'});
     yR = y + box + 20;
   }
+// === CÓDIGO DE BARRAS (ID) ===
+{
+  const barUrl = await makeBarcodeDataURL(receta.id, { w: 300, h: 90, bw: 2, bh: 56 });
+  // ancho del dibujo dentro de la columna
+  const imgW = Math.min(colW - 20, 300);
+  const imgH = 90 * (imgW / 300);
+  let x = rightX + (colW - imgW)/2;
+  let y = yR; // parte de arriba del bloque actual
+
+  // Evita pegarse al QR anterior
+  y += 6;
+
+  // Marco suave del panel
+  const boxH = imgH + 26; // imagen + etiqueta
+  doc.setFillColor(248,250,252);
+  doc.setDrawColor(224,231,240);
+  doc.setLineWidth(0.8);
+  doc.roundedRect(rightX, y, colW, boxH, 8, 8, 'FD');
+
+  // Dibuja el barcode centrado
+  doc.addImage(barUrl, 'PNG', x, y + 8, imgW, imgH, undefined, 'FAST');
+
+  // Etiqueta (“Código de barras (ID)”)
+  doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(55,65,81);
+  doc.text('Código de barras (ID)', rightX + colW/2, y + imgH + 20, { align:'center' });
+
+  yR = y + boxH + 10; // avanza cursor derecha
+}
 
   // HASH
   {
@@ -943,6 +1015,23 @@ function makeQRDataURL(text, size = 260){
     }, 0);
   });
 }
+async function makeBarcodeDataURL(text, {w=260, h=90, bw=2, bh=60}={}){
+  await ensureJsBarcode();
+  const canvas = document.createElement('canvas');
+  canvas.width = w; canvas.height = h;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#fff'; ctx.fillRect(0,0,w,h);
+  JsBarcode(canvas, String(text||''), {
+    format: 'CODE128',
+    width: bw,
+    height: bh,
+    margin: 4,
+    displayValue: true,
+    fontSize: 12,
+    textMargin: 4
+  });
+  return canvas.toDataURL('image/png');
+}
 
 // === Render de vista (asegúrate que esta función YA exista arriba) ===
 // function renderPreview(receta, mainQRDataURL, chainQRDataURL){ ... }
@@ -974,6 +1063,15 @@ if (!window.__kodrx_booted__) {
   else window.location.href = '/'; // fallback
 });
 
+async function ensureJsBarcode(){
+  if (window.JsBarcode) return;
+  await new Promise((res, rej)=>{
+    const s = document.createElement('script');
+    s.src = "https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js";
+    s.onload = res; s.onerror = rej;
+    document.head.appendChild(s);
+  });
+}
 
     // Boot una sola vez
     (async () => {
