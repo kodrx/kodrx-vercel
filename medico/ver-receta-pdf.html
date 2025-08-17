@@ -603,7 +603,17 @@ const i1 = new Image();
 i1.src = mainQRDataURL; i1.alt = 'QR Receta';
 i1.style.width = '220px'; i1.style.height = '220px';
 qrMain.appendChild(i1);
-// === Código de barras del ID (pantalla) ===
+
+
+  
+const qrChain = document.getElementById('qrChain');
+qrChain.innerHTML = '';
+const i2 = new Image();
+i2.src = chainQRDataURL; i2.alt = 'QR Blockchain';
+i2.style.width = '110px'; i2.style.height = '110px';
+qrChain.appendChild(i2);
+
+  // === Código de barras del ID (pantalla) ===
 try{
   await ensureJsBarcode();
   const c = document.getElementById('barcodeCanvas');
@@ -626,15 +636,6 @@ try{
 }catch(e){
   console.warn('[KodRx] No se pudo generar el código de barras:', e);
 }
-
-  
-const qrChain = document.getElementById('qrChain');
-qrChain.innerHTML = '';
-const i2 = new Image();
-i2.src = chainQRDataURL; i2.alt = 'QR Blockchain';
-i2.style.width = '110px'; i2.style.height = '110px';
-qrChain.appendChild(i2);
-
 // número de bloque si lo tienes
 const blockSpan = document.getElementById('blockNum');
 if (blockSpan){
