@@ -518,20 +518,20 @@ function renderPreview(receta, mainQRDataURL, chainQRDataURL){
 
   // Datos médico
   setTextById('doctorNombre', prefixMedico(receta.medico.nombre, receta.medico.genero));
-  setTextById('doctorCedula', 'Cédula: ' + (receta.medico.cedula||'—'));
-  setTextById('doctorEsp',    'Especialidad: ' + (receta.medico.especialidad||'—'));
-  setTextById('doctorTel',    'Tel: ' + (receta.medico.telefono||'—'));
-  setTextById('doctorDir',    'Dirección: ' + (receta.medico.direccion||'—'));
+  setTextById('doctorCedula', receta.medico.cedula||'—'));
+  setTextById('doctorEsp', receta.medico.especialidad||'—'));
+  setTextById('doctorTel', receta.medico.telefono||'—'));
+  setTextById('doctorDir', receta.medico.direccion||'—'));
 
   // Datos paciente
   setTextById('pacienteNombre', receta.paciente.nombre||'—');
-  setTextById('pacEdad',   'Edad: ' + (receta.paciente.edad||'—'));
-  setTextById('pacSexo',   'Sexo: ' + (receta.paciente.sexo||'—'));
-  setTextById('pacPeso',   'Peso: ' + (receta.paciente.peso||'—'));
-  setTextById('pacTalla',  'Talla: ' + (receta.paciente.talla||'—'));
-  setTextById('pacIMC',    'IMC: '  + (receta.paciente.imc||'—'));
-  setTextById('pacTemp',   'Temp: ' + (receta.paciente.temperatura||'—'));
-  setTextById('pacPresion','PA: '   + (receta.paciente.presion||'—'));
+  setTextById('pacEdad', receta.paciente.edad||'—');
+  setTextById('pacSexo', receta.paciente.sexo||'—');
+  setTextById('pacPeso', receta.paciente.peso||'—');
+  setTextById('pacTalla',receta.paciente.talla||'—');
+  setTextById('pacIMC',  receta.paciente.imc||'—');
+  setTextById('pacTemp', receta.paciente.temperatura||'—');
+  setTextById('pacPresion',receta.paciente.presion||'—');
 
   setTextById('fechaEmision', fechaLarga(receta.timestamp));
   setTextById('recetaId', 'ID: ' + receta.id);
