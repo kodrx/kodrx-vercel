@@ -556,7 +556,7 @@ function medsToText(meds){
     });
   }
 
-function renderPreview(receta, mainQRDataURL, chainQRDataURL){
+async function renderPreview(receta, mainQRDataURL, chainQRDataURL){
   // helper local
   function setTextById(id, txt){
     const el = document.getElementById(id);
