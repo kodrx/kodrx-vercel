@@ -28,6 +28,27 @@
   border-radius: 12px;
   font-weight: 700;
 }
+/* ===== Botones / acciones ===== */
+.actions{
+  display:flex; gap:12px; padding:14px 0; justify-content:flex-start; flex-wrap:wrap;
+}
+button{
+  appearance:none; border:0; cursor:pointer; font-weight:700;
+  border-radius:12px; padding:10px 14px; transition:transform .04s ease, box-shadow .2s ease;
+}
+button:active{ transform:translateY(1px) }
+.primary{
+  background:#0b5bd3; color:#fff;
+  box-shadow:0 6px 16px rgba(11,91,211,.2);
+}
+.primary:hover{ box-shadow:0 8px 22px rgba(11,91,211,.25) }
+.ghost{
+  background:#eef2ff; color:#0b1b2b; border:1px solid #dbe3ff;
+}
+.ghost:hover{ background:#e6ebff }
+
+/* Oculta acciones en impresión */
+@media print{ .actions{ display:none !important } }
 
 /* Badge origen */
 .badge{
