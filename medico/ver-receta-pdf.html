@@ -110,39 +110,64 @@
   .qr-chain img{ width: 90px; height:90px; }
 }
 
-/* ==== Print layout dedicado (tabla, 2 columnas) ==== */
-#printLayout{ display:none; }
+/* ===== PRINT: 2 columnas estables para .receta (fallback tipo tabla) ===== */
+@page{ size: A4 portrait; margin: 8mm; }
+
 @media print{
-  .canvas{ display:none !important; }          /* ocultar grid normal */
-  #printLayout{ display:block !important; }
-
-  /* Hoja y tabla que caben en A4 con márgenes de 8mm */
-  #printLayout .sheet{ width:185mm; margin:0 auto; }
-  #printLayout table{
-    width:100%; table-layout:fixed;
-    border-collapse:separate; border-spacing:4mm 0;  /* gutter ~8mm total */
+  /* Forzar la hoja y evitar que el grid se deshaga */
+  .receta{
+    display: table !important;
+    width: 185mm !important;               /* cabe con margen 8mm */
+    table-layout: fixed !important;
+    border-collapse: separate !important;
+    border-spacing: 0 0 !important;
   }
-  #printLayout td{ vertical-align:top; break-inside:avoid; page-break-inside:avoid; }
 
-  /* Izquierda fluida, derecha fija (~82mm ≈ 320px) */
-  #printLayout .leftCol{ width: calc(100% - 82mm - 8mm); padding-right:4mm; }
-  #printLayout .rightCol{ width:82mm; padding-left:4mm; }
+  /* Tus columnas reales: .col-left y .col-right (no .left/.right) */
+  .col-left, .col-right{
+    display: table-cell !important;
+    vertical-align: top !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    -webkit-column-break-inside: avoid !important;
+  }
 
-  /* Compactar un poco tipografía/padding para asegurar 1 página */
-  #printLayout .panel{ padding:8px; margin-bottom:8px; border-radius:10px; }
-  #printLayout .panel h5{ font-size:11px; margin-bottom:5px; }
-  #printLayout .kv, #printLayout .meds{ font-size:12px; line-height:1.25; }
+  /* Gutter ~8mm (4mm + 4mm) y derecha fija ~82mm (~320px) */
+  .col-left{
+    width: calc(185mm - 82mm - 8mm) !important;
+    padding-right: 4mm !important;
+  }
+  .col-right{
+    width: 82mm !important;
+    padding-left: 4mm !important;
+  }
 
-  /* QRs en mm (más estable) */
-  #printLayout .qr-main img{ width:60mm; height:60mm; }
-  #printLayout .qr-chain img{ width:32mm; height:32mm; }
-  #printLayout .qr-frame{ padding:5px; border-width:2px; }
-  #printLayout .qr-legend{ font-size:11px; padding:3px 8px; bottom:-9px; }
+  /* Compactar un poco para asegurar 1 página */
+  .card{ border-radius:10px !important; }
+  .card .title{ font-size:11px !important; margin:2px 0 4px !important; }
+  .card{ padding:8px !important; margin-bottom:8px !important; }
+  .kv, .meds{ font-size:12px !important; line-height:1.25 !important; }
 
-  /* Footer ocupa el ancho completo de la hoja impresa */
-  #printLayout .footer{
-    padding:8px 10px; border-radius:8px; font-size:12px; margin-top:6px;
-    break-inside:avoid; page-break-inside:avoid;
+  /* QRs en milímetros (más estable en WebKit) */
+  .qr-main img{ width:60mm !important; height:60mm !important; }
+  .qr-chain img{ width:32mm !important; height:32mm !important; }
+  .qr-frame{ padding:5px !important; border-width:2px !important; }
+  .qr-legend{ font-size:11px !important; padding:3px 8px !important; margin-top:4px !important; }
+
+  /* Footer a todo lo ancho de la “tabla” */
+  .footer{
+    display: table-caption !important;
+    caption-side: bottom !important;
+    padding:8px 10px !important; border-radius:8px !important; font-size:12px !important;
+    margin-top:6px !important;
+    break-inside: avoid !important; page-break-inside: avoid !important;
+  }
+
+  /* Evitar cortes dentro de bloques */
+  .card, .qr-frame, #listaMedsDerecha, #obsTexto, #diagTexto{
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+    -webkit-column-break-inside: avoid !important;
   }
 
   /* Colores sólidos en WebKit */
