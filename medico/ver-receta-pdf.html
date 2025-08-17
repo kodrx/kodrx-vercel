@@ -110,20 +110,18 @@
   .qr-chain img{ width: 90px; height:90px; }
 }
 
-/* ===== PRINT: 2 columnas estables para .receta (fallback tipo tabla) ===== */
+/* ===== PRINT: footer fijo abajo y columnas en una sola hoja ===== */
 @page{ size: A4 portrait; margin: 8mm; }
 
 @media print{
-  /* Forzar la hoja y evitar que el grid se deshaga */
+  /* 2 columnas por tabla (tu .receta actual) */
   .receta{
     display: table !important;
-    width: 185mm !important;               /* cabe con margen 8mm */
+    width: 185mm !important;
     table-layout: fixed !important;
     border-collapse: separate !important;
     border-spacing: 0 0 !important;
   }
-
-  /* Tus columnas reales: .col-left y .col-right (no .left/.right) */
   .col-left, .col-right{
     display: table-cell !important;
     vertical-align: top !important;
@@ -131,42 +129,47 @@
     break-inside: avoid !important;
     -webkit-column-break-inside: avoid !important;
   }
-
-  /* Gutter ~8mm (4mm + 4mm) y derecha fija ~82mm (~320px) */
   .col-left{
-    width: calc(185mm - 82mm - 8mm) !important;
+    width: calc(185mm - 82mm - 8mm) !important; /* derecha fija + gutter */
     padding-right: 4mm !important;
   }
   .col-right{
-    width: 82mm !important;
+    width: 82mm !important;                     /* ≈ 320px */
     padding-left: 4mm !important;
   }
 
-  /* Compactar un poco para asegurar 1 página */
-  .card{ border-radius:10px !important; }
+  /* --- Footer fuera del flujo de la "tabla" --- */
+  .receta-wrap{ padding-bottom: 22mm !important; } /* reserva espacio para el footer fijo */
+  .footer{
+    position: fixed !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    bottom: 8mm !important;           /* coincide con @page margin */
+    width: 185mm !important;          /* mismo ancho que .receta tabla */
+    margin: 0 !important;
+    border-radius: 8px !important;
+    padding: 8px 10px !important;
+    font-size: 12px !important;
+    z-index: 10 !important;
+    /* evita que se renderice como parte de la tabla */
+    display: block !important;
+  }
+
+  /* Compacta un poco para asegurar 1 página */
+  .card{ padding:8px !important; margin-bottom:8px !important; border-radius:10px !important; }
   .card .title{ font-size:11px !important; margin:2px 0 4px !important; }
-  .card{ padding:8px !important; margin-bottom:8px !important; }
   .kv, .meds{ font-size:12px !important; line-height:1.25 !important; }
 
-  /* QRs en milímetros (más estable en WebKit) */
+  /* QRs en mm (más estable en WebKit) */
   .qr-main img{ width:60mm !important; height:60mm !important; }
   .qr-chain img{ width:32mm !important; height:32mm !important; }
   .qr-frame{ padding:5px !important; border-width:2px !important; }
   .qr-legend{ font-size:11px !important; padding:3px 8px !important; margin-top:4px !important; }
 
-  /* Footer a todo lo ancho de la “tabla” */
-  .footer{
-    display: table-caption !important;
-    caption-side: bottom !important;
-    padding:8px 10px !important; border-radius:8px !important; font-size:12px !important;
-    margin-top:6px !important;
-    break-inside: avoid !important; page-break-inside: avoid !important;
-  }
-
-  /* Evitar cortes dentro de bloques */
+  /* Nada se parte raro */
   .card, .qr-frame, #listaMedsDerecha, #obsTexto, #diagTexto{
-    break-inside: avoid !important;
     page-break-inside: avoid !important;
+    break-inside: avoid !important;
     -webkit-column-break-inside: avoid !important;
   }
 
