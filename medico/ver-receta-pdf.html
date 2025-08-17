@@ -965,11 +965,11 @@ if (!window.__kodrx_booted__) {
       generarPDF(RECETA_ACTUAL, QRS);
     });
 
-    document.getElementById('btnCargarEjemplo')?.addEventListener('click', async () => {
-      const receta = await cargarRecetaDesdeQuery();
-      RECETA_ACTUAL = receta;
-      QRS = await prepararReceta(receta);
-    });
+  document.getElementById('btnRegresar')?.addEventListener('click', ()=>{
+  if (history.length > 1) history.back();
+  else window.location.href = '/'; // fallback
+});
+
 
     // Boot una sola vez
     (async () => {
