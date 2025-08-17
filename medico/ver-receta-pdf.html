@@ -109,73 +109,46 @@
   .qr-main img{ width: 180px; height:180px; }
   .qr-chain img{ width: 90px; height:90px; }
 }
-/* ===== PRINT: 2 columnas estables usando fallback tipo tabla ===== */
-@page{ size: A4 portrait; margin: 8mm; }
 
+/* ==== Print layout dedicado (tabla, 2 columnas) ==== */
+#printLayout{ display:none; }
 @media print{
-  /* Anula cualquier display:block previo en .canvas */
-  .canvas{
-    display: table !important;
-    width: 185mm !important;           /* cabe con márgenes de 8mm */
-    table-layout: fixed !important;
-    border-collapse: separate !important;
-    border-spacing: 0 0 !important;
+  .canvas{ display:none !important; }          /* ocultar grid normal */
+  #printLayout{ display:block !important; }
+
+  /* Hoja y tabla que caben en A4 con márgenes de 8mm */
+  #printLayout .sheet{ width:185mm; margin:0 auto; }
+  #printLayout table{
+    width:100%; table-layout:fixed;
+    border-collapse:separate; border-spacing:4mm 0;  /* gutter ~8mm total */
+  }
+  #printLayout td{ vertical-align:top; break-inside:avoid; page-break-inside:avoid; }
+
+  /* Izquierda fluida, derecha fija (~82mm ≈ 320px) */
+  #printLayout .leftCol{ width: calc(100% - 82mm - 8mm); padding-right:4mm; }
+  #printLayout .rightCol{ width:82mm; padding-left:4mm; }
+
+  /* Compactar un poco tipografía/padding para asegurar 1 página */
+  #printLayout .panel{ padding:8px; margin-bottom:8px; border-radius:10px; }
+  #printLayout .panel h5{ font-size:11px; margin-bottom:5px; }
+  #printLayout .kv, #printLayout .meds{ font-size:12px; line-height:1.25; }
+
+  /* QRs en mm (más estable) */
+  #printLayout .qr-main img{ width:60mm; height:60mm; }
+  #printLayout .qr-chain img{ width:32mm; height:32mm; }
+  #printLayout .qr-frame{ padding:5px; border-width:2px; }
+  #printLayout .qr-legend{ font-size:11px; padding:3px 8px; bottom:-9px; }
+
+  /* Footer ocupa el ancho completo de la hoja impresa */
+  #printLayout .footer{
+    padding:8px 10px; border-radius:8px; font-size:12px; margin-top:6px;
+    break-inside:avoid; page-break-inside:avoid;
   }
 
-  /* Dos celdas de tabla: izquierda fluida, derecha fija */
-  .left, .right{
-    display: table-cell !important;
-    vertical-align: top !important;
-    page-break-inside: avoid !important;
-    break-inside: avoid !important;
-    -webkit-column-break-inside: avoid !important;
-  }
-
-  /* Gutter: 8mm entre columnas (4+4 de padding) */
-  .left{
-    width: calc(185mm - 82mm - 8mm) !important;  /* 185 total - 82 derecha - 8 gutter */
-    padding-right: 4mm !important;
-  }
-  .right{
-    width: 82mm !important;                       /* ≈ 320px */
-    padding-left: 4mm !important;
-  }
-
-  /* Compacta un poco para asegurar 1 página */
-  .panel{ padding:8px !important; margin-bottom:8px !important; border-radius:10px !important; }
-  .panel h5{ font-size:11px !important; margin-bottom:5px !important; }
-  .kv, .meds{ font-size:12px !important; line-height:1.25 !important; }
-
-  /* QRs en milímetros (más fiable en print) */
-  .qr-main img{ width: 60mm !important; height: 60mm !important; }   /* ~236px */
-  .qr-chain img{ width: 32mm !important; height: 32mm !important; }  /* ~121px */
-  .qr-frame{ padding: 5px !important; border-width: 2px !important; }
-  .qr-legend{ font-size:11px !important; padding:3px 8px !important; bottom:-9px !important; }
-
-  /* Footer a todo lo ancho de la “tabla” */
-  .footer{
-    display: table-caption !important;  /* ocupa el ancho total */
-    caption-side: bottom !important;
-    padding:8px 10px !important;
-    border-radius:8px !important;
-    font-size:12px !important;
-    margin-top:6px !important;
-  }
-
-  /* Contenedor principal */
-  .wrap{ margin:0 auto !important; padding:0 !important; }
-  .card{ width:185mm !important; margin:0 auto !important; box-shadow:none !important; border-radius:0 !important; }
-
-  /* No cortes dentro de paneles ni bloques largos */
-  .panel, .qr-frame, #listaMedsDerecha, #obsTexto, #diagTexto{
-    page-break-inside: avoid !important;
-    break-inside: avoid !important;
-    -webkit-column-break-inside: avoid !important;
-  }
-
-  /* Colores en WebKit */
+  /* Colores sólidos en WebKit */
   body{ -webkit-print-color-adjust: exact; print-color-adjust: exact; background:#fff !important; }
 }
+
 
 
   </style>
@@ -935,6 +908,65 @@ if (!window.__kodrx_booted__) {
 }
 
   </script>
+  <script>
+(function(){
+  const card = document.querySelector('.card') || document.body;
+  const canvas = document.querySelector('.canvas');
+  const left   = document.querySelector('.left');
+  const right  = document.querySelector('.right');
+  const footer = document.querySelector('.footer');
+
+  // contenedor para la vista de impresión
+  const printLayout = document.createElement('div');
+  printLayout.id = 'printLayout';
+  card.appendChild(printLayout);
+
+  function buildPrintLayout(){
+    // Clonamos el HTML ya renderizado (incluye <img> de los QRs)
+    const leftHTML  = left ? left.innerHTML : '';
+    const rightHTML = right ? right.innerHTML : '';
+    const footerHTML= footer ? footer.innerHTML : '';
+
+    printLayout.innerHTML = `
+      <div class="sheet">
+        <table role="presentation" aria-hidden="true">
+          <tr>
+            <td class="leftCol">
+              ${leftHTML}
+            </td>
+            <td class="rightCol">
+              ${rightHTML}
+            </td>
+          </tr>
+        </table>
+        <div class="footer">${footerHTML}</div>
+      </div>
+    `;
+  }
+
+  function showPrintLayout(){
+    if (!printLayout) return;
+    buildPrintLayout();
+    if (canvas) canvas.style.display = 'none';
+    printLayout.style.display = 'block';
+  }
+  function hidePrintLayout(){
+    if (canvas) canvas.style.display = '';
+    if (printLayout){ printLayout.style.display = 'none'; printLayout.innerHTML = ''; }
+  }
+
+  // Hooks de impresión (WebKit y otros)
+  window.addEventListener('beforeprint', showPrintLayout);
+  window.addEventListener('afterprint',  hidePrintLayout);
+
+  // Fallback (algunos iOS disparan matchMedia)
+  const mql = window.matchMedia('print');
+  if (mql && mql.addListener){
+    mql.addListener(function(e){ e.matches ? showPrintLayout() : hidePrintLayout(); });
+  }
+})();
+</script>
+
 </body>
 </html>
 
