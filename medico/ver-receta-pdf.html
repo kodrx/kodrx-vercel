@@ -228,11 +228,15 @@ button:active{ transform:translateY(1px) }
 <body class="page-border">
   <div class="receta-wrap">
   <div class="receta">
+     <div class="actions">
+  <button class="ghost" id="btnRegresar">Regresar</button>
+  <button class="primary" id="btnDescargar">Descargar PDF</button>
+  <button class="ghost" onclick="window.print()">Imprimir</button>
 
-    <!-- Header -->
+</div>    <!-- Header -->
     <div class="receta-header">
       KodRx — Receta médica digital
-      <span id="badgeOrigen" class="badge ok">FIRESTORE</span>
+      <span id="badgeOrigen" class="badge ok">Receta Verificada</span>
     </div>
 
     <!-- Columna IZQUIERDA -->
@@ -321,7 +325,7 @@ button:active{ transform:translateY(1px) }
   <button class="ghost" id="btnRegresar">Regresar</button>
   <button class="primary" id="btnDescargar">Descargar PDF</button>
   <button class="ghost" onclick="window.print()">Imprimir</button>
-  <button class="ghost" id="btnCargarEjemplo">Cargar ejemplo</button>
+
 </div>
 
     </div>
