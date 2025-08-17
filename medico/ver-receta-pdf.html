@@ -601,7 +601,7 @@ if (blockSpan){
   // Badge
   const badge = document.getElementById('badgeOrigen');
   if (badge){
-    if (receta._origen === 'firestore'){ badge.textContent = 'FIRESTORE';  badge.className='badge ok'; }
+    if (receta._origen === 'firestore'){ badge.textContent = 'Receta Verificada';  badge.className='badge ok'; }
     else if (receta._origen === 'mock-id'){ badge.textContent = 'MOCK (ID)'; badge.className='badge warn'; }
     else { badge.textContent = 'MOCK'; badge.className='badge warn'; }
   }
