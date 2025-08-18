@@ -648,11 +648,11 @@ try{
     ctx.clearRect(0,0,c.width,c.height);
     JsBarcode(c, String(receta.id || ''), {
       format: 'CODE128',
-      height: 60,          // alto de barras (px)
+      height: 40,          // alto de barras (px)
       width: 2,            // ancho de barra (px)
       margin: 4,
       displayValue: true,  // imprime el valor abajo
-      fontSize: 14,
+      fontSize: 10,
       textMargin: 4
     });
   }
