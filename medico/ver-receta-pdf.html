@@ -434,7 +434,32 @@ button:active{ transform:translateY(1px) }
     console.warn('[KodRx] Firebase no disponible (modo demo). Puedes ignorar este aviso si aún no configuras Firebase.', e);
   }
 </script>
+<script>
+// Loader global y único para JsBarcode
+window.__kodrx_jsbLoading = null;
 
+async function ensureJsBarcode(){
+  // Ya está listo
+  if (window.JsBarcode) return;
+
+  // Ya se está cargando
+  if (window.__kodrx_jsbLoading) {
+    await window.__kodrx_jsbLoading;
+    return;
+  }
+
+  // Cargar desde CDN (sin SRI para evitar bloqueos)
+  window.__kodrx_jsbLoading = new Promise((resolve, reject)=>{
+    const s = document.createElement('script');
+    s.src = "https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js";
+    s.onload = () => resolve();
+    s.onerror = (e) => reject(e);
+    document.head.appendChild(s);
+  });
+
+  await window.__kodrx_jsbLoading;
+}
+</script>
 
   <script>
     // ====== Utilidades ======
