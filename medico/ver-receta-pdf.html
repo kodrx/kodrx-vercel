@@ -1038,14 +1038,13 @@ async function makeBarcodeDataURL(text, {w=260, h=90, bw=2, bh=60}={}){
 // function renderPreview(receta, mainQRDataURL, chainQRDataURL){ ... }
 
 // === Preparar QRs y pintar vista ===
-function prepararReceta(receta){
-  return (async ()=>{
-    const mainQRUrl  = await makeQRDataURL(receta.urlVerificacion, 520);
-    const chainQRUrl = await makeQRDataURL(receta.urlBlockchain, 260);
-    renderPreview(receta, mainQRUrl, chainQRUrl);
-    return { mainQRUrl, chainQRUrl };
-  })();
+async function prepararReceta(receta){
+  const mainQRUrl  = await makeQRDataURL(receta.urlVerificacion, 520);
+  const chainQRUrl = await makeQRDataURL(receta.urlBlockchain, 260);
+  await renderPreview(receta, mainQRUrl, chainQRUrl);   // 👈 importante
+  return { mainQRUrl, chainQRUrl };
 }
+
 // Evita doble boot/listeners si el script se inyecta dos veces
 if (!window.__kodrx_booted__) {
   window.__kodrx_booted__ = true;
