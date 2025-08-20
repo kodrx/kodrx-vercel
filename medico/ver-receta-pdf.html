@@ -934,10 +934,10 @@ async function generarPDF(receta, qrs){
   }
 // === CÓDIGO DE BARRAS (ID) ===
 {
-  const barUrl = await makeBarcodeDataURL(receta.id, { w: 300, h: 90, bw: 2, bh: 56 });
+  const barUrl = await makeBarcodeDataURL(receta.id, { w: 300, h: 40, bw: 2, bh: 56 });
   // ancho del dibujo dentro de la columna
   const imgW = Math.min(colW - 20, 300);
-  const imgH = 90 * (imgW / 300);
+  const imgH = 40 * (imgW / 300);
   let x = rightX + (colW - imgW)/2;
   let y = yR; // parte de arriba del bloque actual
 
