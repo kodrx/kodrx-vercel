@@ -141,6 +141,56 @@ button:active{ transform:translateY(1px) }
   .qr-chain img{ width: 90px; height:90px; }
 }
 
+/* ===== PRINT: header fijo arriba + reserva de espacio ===== */
+@page{ size: A4 portrait; margin: 8mm; }
+
+@media print{
+  /* Reservas para header y footer fijos */
+  .receta-wrap{
+    padding-top: 22mm !important;   /* altura reservada p/ header fijo */
+    padding-bottom: 22mm !important;/* ya la tenías para footer fijo */
+  }
+
+  /* Header fijo centrado con el mismo ancho de la hoja */
+  .receta-header{
+    position: fixed !important;
+    top: 8mm !important;                  /* al ras del margen de página */
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    width: 185mm !important;              /* igual que el contenido */
+    margin: 0 !important;
+    padding: 8px 10px !important;
+    border-radius: 8px !important;
+    z-index: 20 !important;
+    display: block !important;            /* que no intente ser “celda” */
+    -webkit-print-color-adjust: exact;    /* conserva color de fondo */
+    print-color-adjust: exact;
+  }
+
+  /* Mantén la tabla de 2 columnas para el contenido (como ya pusimos) */
+  .receta{
+    display: table !important;
+    width: 185mm !important;
+    table-layout: fixed !important;
+    border-collapse: separate !important;
+    border-spacing: 0 0 !important;
+  }
+  .col-left, .col-right{
+    display: table-cell !important;
+    vertical-align: top !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    -webkit-column-break-inside: avoid !important;
+  }
+  .col-left{
+    width: calc(185mm - 82mm - 8mm) !important;
+    padding-right: 4mm !important;
+  }
+  .col-right{
+    width: 82mm !important;
+    padding-left: 4mm !important;
+  }
+}
 
 
 
