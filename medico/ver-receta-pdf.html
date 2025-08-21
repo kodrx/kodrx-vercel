@@ -141,95 +141,6 @@ button:active{ transform:translateY(1px) }
   .qr-chain img{ width: 90px; height:90px; }
 }
 
-/* ===== PRINT: header fijo arriba + reserva de espacio ===== */
-@page{ size: A4 portrait; margin: 8mm; }
-
-@media print{
-  /* Reservas para header y footer fijos */
-  .receta-wrap{
-    padding-top: 22mm !important;   /* altura reservada p/ header fijo */
-    padding-bottom: 22mm !important;/* ya la tenías para footer fijo */
-  }
-
-  /* Header fijo centrado con el mismo ancho de la hoja */
-  .receta-header{
-    position: fixed !important;
-    top: 8mm !important;                  /* al ras del margen de página */
-    left: 50% !important;
-    transform: translateX(-50%) !important;
-    width: 185mm !important;              /* igual que el contenido */
-    margin: 0 !important;
-    padding: 8px 10px !important;
-    border-radius: 8px !important;
-    z-index: 20 !important;
-    display: block !important;            /* que no intente ser “celda” */
-    -webkit-print-color-adjust: exact;    /* conserva color de fondo */
-    print-color-adjust: exact;
-  }
-
-  /* Mantén la tabla de 2 columnas para el contenido (como ya pusimos) */
-  .receta{
-    display: table !important;
-    width: 185mm !important;
-    table-layout: fixed !important;
-    border-collapse: separate !important;
-    border-spacing: 0 0 !important;
-  }
-  .col-left, .col-right{
-    display: table-cell !important;
-    vertical-align: top !important;
-    page-break-inside: avoid !important;
-    break-inside: avoid !important;
-    -webkit-column-break-inside: avoid !important;
-  }
-  .col-left{
-    width: calc(185mm - 82mm - 8mm) !important;
-    padding-right: 4mm !important;
-  }
-  .col-right{
-    width: 82mm !important;
-    padding-left: 4mm !important;
-  }
-}
-
-  /* --- Footer fuera del flujo de la "tabla" --- */
-  .receta-wrap{ padding-bottom: 22mm !important; } /* reserva espacio para el footer fijo */
-  .footer{
-    position: fixed !important;
-    left: 50% !important;
-    transform: translateX(-50%) !important;
-    bottom: 8mm !important;           /* coincide con @page margin */
-    width: 185mm !important;          /* mismo ancho que .receta tabla */
-    margin: 0 !important;
-    border-radius: 8px !important;
-    padding: 8px 10px !important;
-    font-size: 12px !important;
-    z-index: 10 !important;
-    /* evita que se renderice como parte de la tabla */
-    display: block !important;
-  }
-
-  /* Compacta un poco para asegurar 1 página */
-  .card{ padding:8px !important; margin-bottom:8px !important; border-radius:10px !important; }
-  .card .title{ font-size:11px !important; margin:2px 0 4px !important; }
-  .kv, .meds{ font-size:12px !important; line-height:1.25 !important; }
-
-  /* QRs en mm (más estable en WebKit) */
-  .qr-main img{ width:60mm !important; height:60mm !important; }
-  .qr-chain img{ width:32mm !important; height:32mm !important; }
-  .qr-frame{ padding:5px !important; border-width:2px !important; }
-  .qr-legend{ font-size:11px !important; padding:3px 8px !important; margin-top:4px !important; }
-
-  /* Nada se parte raro */
-  .card, .qr-frame, #listaMedsDerecha, #obsTexto, #diagTexto{
-    page-break-inside: avoid !important;
-    break-inside: avoid !important;
-    -webkit-column-break-inside: avoid !important;
-  }
-
-  /* Colores sólidos en WebKit */
-  body{ -webkit-print-color-adjust: exact; print-color-adjust: exact; background:#fff !important; }
-}
 
 
 
@@ -672,25 +583,23 @@ if (blockSpan){
   }
 }
 
-
-async function generarPDF(receta, qrs){
+async function generarPDF(receta, qrs, { mode = 'save' } = {}){
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ unit:'pt', format:'letter', compress:true }); // 612x792
   const W = doc.internal.pageSize.getWidth();
   const H = doc.internal.pageSize.getHeight();
 
   // --- Layout base ---
-  const Mx = 40;               // margen lateral
-  const gutter = 16;           // separación entre columnas
-  const CW = W - 2*Mx;         // ancho útil
+  const Mx = 40, gutter = 16;
+  const CW = W - 2*Mx;
   const colW = (CW - gutter)/2;
   const leftX  = Mx;
   const rightX = Mx + colW + gutter;
 
   // Pie alto y límite inferior SIEMPRE respetado
   const footerH = 52;
-  const My = 50;                              // top base (header devuelve startY)
-  const availYMax = H - My - footerH - 10;    // límite inferior duro
+  const My = 50;                           // top base (header devuelve startY)
+  const availYMax = H - My - footerH - 10; // límite inferior duro
 
   // --- Colores / fuente ---
   const COLORS = {
@@ -700,7 +609,7 @@ async function generarPDF(receta, qrs){
   const FONT = 'helvetica';
   doc.setFont(FONT,'normal');
 
-  // --- Helpers locales (autocontenidos) ---
+  // --- Helpers ---
   function header(){
     const headY = 18, headH = 50;
     doc.setFillColor(240,245,255);
@@ -709,7 +618,7 @@ async function generarPDF(receta, qrs){
     doc.setFont(FONT,'bold'); doc.setFontSize(13);
     doc.text('KodRx — Receta médica digital', Mx, headY + 30);
     doc.setFont(FONT,'normal');
-    return headY + headH + 12; // Y segura para arrancar contenido
+    return headY + headH + 12;
   }
   function footer(){
     doc.setFillColor(...COLORS.brand);
@@ -721,7 +630,6 @@ async function generarPDF(receta, qrs){
   }
   function wrap(txt, w){ return doc.splitTextToSize(String(txt ?? '—'), w); }
   function sectionBox(x, y, w, contentH, title){
-    // Clamp vertical para NO invadir el pie
     const padX=10, padY=10, titleH=18, boxH = contentH + padY*2 + titleH;
     const yClamped = Math.min(y, availYMax - boxH);
     doc.setFillColor(...COLORS.panelFill);
@@ -754,7 +662,7 @@ async function generarPDF(receta, qrs){
   function fechaStr(ts){
     try{
       if (ts && typeof ts.toDate === 'function') ts = ts.toDate();
-      else if (ts && typeof ts.seconds === 'number') ts = new Date(ts.seconds*1000 + Math.floor((ts.nanoseconds||0)/1e6));
+      else if (ts && typeof ts.seconds === 'number') ts = new Date(ts.seconds*1000 + Math.floor((ts.nanoseconds||0) / 1e6));
       else if (!(ts instanceof Date)) ts = new Date(ts);
       return ts.toLocaleString('es-MX',{year:'numeric',month:'long',day:'numeric',hour:'2-digit',minute:'2-digit'});
     }catch(_){ return ''; }
@@ -774,15 +682,13 @@ async function generarPDF(receta, qrs){
   let yL = startY, yR = startY;
 
   // ------- IZQUIERDA -------
-  // MÉDICO (compacto, con clamp)
+  // MÉDICO
   {
     const Hfixed = 90;
     const s = sectionBox(leftX, yL, colW, Hfixed, 'MÉDICO');
-    // nombre (2 líneas máx)
     doc.setFont(FONT,'bold'); doc.setFontSize(11.5); doc.setTextColor(...COLORS.text);
     const nombreMed = receta.medico?.nombre ? (typeof prefixMedico==='function' ? prefixMedico(receta.medico.nombre, receta.medico.genero) : receta.medico.nombre) : '—';
     drawClamp(s.cx, s.cy, colW-16, 26, nombreMed, 13);
-    // datos
     let cy = s.cy + 26 + 6;
     doc.setFont(FONT,'normal'); doc.setFontSize(9.5); doc.setTextColor(...COLORS.sub);
     const info = `Cédula: ${receta.medico?.cedula||'—'}    Especialidad: ${receta.medico?.especialidad||'—'}\n`+
@@ -792,20 +698,16 @@ async function generarPDF(receta, qrs){
     yL = s.ny;
   }
 
-  // PACIENTE (fecha+ID debajo del nombre; IMC debajo de Temp)
+  // PACIENTE
   {
     const Hfixed = 100;
     const s = sectionBox(leftX, yL, colW, Hfixed, 'PACIENTE');
     doc.setFont(FONT,'bold'); doc.setFontSize(11.5); doc.setTextColor(...COLORS.text);
     drawClamp(s.cx, s.cy, colW-16, 26, String(receta.paciente?.nombre||'—'), 13);
-
-    // fecha + ID
     let cy = s.cy + 26 + 6;
     doc.setFont(FONT,'normal'); doc.setFontSize(9.5); doc.setTextColor(...COLORS.sub);
     doc.text(fechaStr(receta.timestamp), s.cx, cy); cy += 13;
     doc.text(`ID: ${receta.id}`,          s.cx, cy); cy += 16;
-
-    // vitals
     const lv = (x,y,lbl,val)=>{ doc.setFont(FONT,'bold'); doc.setTextColor(...COLORS.sub); doc.text(lbl,x,y);
       const w=doc.getTextWidth(lbl); doc.setFont(FONT,'normal'); doc.setTextColor(...COLORS.text); doc.text(String(val??'—'), x+w+4, y); };
     lv(s.cx,     cy, 'Edad:', receta.paciente?.edad);
@@ -818,88 +720,69 @@ async function generarPDF(receta, qrs){
     lv(s.cx+120, cy, 'PA:',    receta.paciente?.presion);
     cy += 13;
     lv(s.cx,     cy, 'IMC:',   receta.paciente?.imc);
-
     yL = s.ny;
   }
-// ===== IZQUIERDA: OBSERVACIONES + DIAGNÓSTICO con separador duro =====
-{
-  const lineH   = 11;
-  const SEP     = 35;  // altura visible del hueco (sube a 30 si quieres más aire)
-  const MIN_OBS = 60;
-  const MIN_DX  = 60;
 
-  // --- 1) Altura para OBSERVACIONES (sin comerse el mínimo de DIAG + hueco) ---
-  const leftSpaceTotal = Math.max(0, availYMax - yL);
-  const obsWrapped = doc.splitTextToSize(String(receta.observaciones ?? '—'), colW - 16);
-  const idealObsH  = Math.max(MIN_OBS, obsWrapped.length * lineH + 6);
-  const obsMaxH    = Math.max(MIN_OBS, leftSpaceTotal - (SEP + MIN_DX));
-  const obsH       = Math.min(idealObsH, obsMaxH);
-
-  // --- 2) OBSERVACIONES ---
-  const sObs = sectionBox(leftX, yL, colW, obsH, 'OBSERVACIONES');
-  doc.setFont('helvetica','normal'); doc.setFontSize(9.5); doc.setTextColor(17,24,39);
-  (function clamp(x,y,maxW,maxH,txt){
-    const lines = doc.splitTextToSize(String(txt ?? '—'), maxW);
-    let used = 0, lastY = y;
-    for (let i=0;i<lines.length;i++){
-      if (used + lineH > maxH){
-        if (i>0){
-          const prev = lines[i-1];
-          doc.text((prev.length>1 ? prev.slice(0,prev.length-1)+'…' : prev+'…'), x, lastY);
-        }
-        return;
-      }
-      lastY = y + used + lineH;
-      doc.text(lines[i], x, lastY);
-      used += lineH;
-    }
-  })(sObs.cx, sObs.cy, colW - 16, sObs.innerH, receta.observaciones);
-
-  // --- 3) Separador visual DURO (franja blanca + línea tenue) ---
+  // IZQUIERDA: OBSERVACIONES + DIAGNÓSTICO
   {
-    const gapY = sObs.ny - 2;         // tapa la curva inferior
+    const lineH=11, SEP=35, MIN_OBS=60, MIN_DX=60;
+    const leftSpaceTotal = Math.max(0, availYMax - yL);
+    const obsWrapped = doc.splitTextToSize(String(receta.observaciones ?? '—'), colW - 16);
+    const idealObsH  = Math.max(MIN_OBS, obsWrapped.length * lineH + 6);
+    const obsMaxH    = Math.max(MIN_OBS, leftSpaceTotal - (SEP + MIN_DX));
+    const obsH       = Math.min(idealObsH, obsMaxH);
+
+    const sObs = sectionBox(leftX, yL, colW, obsH, 'OBSERVACIONES');
+    doc.setFont('helvetica','normal'); doc.setFontSize(9.5); doc.setTextColor(17,24,39);
+    (function clamp(x,y,maxW,maxH,txt){
+      const lines = doc.splitTextToSize(String(txt ?? '—'), maxW);
+      let used=0, lastY=y;
+      for (let i=0;i<lines.length;i++){
+        if (used + lineH > maxH){
+          if (i>0){
+            const prev = lines[i-1];
+            doc.text((prev.length>1 ? prev.slice(0,prev.length-1)+'…' : prev+'…'), x, lastY);
+          }
+          return;
+        }
+        lastY = y + used + lineH;
+        doc.text(lines[i], x, lastY);
+        used += lineH;
+      }
+    })(sObs.cx, sObs.cy, colW - 16, sObs.innerH, receta.observaciones);
+
+    // Separador duro
+    const gapY = sObs.ny - 2;
     const midY = gapY + SEP/2;
-
-    // franja blanca
-    doc.setFillColor(255,255,255);
-    doc.setDrawColor(255,255,255);
+    doc.setFillColor(255,255,255); doc.setDrawColor(255,255,255);
     doc.rect(leftX, gapY, colW, SEP, 'F');
-
-    // línea tenue
-    doc.setDrawColor(224,231,240);
-    doc.setLineWidth(0.8);
-    doc.line(leftX + 6, midY, leftX + colW - 6, midY);
-
-    // cursor después del separador
+    doc.setDrawColor(224,231,240); doc.setLineWidth(0.8);
+    doc.line(leftX+6, midY, leftX+colW-6, midY);
     yL = gapY + SEP + 6;
+
+    // Diagnóstico
+    const dxH = Math.max(MIN_DX, availYMax - yL);
+    const sDx = sectionBox(leftX, yL, colW, dxH, 'DIAGNÓSTICO');
+    doc.setFont('helvetica','normal'); doc.setFontSize(9.5); doc.setTextColor(17,24,39);
+    (function clamp(x,y,maxW,maxH,txt){
+      const lines = doc.splitTextToSize(String(txt ?? '—'), maxW);
+      let used=0, lastY=y;
+      for (let i=0;i<lines.length;i++){
+        if (used + lineH > maxH){
+          if (i>0){
+            const prev = lines[i-1];
+            doc.text((prev.length>1 ? prev.slice(0,prev.length-1)+'…' : prev+'…'), x, lastY);
+          }
+          return;
+        }
+        lastY = y + used + lineH;
+        doc.text(lines[i], x, lastY);
+        used += lineH;
+      }
+    })(sDx.cx, sDx.cy, colW - 16, sDx.innerH, receta.diagnostico);
+    yL = sDx.ny;
   }
 
-  // --- 4) DIAGNÓSTICO (usa TODO lo que quede hasta el pie) ---
-  const dxH = Math.max(MIN_DX, availYMax - yL);
-  const sDx = sectionBox(leftX, yL, colW, dxH, 'DIAGNÓSTICO');
-  doc.setFont('helvetica','normal'); doc.setFontSize(9.5); doc.setTextColor(17,24,39);
-  (function clamp(x,y,maxW,maxH,txt){
-    const lines = doc.splitTextToSize(String(txt ?? '—'), maxW);
-    let used = 0, lastY = y;
-    for (let i=0;i<lines.length;i++){
-      if (used + lineH > maxH){
-        if (i>0){
-          const prev = lines[i-1];
-          doc.text((prev.length>1 ? prev.slice(0,prev.length-1)+'…' : prev+'…'), x, lastY);
-        }
-        return;
-      }
-      lastY = y + used + lineH;
-      doc.text(lines[i], x, lastY);
-      used += lineH;
-    }
-  })(sDx.cx, sDx.cy, colW - 16, sDx.innerH, receta.diagnostico);
-
-  yL = sDx.ny;
-} // ←←← ESTA ES LA LLAVE QUE FALTABA: cierra el bloque IZQUIERDA
-
-
- 
   // ------- DERECHA -------
   // MEDICAMENTOS
   {
@@ -915,10 +798,10 @@ async function generarPDF(receta, qrs){
 
   // QR Receta
   {
-    const box = 120, pad=10;
+    const box=120, pad=10;
     let y = yR;
     const yMax = availYMax - (box + 20);
-    y = Math.min(Math.max(y, startY), yMax); // nunca sobre header, nunca invade pie
+    y = Math.min(Math.max(y, startY), yMax);
     const xQR = rightX + (colW - box)/2;
     doc.setDrawColor(...COLORS.brand); doc.setLineWidth(2.2);
     doc.roundedRect(xQR, y, box, box, 10, 10, 'S');
@@ -927,34 +810,31 @@ async function generarPDF(receta, qrs){
     doc.text('Receta', xQR + box/2, y + box + 12, {align:'center'});
     yR = y + box + 20;
   }
-// === CÓDIGO DE BARRAS (ID) ===
-{
-  const barUrl = await makeBarcodeDataURL(receta.id, { w: 300, h: 38, bw: 2, bh: 52 });
-  let imgW = Math.min(colW - 20, 300);
-  let imgH = 38 * (imgW / 300);
-  let x = rightX + (colW - imgW)/2;
-  let y = yR + 6;
 
-  // Altura total prevista del panel
-  let boxH = imgH + 26;
+  // CÓDIGO DE BARRAS (ID)
+  {
+    const barUrl = await makeBarcodeDataURL(receta.id, { w: 300, h: 38, bw: 2, bh: 52 });
+    let imgW = Math.min(colW - 20, 300);
+    let imgH = 38 * (imgW / 300);
+    let x = rightX + (colW - imgW)/2;
+    let y = yR + 6;
+    let boxH = imgH + 26;
 
-  // Compacta si no cabe
-  for (const f of [0.95, 0.9, 0.85]) {
-    if (y + boxH <= availYMax) break;
-    imgW *= f; imgH *= f; boxH = imgH + 26; x = rightX + (colW - imgW)/2;
+    for (const f of [0.95, 0.9, 0.85]){
+      if (y + boxH <= availYMax) break;
+      imgW *= f; imgH *= f; boxH = imgH + 26; x = rightX + (colW - imgW)/2;
+    }
+    if (y + boxH <= availYMax){
+      doc.setFillColor(248,250,252);
+      doc.setDrawColor(224,231,240);
+      doc.setLineWidth(0.8);
+      doc.roundedRect(rightX, y, colW, boxH, 8, 8, 'FD');
+      doc.addImage(barUrl, 'PNG', x, y + 8, imgW, imgH, undefined, 'FAST');
+      doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(55,65,81);
+      doc.text('Código de barras (ID)', rightX + colW/2, y + imgH + 20, { align:'center' });
+      yR = y + boxH + 10;
+    }
   }
-  if (y + boxH <= availYMax) {
-    doc.setFillColor(248,250,252);
-    doc.setDrawColor(224,231,240);
-    doc.setLineWidth(0.8);
-    doc.roundedRect(rightX, y, colW, boxH, 8, 8, 'FD');
-    doc.addImage(barUrl, 'PNG', x, y + 8, imgW, imgH, undefined, 'FAST');
-    doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(55,65,81);
-    doc.text('Código de barras (ID)', rightX + colW/2, y + imgH + 20, { align:'center' });
-    yR = y + boxH + 10;
-  }
-  // si no cabe, lo omitimos: no empuja al pie ni agrega página
-}
 
   // HASH
   {
@@ -984,195 +864,32 @@ async function generarPDF(receta, qrs){
 
     doc.setTextColor(...COLORS.sub); doc.setFont(FONT,'normal'); doc.setFontSize(8.5);
     doc.text('Para verificar receta visitar kodrx.app', qrX + rectW/2, qrY + rectH + 38, {align:'center'});
-
     yR = qrY + rectH + 42;
   }
 
   // --- Pie SIEMPRE visible ---
   footer();
 
-  doc.save(`receta_${receta.id}.pdf`);
-}
-
-
-
-  // ===== Boot & Listeners =====
-  let RECETA_ACTUAL = null; let QRS = null;
-
-  async function cargarRecetaDesdeQuery(){
-  const p = new URLSearchParams(location.search);
-  const id = p.get('id') || 'RECETA-DE-EJEMPLO-001';
-  if (p.get('id')) return await smartLoadReceta(id);
-
-  // mock por defecto cuando NO hay ?id=
-  return {
-    id,
-    medico:{ nombre:'Gabriela López Ramírez', genero:'F', cedula:'1234567', especialidad:'Medicina Interna', telefono:'—', direccion:'—' },
-    paciente:{ nombre:'Juan Pérez' },
-    medicamentos:[
-      { nombre:'Amoxicilina 500 mg', dosis:'1 cápsula cada 8 h', duracion:'7 días' },
-      { nombre:'Paracetamol 500 mg', dosis:'1 tableta cada 8 h si dolor', duracion:'5 días' }
-    ],
-    observaciones:'—',
-    diagnostico:'—',
-    timestamp: Date.now(),
-    urlVerificacion: location.origin + '/public/verificar.html?id='+encodeURIComponent(id),
-    urlBlockchain: location.origin + '/public/consulta.html?block='+encodeURIComponent(id),
-    _origen:'mock'
-  };
-}
-
-// === QR -> DataURL (usado por prepararReceta/generarPDF) ===
-function makeQRDataURL(text, size = 260){
-  return new Promise((resolve)=>{
-    if (typeof QRCode === 'undefined'){ console.error('QRCode no está disponible'); resolve(''); return; }
-    const div = document.createElement('div');
-    new QRCode(div, { text, width:size, height:size, correctLevel: QRCode.CorrectLevel.M });
-    setTimeout(()=>{
-      const img = div.querySelector('img');
-      if (img && img.src) return resolve(img.src);
-      const canvas = div.querySelector('canvas');
-      resolve(canvas ? canvas.toDataURL('image/png') : '');
-    }, 0);
-  });
-}
-async function makeBarcodeDataURL(text, {w=260, h=90, bw=2, bh=60}={}){
-  await ensureJsBarcode();
-  const canvas = document.createElement('canvas');
-  canvas.width = w; canvas.height = h;
-  const ctx = canvas.getContext('2d');
-  ctx.fillStyle = '#fff'; ctx.fillRect(0,0,w,h);
-  JsBarcode(canvas, String(text||''), {
-    format: 'CODE128',
-    width: bw,
-    height: bh,
-    margin: 4,
-    displayValue: false,
-    fontSize: 12,
-    textMargin: 4
-  });
-  return canvas.toDataURL('image/png');
-}
-
-// === Render de vista (asegúrate que esta función YA exista arriba) ===
-// function renderPreview(receta, mainQRDataURL, chainQRDataURL){ ... }
-
-// === Preparar QRs y pintar vista ===
-async function prepararReceta(receta){
-  const mainQRUrl  = await makeQRDataURL(receta.urlVerificacion, 520);
-  const chainQRUrl = await makeQRDataURL(receta.urlBlockchain, 260);
-  await renderPreview(receta, mainQRUrl, chainQRUrl);   // 👈 importante
-  return { mainQRUrl, chainQRUrl };
-}
-
-// ===== Evita doble boot =====
-if (!window.__kodrx_booted__) {
-  window.__kodrx_booted__ = true;
-
-  window.addEventListener('DOMContentLoaded', () => {
-
-    // ===== Wire listeners solo una vez =====
-    if (!window.__kodrx_pdf_wired__) {
-      window.__kodrx_pdf_wired__ = true;
-
-      const btnDesc = document.getElementById('btnDescargar');
-btnDesc?.addEventListener('click', async () => {
-  if (btnDesc.__busy) return;
-  btnDesc.__busy = true; btnDesc.disabled = true;
-  try{
-    await waitForLibs();
-    if (!RECETA_ACTUAL)  RECETA_ACTUAL = await cargarRecetaDesdeQuery();
-    if (!QRS)            QRS = await prepararReceta(RECETA_ACTUAL);
-    await generarPDF(RECETA_ACTUAL, QRS);  // ⬅️ importante
-  } finally {
-    btnDesc.__busy = false; btnDesc.disabled = false;
-  }
-});
-
-
-      document.getElementById('btnRegresar')?.addEventListener('click', ()=>{
-        if (history.length > 1) history.back();
-        else window.location.href = '/';
-      });
-
-      document.getElementById('btnCargarEjemplo')?.addEventListener('click', async ()=>{
-        const receta = await cargarRecetaDesdeQuery();
-        RECETA_ACTUAL = receta;
-        QRS = await prepararReceta(receta);
-      });
+  // === OUTPUT según modo ===
+  const filename = `receta_${receta.id}.pdf`;
+  if (mode === 'print') {
+    try {
+      doc.autoPrint();
+      const url = doc.output('bloburl');
+      const w = window.open(url, '_blank');
+      if (!w) doc.save(filename); // popup bloqueado → descarga
+    } catch {
+      doc.save(filename);
     }
-
-    // ===== Boot una sola vez =====
-    (async () => {
-      await waitForLibs();
-      const receta = await cargarRecetaDesdeQuery();
-      RECETA_ACTUAL = receta;
-      QRS = await prepararReceta(receta);
-    })();
-
-  });
+  } else if (mode === 'open') {
+    const url = doc.output('bloburl'); window.open(url, '_blank');
+  } else {
+    doc.save(filename);
+  }
 }
 
 
-  </script>
-  <script>
-(function(){
-  const card = document.querySelector('.card') || document.body;
-  const canvas = document.querySelector('.canvas');
-  const left   = document.querySelector('.left');
-  const right  = document.querySelector('.right');
-  const footer = document.querySelector('.footer');
-
-  // contenedor para la vista de impresión
-  const printLayout = document.createElement('div');
-  printLayout.id = 'printLayout';
-  card.appendChild(printLayout);
-
-  function buildPrintLayout(){
-    // Clonamos el HTML ya renderizado (incluye <img> de los QRs)
-    const leftHTML  = left ? left.innerHTML : '';
-    const rightHTML = right ? right.innerHTML : '';
-    const footerHTML= footer ? footer.innerHTML : '';
-
-    printLayout.innerHTML = `
-      <div class="sheet">
-        <table role="presentation" aria-hidden="true">
-          <tr>
-            <td class="leftCol">
-              ${leftHTML}
-            </td>
-            <td class="rightCol">
-              ${rightHTML}
-            </td>
-          </tr>
-        </table>
-        <div class="footer">${footerHTML}</div>
-      </div>
-    `;
-  }
-
-  function showPrintLayout(){
-    if (!printLayout) return;
-    buildPrintLayout();
-    if (canvas) canvas.style.display = 'none';
-    printLayout.style.display = 'block';
-  }
-  function hidePrintLayout(){
-    if (canvas) canvas.style.display = '';
-    if (printLayout){ printLayout.style.display = 'none'; printLayout.innerHTML = ''; }
-  }
-
-  // Hooks de impresión (WebKit y otros)
-  window.addEventListener('beforeprint', showPrintLayout);
-  window.addEventListener('afterprint',  hidePrintLayout);
-
-  // Fallback (algunos iOS disparan matchMedia)
-  const mql = window.matchMedia('print');
-  if (mql && mql.addListener){
-    mql.addListener(function(e){ e.matches ? showPrintLayout() : hidePrintLayout(); });
-  }
-})();
-</script>
+ 
 
 </body>
 </html>
