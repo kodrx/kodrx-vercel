@@ -606,7 +606,7 @@ async function renderPreview(receta, mainQRDataURL, chainQRDataURL){
   setTextById('pacPresion',receta.paciente.presion);
 
   setTextById('fechaEmision', fechaLarga(receta.timestamp));
-  setTextById('recetaId', 'ID: ' + receta.id);
+  setTextById('recetaId',  receta.id);
 
   setTextById('obsTexto',  receta.observaciones||'—');
   setTextById('diagTexto', receta.diagnostico||'—');
@@ -618,7 +618,7 @@ async function renderPreview(receta, mainQRDataURL, chainQRDataURL){
   if (medsEl) medsEl.textContent = medsTXT;
 
   // Hash y URL
-  setTextById('hashTexto', 'hash: ' + hashSimulado(receta));
+  setTextById('hashTexto',hashSimulado(receta));
   setTextById('verifUrl', receta.urlBlockchain);
 
  // Dentro de renderPreview(receta, mainQRDataURL, chainQRDataURL)
@@ -1070,43 +1070,54 @@ async function prepararReceta(receta){
   return { mainQRUrl, chainQRUrl };
 }
 
-// Evita doble boot/listeners si el script se inyecta dos veces
+// ===== Evita doble boot =====
 if (!window.__kodrx_booted__) {
   window.__kodrx_booted__ = true;
 
   window.addEventListener('DOMContentLoaded', () => {
-    // Listeners seguros (solo si existen)
-    document.getElementById('btnDescargar')?.addEventListener('click', async () => {
-      await waitForLibs();
-      if (!RECETA_ACTUAL)  RECETA_ACTUAL = await cargarRecetaDesdeQuery();
-      if (!QRS)            QRS = await prepararReceta(RECETA_ACTUAL);
-      generarPDF(RECETA_ACTUAL, QRS);
-    });
 
-  document.getElementById('btnRegresar')?.addEventListener('click', ()=>{
-  if (history.length > 1) history.back();
-  else window.location.href = '/'; // fallback
-});
+    // ===== Wire listeners solo una vez =====
+    if (!window.__kodrx_pdf_wired__) {
+      window.__kodrx_pdf_wired__ = true;
 
-async function ensureJsBarcode(){
-  if (window.JsBarcode) return;
-  await new Promise((res, rej)=>{
-    const s = document.createElement('script');
-    s.src = "https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js";
-    s.onload = res; s.onerror = rej;
-    document.head.appendChild(s);
-  });
-}
+      const btnDesc = document.getElementById('btnDescargar');
+      btnDesc?.addEventListener('click', async () => {
+        if (btnDesc.__busy) return;         // anti-double click
+        btnDesc.__busy = true; btnDesc.disabled = true;
 
-    // Boot una sola vez
+        try{
+          await waitForLibs();
+          if (!RECETA_ACTUAL)  RECETA_ACTUAL = await cargarRecetaDesdeQuery();
+          if (!QRS)            QRS = await prepararReceta(RECETA_ACTUAL);
+          await generarPDF(RECETA_ACTUAL, QRS);  // 👈 IMPORTANTE
+        } finally {
+          btnDesc.__busy = false; btnDesc.disabled = false;
+        }
+      });
+
+      document.getElementById('btnRegresar')?.addEventListener('click', ()=>{
+        if (history.length > 1) history.back();
+        else window.location.href = '/';
+      });
+
+      document.getElementById('btnCargarEjemplo')?.addEventListener('click', async ()=>{
+        const receta = await cargarRecetaDesdeQuery();
+        RECETA_ACTUAL = receta;
+        QRS = await prepararReceta(receta);
+      });
+    }
+
+    // ===== Boot una sola vez =====
     (async () => {
       await waitForLibs();
       const receta = await cargarRecetaDesdeQuery();
       RECETA_ACTUAL = receta;
       QRS = await prepararReceta(receta);
     })();
+
   });
 }
+
 
   </script>
   <script>
