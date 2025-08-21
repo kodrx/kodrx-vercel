@@ -646,7 +646,7 @@ try{
       height: 40,          // alto de barras (px)
       width: 2,            // ancho de barra (px)
       margin: 4,
-      displayValue: true,  // imprime el valor abajo
+      displayValue: false,  // imprime el valor abajo
       fontSize: 10,
       textMargin: 4
     });
@@ -929,31 +929,31 @@ async function generarPDF(receta, qrs){
   }
 // === CÓDIGO DE BARRAS (ID) ===
 {
-  const barUrl = await makeBarcodeDataURL(receta.id, { w: 300, h: 40, bw: 2, bh: 56 });
-  // ancho del dibujo dentro de la columna
-  const imgW = Math.min(colW - 20, 300);
-  const imgH = 40 * (imgW / 300);
+  const barUrl = await makeBarcodeDataURL(receta.id, { w: 300, h: 38, bw: 2, bh: 52 });
+  let imgW = Math.min(colW - 20, 300);
+  let imgH = 38 * (imgW / 300);
   let x = rightX + (colW - imgW)/2;
-  let y = yR; // parte de arriba del bloque actual
+  let y = yR + 6;
 
-  // Evita pegarse al QR anterior
-  y += 6;
+  // Altura total prevista del panel
+  let boxH = imgH + 26;
 
-  // Marco suave del panel
-  const boxH = imgH + 26; // imagen + etiqueta
-  doc.setFillColor(248,250,252);
-  doc.setDrawColor(224,231,240);
-  doc.setLineWidth(0.8);
-  doc.roundedRect(rightX, y, colW, boxH, 8, 8, 'FD');
-
-  // Dibuja el barcode centrado
-  doc.addImage(barUrl, 'PNG', x, y + 8, imgW, imgH, undefined, 'FAST');
-
-  // Etiqueta (“Código de barras (ID)”)
-  doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(55,65,81);
-  doc.text('Código de barras (ID)', rightX + colW/2, y + imgH + 20, { align:'center' });
-
-  yR = y + boxH + 10; // avanza cursor derecha
+  // Compacta si no cabe
+  for (const f of [0.95, 0.9, 0.85]) {
+    if (y + boxH <= availYMax) break;
+    imgW *= f; imgH *= f; boxH = imgH + 26; x = rightX + (colW - imgW)/2;
+  }
+  if (y + boxH <= availYMax) {
+    doc.setFillColor(248,250,252);
+    doc.setDrawColor(224,231,240);
+    doc.setLineWidth(0.8);
+    doc.roundedRect(rightX, y, colW, boxH, 8, 8, 'FD');
+    doc.addImage(barUrl, 'PNG', x, y + 8, imgW, imgH, undefined, 'FAST');
+    doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(55,65,81);
+    doc.text('Código de barras (ID)', rightX + colW/2, y + imgH + 20, { align:'center' });
+    yR = y + boxH + 10;
+  }
+  // si no cabe, lo omitimos: no empuja al pie ni agrega página
 }
 
   // HASH
@@ -1047,7 +1047,7 @@ async function makeBarcodeDataURL(text, {w=260, h=90, bw=2, bh=60}={}){
     width: bw,
     height: bh,
     margin: 4,
-    displayValue: true,
+    displayValue: false,
     fontSize: 12,
     textMargin: 4
   });
