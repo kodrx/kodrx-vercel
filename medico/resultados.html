@@ -1,184 +1,61 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>KodRx | Resultados de búsqueda</title>
-<style>
-  body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:#f8fafc;color:#0f172a}
-  .wrap{max-width:960px;margin:24px auto;padding:0 16px}
-  header{display:flex;gap:12px;align-items:center;margin-bottom:16px}
-  h1{font-size:20px;margin:0}
-  .search-row{display:flex;gap:8px;margin-left:auto}
-  input[type="search"]{flex:1;padding:10px 12px;border:1px solid #e5e7eb;border-radius:10px;background:#fff}
-  button{appearance:none;border:0;border-radius:10px;padding:10px 14px;font-weight:700;cursor:pointer}
-  .primary{background:#0b5bd3;color:#fff}
-  .ghost{background:#eef2ff;color:#0b1b2b;border:1px solid #dbe3ff}
-  .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
-  .card{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:12px}
-  .card h3{margin:0 0 6px;font-size:16px}
-  .meta{font-size:12px;color:#6b7280;margin-bottom:6px}
-  .pill{display:inline-block;font-size:11px;color:#0b5bd3;background:#e8f0ff;border:1px solid #cfe0ff;border-radius:999px;padding:2px 8px}
-  .footer-actions{display:flex;justify-content:center;gap:8px;margin:16px 0}
-  .empty{padding:24px;text-align:center;color:#6b7280}
-  a.card-link{display:block;text-decoration:none;color:inherit}
-</style>
+  <meta charset="UTF-8">
+  <title>Resultados de búsqueda</title>
+  <style>
+    body{font-family:system-ui;background:#f9fafb;color:#111;}
+    .wrap{max-width:900px;margin:20px auto;padding:16px;}
+    .result{padding:12px;margin-bottom:8px;border:1px solid #ddd;border-radius:8px;background:#fff;}
+    .result h3{margin:0 0 6px;font-size:16px;color:#0b5bd3;}
+    .result p{margin:0;font-size:14px;color:#444;}
+  </style>
 </head>
 <body>
-<div class="wrap">
-  <header>
-    <h1>Resultados</h1>
-    <form class="search-row" action="/resultados.html" method="GET">
-      <input type="search" name="q" id="q" placeholder="Buscar por nombre…" required>
-      <button class="primary" type="submit">Buscar</button>
-      <button class="ghost" type="button" id="btnVolver">Volver</button>
-    </form>
-  </header>
-
-  <div id="status" class="meta">Buscando…</div>
-  <div id="results" class="cards"></div>
-  <div id="empty" class="empty" style="display:none">Sin coincidencias.</div>
-
-  <div class="footer-actions">
-    <button class="ghost" id="btnPrev" disabled>Anterior</button>
-    <button class="ghost" id="btnNext" disabled>Siguiente</button>
+  <div class="wrap">
+    <h2>Resultados de búsqueda</h2>
+    <div id="results">Cargando...</div>
   </div>
-</div>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getFirestore, collection, getDocs, query, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-<script type="module">
-  // --- Firebase ---
-  const firebaseConfig = {
-    apiKey: "AIzaSyBIjaOe4HcGNDk0xrqen8etBv0RyjyOJHw",
-    authDomain: "kodrx-105b9.firebaseapp.com",
-    projectId: "kodrx-105b9"
-  };
-  const [{ initializeApp }, { getFirestore, collection, query, orderBy, startAt, endAt, limit, getDocs, startAfter }] =
-    await Promise.all([
-      import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js'),
-      import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js')
-    ]);
-  const app = initializeApp(firebaseConfig);
-  const db  = getFirestore(app);
+    const firebaseConfig = {
+      apiKey: "AIzaSyBIjaOe4HcGNDk0xrqen8etBv0RyjyOJHw",
+      authDomain: "kodrx-105b9.firebaseapp.com",
+      projectId: "kodrx-105b9"
+    };
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
 
-  // --- Helpers ---
-  const $ = (id)=>document.getElementById(id);
-  const p  = new URLSearchParams(location.search);
-  const termRaw = (p.get('q') || '').trim();
-  $('q').value = termRaw;
+    const qParam = new URLSearchParams(location.search).get("q") || "";
+    const resultsDiv = document.getElementById("results");
 
-  // Normaliza a lowercase (y opcionalmente sin acentos)
-  const normalize = (s)=> s.toLocaleLowerCase('es-MX')
-    .normalize('NFD').replace(/\p{Diacritic}/gu,''); // quita tildes
-
-  const term = normalize(termRaw);
-  if (!term) { $('status').textContent = 'Escribe un nombre para buscar.'; }
-
-  // Paginación
-  const PAGE_SIZE = 20;
-  let lastDoc = null;
-  let prevStack = []; // pila de cursors para "Anterior"
-
-  $('btnVolver').addEventListener('click', ()=>{
-    if (history.length>1) history.back(); else location.href = '/historial.html';
-  });
-
-  $('btnNext').addEventListener('click', async ()=>{
-    if (!lastDoc) return;
-    prevStack.push(lastDoc);
-    await runSearch({ after: lastDoc });
-  });
-  $('btnPrev').addEventListener('click', async ()=>{
-    if (!prevStack.length) return;
-    const prevCursor = prevStack.length>1 ? prevStack[prevStack.length-2] : null;
-    prevStack.pop();
-    await runSearch({ after: prevCursor, reset: true });
-  });
-
-  function recetaCardHTML(id, r){
-    const fecha = (()=> {
-      try{
-        const ts = r.timestamp?.seconds ? new Date(r.timestamp.seconds*1000) :
-                    (r.timestamp ? new Date(r.timestamp) : null);
-        return ts ? ts.toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'}) : '—';
-      }catch{ return '—'; }
-    })();
-    const nombre = r.paciente?.nombre || '—';
-    const doctor = r.medico?.nombre || '—';
-    return `
-      <a class="card-link" href="/ver-receta.html?id=${encodeURIComponent(id)}">
-        <div class="card">
-          <h3>${nombre}</h3>
-          <div class="meta">Dr(a). ${doctor} · ${fecha}</div>
-          <div class="pill">ID: ${id}</div>
-        </div>
-      </a>
-    `;
-  }
-
-  async function runSearch({ after=null, reset=false }={}){
-    if (!term) return;
-
-    $('status').textContent = 'Buscando…';
-    $('results').innerHTML = '';
-    $('empty').style.display = 'none';
-
-    // Consulta por prefijo: requiere campo pacienteNombre_lc
-    // orderBy + startAt + endAt para “startsWith”
-    let base = query(
-      collection(db, 'recetas'),
-      orderBy('pacienteNombre_lc'),
-      startAt(term),
-      endAt(term + '\uf8ff'),
-      limit(PAGE_SIZE)
-    );
-
-    if (after) {
-      // si after es null y reset true, volvemos al inicio
-      if (after !== null) {
-        base = query(
-          collection(db, 'recetas'),
-          orderBy('pacienteNombre_lc'),
-          startAt(term),
-          endAt(term + '\uf8ff'),
-          startAfter(after),
-          limit(PAGE_SIZE)
-        );
+    async function buscar(){
+      if(!qParam){ resultsDiv.textContent="No se ingresó búsqueda"; return; }
+      const snap = await getDocs(collection(db,"recetas"));
+      const matches = [];
+      snap.forEach(doc=>{
+        const d = doc.data();
+        const nombre = d.nombrePaciente || d.pacienteNombre || d.paciente?.nombre || "";
+        if(nombre.toLowerCase().includes(qParam.toLowerCase())){
+          matches.push({id:doc.id,...d});
+        }
+      });
+      if(matches.length===0){
+        resultsDiv.textContent = "No se encontraron resultados.";
+        return;
       }
-    } else {
-      // si no hay cursor y se pidió reset, limpiar pila
-      if (reset) prevStack = [];
+      resultsDiv.innerHTML = matches.map(r=>`
+        <div class="result">
+          <h3><a href="ver-receta.html?id=${r.id}">${r.nombrePaciente || r.pacienteNombre || r.paciente?.nombre}</a></h3>
+          <p>ID: ${r.id}</p>
+          <p>${r.diagnostico || "Sin diagnóstico"}</p>
+        </div>
+      `).join("");
     }
-
-    const snap = await getDocs(base);
-    if (snap.empty){
-      $('status').textContent = '0 resultados';
-      $('empty').style.display = 'block';
-      $('btnNext').disabled = true;
-      $('btnPrev').disabled = prevStack.length===0;
-      lastDoc = null;
-      return;
-    }
-
-    let html = '';
-    snap.forEach(docSnap=>{
-      html += recetaCardHTML(docSnap.id, docSnap.data());
-    });
-    $('results').innerHTML = html;
-    $('status').textContent = `Mostrando ${snap.size} resultado(s) para “${termRaw}”`;
-
-    // Actualiza cursores
-    lastDoc = snap.docs[snap.docs.length-1] || null;
-    $('btnPrev').disabled = prevStack.length===0;
-    $('btnNext').disabled = !lastDoc || snap.size < PAGE_SIZE;
-  }
-
-  // Ejecuta al cargar
-  if (term) {
-    try { await runSearch(); } catch (e) {
-      $('status').textContent = 'Error al buscar (revisa índices/seguridad).';
-      console.error(e);
-    }
-  }
-</script>
+    buscar();
+  </script>
 </body>
 </html>
+
