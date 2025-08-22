@@ -802,7 +802,41 @@ if (blockSpan){
     await renderPreview(receta, mainQR, chainQR);
     return { mainQRUrl: mainQR, chainQRUrl: chainQR };
   }
+// Fuerza reemplazo si seguimos en mock tras el boot
+async function forceSwapToFirestore() {
+  try {
+    const p = new URLSearchParams(location.search);
+    const id = p.get('id');
+    if (!id) return;
 
+    // si ya estamos en firestore, nada que hacer
+    if (RECETA_ACTUAL && RECETA_ACTUAL._origen === 'firestore') return;
+
+    // si el helper ya está, vuelve a pedir y re-renderiza
+    if (await waitForFirestoreHelper(0)) {
+      const r = await window.kodrxGetReceta(id);
+      if (r && r._origen === 'firestore') {
+        console.info('[KodRx] Swap a FIRESTORE (forcer)');
+        RECETA_ACTUAL = r;
+        QRS = await prepararReceta(r); // <- re-pinta pantalla y badge
+      }
+    }
+  } catch (e) {
+    console.warn('[KodRx] forceSwapToFirestore falló:', e);
+  }
+}
+  // Boot una sola vez
+(async () => {
+  await waitForLibs();
+  const receta = await cargarRecetaDesdeQuery();
+  RECETA_ACTUAL = receta;
+  QRS = await prepararReceta(receta);
+
+  // intentos escalonados por si el módulo de Firebase llegó tarde
+  forceSwapToFirestore();                 // inmediato
+  setTimeout(forceSwapToFirestore, 800);  // 0.8s
+  setTimeout(forceSwapToFirestore, 2000); // 2s
+})();
   // ---------- Boot seguro (evita dobles) ----------
   if (!window.__kodrx_booted_rescue__){
     window.__kodrx_booted_rescue__ = true;
