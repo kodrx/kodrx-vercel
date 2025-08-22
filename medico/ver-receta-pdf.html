@@ -878,6 +878,89 @@ async function forceSwapToFirestore() {
 })();
 </script>
 
+<script>
+// === BOOT ÚNICO KODRX (reemplaza cualquier boot/patch anterior) ===
+(() => {
+  let booted = false;
+
+  function getIdFromURL(){
+    return new URLSearchParams(location.search).get('id') || 'RECETA-DE-EJEMPLO-001';
+  }
+
+  async function loadFromFirestore(id){
+    if (typeof window.kodrxGetReceta !== 'function') return null;
+    try { return await window.kodrxGetReceta(id); } catch { return null; }
+  }
+
+  function makeMock(id){
+    return {
+      id,
+      medico:{ nombre:`Demo ${id.slice(0,6)}`, genero:'F', cedula:`MX-${id.slice(0,6)}`, especialidad:'Medicina General', telefono:'—', direccion:'—' },
+      paciente:{ nombre:`Paciente ${id.slice(0,6)}` },
+      medicamentos:[],
+      observaciones:'—',
+      diagnostico:'—',
+      timestamp: Date.now(),
+      urlVerificacion: location.origin + '/public/verificar.html?id='+encodeURIComponent(id),
+      urlBlockchain: location.origin + '/public/consulta.html?block='+encodeURIComponent(id),
+      _origen:'mock-id'
+    };
+  }
+
+  async function loadAndRender(){
+    const id = getIdFromURL();
+
+    // 1) intenta Firestore
+    let receta = await loadFromFirestore(id);
+
+    // 2) si no hay, pinta MOCK inmediato
+    if (!receta) receta = makeMock(id);
+
+    // 3) pinta pantalla
+    window.RECETA_ACTUAL = receta;
+    window.QRS = await prepararReceta(receta);
+
+    // 4) si quedó en MOCK, reintenta swap → Firestore sin romper UI
+    if (receta._origen !== 'firestore'){
+      for (const delay of [500, 1200, 2500]){
+        setTimeout(async ()=>{
+          // si ya se cambió a firestore, no hagas nada
+          if (window.RECETA_ACTUAL && window.RECETA_ACTUAL._origen === 'firestore') return;
+
+          const real = await loadFromFirestore(id);
+          if (real){
+            console.info('[KodRx] Swap a FIRESTORE (retry ', delay,'ms )');
+            window.RECETA_ACTUAL = real;
+            window.QRS = await prepararReceta(real); // re-render badge + datos reales
+          }
+        }, delay);
+      }
+    }
+  }
+
+  window.addEventListener('DOMContentLoaded', () => {
+    if (booted) return; booted = true;
+
+    // Botones
+    const btnDesc = document.getElementById('btnDescargar');
+    btnDesc?.addEventListener('click', async ()=>{
+      if (btnDesc.__busy) return; btnDesc.__busy = true; btnDesc.disabled = true;
+      try{
+        await waitForLibs();
+        if (!window.RECETA_ACTUAL || !window.QRS) await loadAndRender();
+        await generarPDF(window.RECETA_ACTUAL, window.QRS);
+      } finally { btnDesc.__busy = false; btnDesc.disabled = false; }
+    });
+
+    document.getElementById('btnRegresar')?.addEventListener('click', ()=>{
+      if (history.length > 1) history.back(); else location.href = '/';
+    });
+
+    // Boot
+    (async()=>{ await waitForLibs(); await loadAndRender(); })();
+  });
+})();
+</script>
 
  
 
