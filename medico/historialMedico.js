@@ -11,19 +11,7 @@ import {
 document.addEventListener("DOMContentLoaded", () => {
   const historialDiv = document.getElementById("historial");
 
-  const buscador = document.createElement("input");
-  buscador.type = "text";
-  buscador.id = "buscador";
-  buscador.placeholder = "Buscar paciente...";
-  buscador.style.display = "block";
-  buscador.style.margin = "1rem auto";
-  buscador.style.padding = "0.5rem 1rem";
-  buscador.style.fontSize = "1rem";
-  buscador.style.borderRadius = "8px";
-  buscador.style.border = "1px solid #ccc";
-  buscador.style.width = "100%";
-  buscador.style.maxWidth = "400px";
-  historialDiv.appendChild(buscador);
+
 
   const contenedorGrupos = document.createElement("div");
   historialDiv.appendChild(contenedorGrupos);
