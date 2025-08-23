@@ -14,12 +14,13 @@
 </head>
 
   <main>
-    <section>
-      <button onclick="location.reload()">➕ Nueva receta</button>
-      <button onclick="window.location.href='historial.html'">Historial</button>
-      <button onclick="window.location.href='#'">Acceder IA clínica</button>
-      <button onclick="cerrarSesion()">Cerrar sesión</button>
-    </section>
+   <section class="botonera">
+  <button class="btn ghost" onclick="location.reload()"> Nueva receta</button>
+  <button class="btn ghost" onclick="window.location.href='historial.html'">Historial</button>
+  <button class="btn primary" onclick="window.location.href='#'">Acceder IA clínica</button>
+  <button class="btn ghost" onclick="cerrarSesion()">Cerrar sesión</button>
+</section>
+
 
     <form id="generarRecetaForm" class="form-login">
       <h2>Generar nueva receta</h2>
