@@ -41,87 +41,133 @@
 </style>
 
 <script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-  import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { getFirestore, collection, query, where, orderBy, getDocs, limit } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-  const firebaseConfig = {
-    apiKey: "AIzaSyBIjaOe4HcGNDk0xrqen8etBv0RyjyOJHw",
-    authDomain: "kodrx-105b9.firebaseapp.com",
-    projectId: "kodrx-105b9"
-  };
-  const app = initializeApp(firebaseConfig);
-  const db  = getFirestore(app);
+const auth = getAuth();
+const db   = getFirestore();
 
-  const q = (new URLSearchParams(location.search).get("q") || "").trim();
-  const resultsDiv = document.getElementById("results");
+const $res  = document.getElementById('resultados');
+const $meta = document.getElementById('metaBusqueda');
 
-  const fechaStr = (ts)=>{
-    try{
-      if (ts && typeof ts.toDate === 'function') ts = ts.toDate();
-      else if (ts && typeof ts.seconds === 'number') ts = new Date(ts.seconds*1000 + Math.floor((ts.nanoseconds||0)/1e6));
-      else if (!(ts instanceof Date)) ts = new Date(ts);
-      return ts.toLocaleString('es-MX',{year:'numeric',month:'long',day:'numeric'});
-    }catch{ return '—'; }
-  };
+const params = new URLSearchParams(location.search);
+const term   = (params.get('q') || '').trim();
+const termLower = term.toLowerCase();
 
-  async function buscar(){
-    if(!q){
-      resultsDiv.textContent = "Ingresa un nombre para buscar.";
-      return;
-    }
-    resultsDiv.textContent = "Buscando…";
+onAuthStateChanged(auth, async (user)=>{
+  if (!user) { location.href = '/login.html'; return; }
 
-    const snap = await getDocs(collection(db,"recetas"));
-    const term = q.toLowerCase();
-    const items = [];
-    snap.forEach(docSnap=>{
-      const d = docSnap.data();
-      const nombre = (d.nombrePaciente || d.pacienteNombre || d.paciente?.nombre || "").toString();
-      if (nombre.toLowerCase().includes(term)){
-        items.push({
-          id: docSnap.id,
-          nombre,
-          diagnostico: d.diagnostico || "Sin diagnóstico",
-          fecha: d.fecha ?? d.timestamp ?? null
-        });
-      }
-    });
+  $meta.textContent = term ? `Buscando: “${term}”` : 'Sin término de búsqueda.';
 
-    if(items.length===0){
-      resultsDiv.textContent = "No se encontraron resultados.";
-      return;
+  try {
+    // --- Opción A: búsqueda por prefijo si tienes pacienteNombreLower ---
+    // where medicoUid == user.uid (multi-tenant) + rango de prefijo en pacienteNombreLower
+    const q = query(
+      collection(db,'recetas'),
+      where('medicoUid','==', user.uid),
+      where('pacienteNombreLower','>=', termLower),
+      where('pacienteNombreLower','<=', termLower + '\uf8ff'),
+      orderBy('pacienteNombreLower'),
+      orderBy('timestamp','desc'),
+      limit(100)
+    );
+
+    const snap = await getDocs(q);
+    if (snap.empty) {
+      renderVacio();
+    } else {
+      renderCascada(snap.docs.map(d=>({ id:d.id, ...d.data() })));
     }
 
-    items.sort((a,b)=>{
-      const ta = a.fecha?.seconds ? (a.fecha.seconds*1000 + Math.floor((a.fecha.nanoseconds||0)/1e6)) : new Date(a.fecha||0).getTime();
-      const tb = b.fecha?.seconds ? (b.fecha.seconds*1000 + Math.floor((b.fecha.nanoseconds||0)/1e6)) : new Date(b.fecha||0).getTime();
-      return tb - ta;
-    });
+  } catch (e) {
+    // Si falta índice compuesto o aún no guardas pacienteNombreLower, haz fallback:
+    console.warn('[Resultados] Fallback por índice/campo:', e?.code, e?.message);
 
-    resultsDiv.innerHTML = items.map(it=>`
-      <div class="acordeon">
-        <div class="acordeon-header">
-          <span>${it.nombre}</span>
-          <span>${fechaStr(it.fecha)}</span>
-        </div>
-        <div class="acordeon-body">
-          <p><b>Diagnóstico:</b> ${it.diagnostico}</p>
-          <a class="boton-ver" href="ver-receta.html?id=${encodeURIComponent(it.id)}">Ver receta</a>
-        </div>
+    // --- Opción B (fallback): trae por médico y filtra en memoria por nombre ---
+    const q2 = query(
+      collection(db,'recetas'),
+      where('medicoUid','==', user.uid),
+      orderBy('timestamp','desc'),
+      limit(200)
+    );
+    const snap2 = await getDocs(q2);
+    const lista = snap2.docs
+      .map(d=>({ id:d.id, ...d.data() }))
+      .filter(r => (r.pacienteNombre || r.paciente?.nombre || '')
+                    .toLowerCase()
+                    .includes(termLower));
+
+    if (lista.length === 0) renderVacio();
+    else renderCascada(lista);
+  }
+});
+
+function renderVacio(){
+  $res.innerHTML = `
+    <div class="acordeon">
+      <div class="acordeon-header">Sin resultados</div>
+      <div class="acordeon-body">
+        No encontramos recetas que coincidan con “${escapeHtml(term)}”.
       </div>
-    `).join("");
+    </div>`;
+}
 
-    // Wire de toggles
-    document.querySelectorAll('.acordeon-header').forEach(head=>{
-      head.addEventListener('click', ()=>{
-        const acc = head.parentElement;
-        acc.classList.toggle('open');
-      });
-    });
+function renderCascada(items){
+  // Agrupa por fecha (dd/mm/aaaa) como en el historial
+  const grupos = new Map();
+  for (const r of items){
+    const d = toDate(r.timestamp);
+    const key = d.toLocaleDateString('es-MX');
+    if (!grupos.has(key)) grupos.set(key, []);
+    grupos.get(key).push(r);
   }
 
-  buscar();
+  let html = '';
+  for (const [fecha, arr] of grupos){
+    html += `
+      <div class="acordeon open">
+        <div class="acordeon-header">
+          <span>📅 ${fecha} (${arr.length})</span>
+        </div>
+        <div class="acordeon-body">
+          ${arr.map(renderItem).join('')}
+        </div>
+      </div>`;
+  }
+  $res.innerHTML = html;
+
+  // toggle acordeón
+  $res.querySelectorAll('.acordeon-header').forEach(h=>{
+    h.addEventListener('click', ()=> h.parentElement.classList.toggle('open'));
+  });
+}
+
+function renderItem(r){
+  const nombre = r.pacienteNombre || r.paciente?.nombre || '—';
+  const dx     = r.diagnostico || '—';
+  const fechaCorta = toDate(r.timestamp).toLocaleTimeString('es-MX', {hour:'2-digit', minute:'2-digit'});
+  return `
+    <div style="border:1px solid #e0e7f0;border-radius:8px;padding:10px;margin:8px 0;background:#fff">
+      <div style="font-weight:600">${escapeHtml(nombre)}</div>
+      <div class="sub" style="color:#6b7280;margin:2px 0">Diagnóstico: ${escapeHtml(dx)}</div>
+      <div class="sub" style="color:#6b7280">Hora: ${fechaCorta}</div>
+      <a class="boton ghost" style="margin-top:6px" href="/medico/ver-receta.html?id=${encodeURIComponent(r.id)}">Ver receta</a>
+    </div>`;
+}
+
+function toDate(ts){
+  try{
+    if (ts && typeof ts.toDate === 'function') return ts.toDate();
+    if (ts && typeof ts.seconds === 'number') return new Date(ts.seconds*1000);
+    return new Date(ts);
+  }catch{ return new Date(); }
+}
+
+function escapeHtml(s=''){
+  return String(s).replace(/[&<>"']/g, m=>({ '&':'&nbsp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));
+}
 </script>
+
 <script>
 document.addEventListener('DOMContentLoaded', ()=>{
   const btn = document.getElementById('btnRegresar');
