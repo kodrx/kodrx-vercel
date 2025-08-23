@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>KodRx | ver-receta-pdf</title>
+<title>KodRx | Receta Digital</title>
 
 <style>
 /* ===== Layout general ===== */
@@ -527,7 +527,7 @@ async function generarPDF(receta, qrs, {mode='save'}={}){
   }
 
   // HASH
-  { const s=sectionBox(rightX,yR,colW,40,'HASH');
+  { const s=sectionBox(rightX,yR,colW,20,'HASH');
     doc.setFont(FONT,'normal'); doc.setFontSize(9.5); doc.setTextColor(...COLORS.sub);
     drawClamp(s.cx,s.cy,colW-16,s.innerH,'hash: '+hashSimulado(receta),11); yR=s.ny; }
 
