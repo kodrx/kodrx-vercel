@@ -85,7 +85,16 @@ button {
   font-weight: bold;
   cursor: pointer;
   transition: background-color 0.3s ease;
+  display: inline-block;   /* ✅ evita que se estire al 100% */
+  width: auto;             /* ✅ ajusta al texto */
 }
+.botones {
+  display: flex;
+  justify-content: center; /* o space-between / flex-start */
+  gap: 10px;
+  margin: 1rem 0;
+}
+
 
 button:hover {
   background-color: #00b9a2;
