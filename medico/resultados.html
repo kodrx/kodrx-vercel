@@ -1,190 +1,247 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <title>Resultados de búsqueda</title>
-  <style>
-    body{font-family:system-ui;background:#f9fafb;color:#111;}
-    .wrap{max-width:900px;margin:20px auto;padding:16px;}
-    .result{padding:12px;margin-bottom:8px;border:1px solid #ddd;border-radius:8px;background:#fff;}
-    .result h3{margin:0 0 6px;font-size:16px;color:#0b5bd3;}
-    .result p{margin:0;font-size:14px;color:#444;}
- 
-  </style>
-    <link rel="stylesheet" href="/estilos/global.css" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>KodRx | Resultados de búsqueda</title>
+
+  <!-- Estilos y header globales -->
+  <link rel="stylesheet" href="/estilos/global.css" />
   <script src="/componentes/header.js" defer></script>
+
+  <style>
+    /* Ajustes mínimos propios de esta página */
+    body { background:#f8f9fc; font-family: 'Poppins', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
+    .wrap { max-width: 900px; margin: 16px auto; padding: 0 12px; }
+    h1 { color:#123f91; text-align:center; margin: 1rem 0 .25rem; }
+    .hint { text-align:center; color:#6b7280; margin-bottom: 1rem; }
+
+    .buscador-wrap{ display:flex; justify-content:center; align-items:center; gap:8px; margin: .5rem auto 1rem; max-width: 520px; }
+    #buscador{
+      flex:1; padding: .65rem 1rem; font-size: 1rem; border-radius: 10px;
+      border: 1px solid #d1d5db; outline: none; background:#fff;
+    }
+    #btnBuscar{ min-width: 110px; }
+
+    .result-list{ max-width: 820px; margin: 0 auto; }
+    .card{ background:#fff; border:1px solid #e5e7eb; border-radius:12px; padding: 12px 14px; margin-bottom:10px; box-shadow:0 1px 3px rgba(0,0,0,.04); }
+    .card h3{ margin:.2rem 0 .4rem; font-size:1.05rem; color:#111827; }
+    .meta{ font-size:.85rem; color:#6b7280; display:flex; gap:10px; flex-wrap: wrap; }
+    .diag{ margin-top:.35rem; color:#374151; }
+    .actions{ margin-top:.6rem; display:flex; gap:8px; flex-wrap:wrap; }
+
+    /* Botones (usa tus utilidades globales .btn) */
+    .btn{ display:inline-flex; align-items:center; justify-content:center; gap:.4rem; padding:.55rem .9rem; border-radius:10px; font-weight:700; border:1px solid transparent; cursor:pointer; text-decoration:none; }
+    .btn.primary{ background:#0b5bd3; color:#fff; box-shadow:0 6px 16px rgba(11,91,211,.18); }
+    .btn.primary:hover{ background:#0a51be; }
+    .btn.ghost{ background:#eef2ff; color:#0b1b2b; border-color:#dbe3ff; }
+    .btn.ghost:hover{ background:#e6ebff; }
+
+    .empty{ text-align:center; color:#6b7280; padding: 24px 12px; }
+    .pill{ display:inline-block; padding:.18rem .5rem; border-radius:999px; background:#eef2ff; color:#123f91; font-size:.75rem; font-weight:700; }
+    .warn{ color:#b45309; }
+  </style>
 </head>
 <body>
-<br>
-  <br>
-   <div class="actions">
-  <button class="ghost" id="btnRegresar">Regresar</button>
-</div>
-  
-  <div class="contenedor">
-  <h1>Resultados de búsqueda</h1>
-  <div id="results"></div>
-</div>
+  <div class="wrap">
+    <h1>Resultados de búsqueda</h1>
+    <div class="hint" id="queryHint">Buscando…</div>
 
-<style>
-  body { font-family: 'Poppins', sans-serif; margin: 0; padding: 1rem; background: #f8f9fc; }
-  h1 { color: #123f91; text-align: center; margin-bottom: 1rem; }
-  .contenedor { max-width: 800px; margin: auto; }
-  .acordeon { background: white; border: 1px solid #ccc; border-radius: 6px; margin-bottom: 0.5rem; overflow: hidden; }
-  .acordeon-header { background: #123f91; color: white; padding: 0.75rem 1rem; cursor: pointer; font-weight: 500; display: flex; justify-content: space-between; align-items: center; }
-  .acordeon-body { display: none; padding: 1rem; background: #fff; border-top: 1px solid #ddd; }
-  .acordeon-body p { margin: 0.3rem 0; }
-  .acordeon.open .acordeon-body { display: block; }
-  .acordeon.open .acordeon-header::after { content: "▲"; }
-  .acordeon-header::after { content: "▼"; font-size: 0.8rem; }
-  a.boton-ver { background: #2e6fd6; color: white; padding: 0.4rem 0.8rem; border-radius: 4px; text-decoration: none; font-size: 0.85rem; margin-top: 0.5rem; display: inline-block; }
-</style>
-<main class="contenedor">
-  <h1>Resultados de búsqueda</h1>
-  <p id="metaBusqueda" class="sub"></p>
-  <div id="resultados"></div>
-</main>
+    <!-- Buscador local para refinar (no cambia la URL) -->
+    <div class="buscador-wrap">
+      <input id="buscador" type="text" placeholder="Buscar paciente…" />
+      <button id="btnBuscar" class="btn primary">Buscar</button>
+      <button id="btnVolver" class="btn ghost">Regresar</button>
+    </div>
 
-<script type="module">
-import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { getFirestore, collection, query, where, orderBy, getDocs, limit } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    <div id="alertaAmbito" class="hint" style="display:none">
+      <span class="pill">Aviso</span> Mostrando resultados <b>de todos los médicos</b> (no se detectó sesión/UID).
+    </div>
 
-const auth = getAuth();
-const db   = getFirestore();
+    <div id="resultados" class="result-list"></div>
+    <div id="vacio" class="empty" style="display:none">No se encontraron recetas con ese nombre.</div>
+  </div>
 
-const $res  = document.getElementById('resultados');
-const $meta = document.getElementById('metaBusqueda');
+  <!-- Firebase (ESM) -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import {
+      getFirestore, collection, query, where, getDocs, orderBy, limit
+    } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-const params = new URLSearchParams(location.search);
-const term   = (params.get('q') || '').trim();
-const termLower = term.toLowerCase();
+    // 1) Configura e inicializa Firebase
+    const firebaseConfig = {
+      apiKey: "AIzaSyBIjaOe4HcGNDk0xrqen8etBv0RyjyOJHw",
+      authDomain: "kodrx-105b9.firebaseapp.com",
+      projectId: "kodrx-105b9"
+    };
+    const app  = initializeApp(firebaseConfig);
+    const db   = getFirestore(app);
+    const auth = getAuth(app);
 
-onAuthStateChanged(auth, async (user)=>{
-  if (!user) { location.href = '/login.html'; return; }
+    // 2) Utilidades de la página
+    const $ = (sel) => document.querySelector(sel);
+    const resultadosEl = $('#resultados');
+    const vacioEl      = $('#vacio');
+    const hintEl       = $('#queryHint');
+    const alertaEl     = $('#alertaAmbito');
+    const inputEl      = $('#buscador');
 
-  $meta.textContent = term ? `Buscando: “${term}”` : 'Sin término de búsqueda.';
-
-  try {
-    // --- Opción A: búsqueda por prefijo si tienes pacienteNombreLower ---
-    // where medicoUid == user.uid (multi-tenant) + rango de prefijo en pacienteNombreLower
-    const q = query(
-      collection(db,'recetas'),
-      where('medicoUid','==', user.uid),
-      where('pacienteNombreLower','>=', termLower),
-      where('pacienteNombreLower','<=', termLower + '\uf8ff'),
-      orderBy('pacienteNombreLower'),
-      orderBy('timestamp','desc'),
-      limit(100)
-    );
-
-    const snap = await getDocs(q);
-    if (snap.empty) {
-      renderVacio();
-    } else {
-      renderCascada(snap.docs.map(d=>({ id:d.id, ...d.data() })));
+    function fmtFecha(ts){
+      try{
+        let d = ts;
+        if (d?.toDate) d = d.toDate();
+        else if (typeof d?.seconds === 'number') d = new Date(d.seconds*1000 + Math.floor((d.nanoseconds||0)/1e6));
+        else if (!(d instanceof Date)) d = new Date(d);
+        return d.toLocaleString('es-MX',{year:'numeric',month:'long',day:'numeric', hour:'2-digit', minute:'2-digit'});
+      }catch{ return '—'; }
     }
 
-  } catch (e) {
-    // Si falta índice compuesto o aún no guardas pacienteNombreLower, haz fallback:
-    console.warn('[Resultados] Fallback por índice/campo:', e?.code, e?.message);
+    function cardReceta(r){
+      const diag = r.diagnostico || '—';
+      const fecha = fmtFecha(r.timestamp || r.fecha);
+      const nombre = r.nombrePaciente || r.pacienteNombre || r.paciente?.nombre || 'Paciente';
+      const id = r.id;
 
-    // --- Opción B (fallback): trae por médico y filtra en memoria por nombre ---
-    const q2 = query(
-      collection(db,'recetas'),
-      where('medicoUid','==', user.uid),
-      orderBy('timestamp','desc'),
-      limit(200)
-    );
-    const snap2 = await getDocs(q2);
-    const lista = snap2.docs
-      .map(d=>({ id:d.id, ...d.data() }))
-      .filter(r => (r.pacienteNombre || r.paciente?.nombre || '')
-                    .toLowerCase()
-                    .includes(termLower));
+      const aVer = document.createElement('a');
+      aVer.className = 'btn primary';
+      aVer.textContent = 'Ver receta';
+      aVer.href = `/ver-receta-pdf.html?id=${encodeURIComponent(id)}`;
 
-    if (lista.length === 0) renderVacio();
-    else renderCascada(lista);
-  }
-});
+      const aAbrir = document.createElement('a');
+      aAbrir.className = 'btn ghost';
+      aAbrir.textContent = 'Abrir en nueva pestaña';
+      aAbrir.target = '_blank';
+      aAbrir.rel = 'noopener';
+      aAbrir.href = `/ver-receta-pdf.html?id=${encodeURIComponent(id)}`;
 
-function renderVacio(){
-  $res.innerHTML = `
-    <div class="acordeon">
-      <div class="acordeon-header">Sin resultados</div>
-      <div class="acordeon-body">
-        No encontramos recetas que coincidan con “${escapeHtml(term)}”.
-      </div>
-    </div>`;
-}
-
-function renderCascada(items){
-  // Agrupa por fecha (dd/mm/aaaa) como en el historial
-  const grupos = new Map();
-  for (const r of items){
-    const d = toDate(r.timestamp);
-    const key = d.toLocaleDateString('es-MX');
-    if (!grupos.has(key)) grupos.set(key, []);
-    grupos.get(key).push(r);
-  }
-
-  let html = '';
-  for (const [fecha, arr] of grupos){
-    html += `
-      <div class="acordeon open">
-        <div class="acordeon-header">
-          <span>📅 ${fecha} (${arr.length})</span>
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.innerHTML = `
+        <h3>${nombre}</h3>
+        <div class="meta">
+          <span>${fecha}</span>
+          <span>Diagnóstico: <b>${diag}</b></span>
         </div>
-        <div class="acordeon-body">
-          ${arr.map(renderItem).join('')}
-        </div>
-      </div>`;
-  }
-  $res.innerHTML = html;
+        <div class="diag"></div>
+      `;
+      const diagDiv = card.querySelector('.diag');
+      diagDiv.textContent = (r.observaciones && r.observaciones.length > 1)
+        ? r.observaciones.slice(0, 140) + (r.observaciones.length > 140 ? '…' : '')
+        : '—';
 
-  // toggle acordeón
-  $res.querySelectorAll('.acordeon-header').forEach(h=>{
-    h.addEventListener('click', ()=> h.parentElement.classList.toggle('open'));
-  });
-}
+      const actions = document.createElement('div');
+      actions.className = 'actions';
+      actions.append(aVer, aAbrir);
 
-function renderItem(r){
-  const nombre = r.pacienteNombre || r.paciente?.nombre || '—';
-  const dx     = r.diagnostico || '—';
-  const fechaCorta = toDate(r.timestamp).toLocaleTimeString('es-MX', {hour:'2-digit', minute:'2-digit'});
-  return `
-    <div style="border:1px solid #e0e7f0;border-radius:8px;padding:10px;margin:8px 0;background:#fff">
-      <div style="font-weight:600">${escapeHtml(nombre)}</div>
-      <div class="sub" style="color:#6b7280;margin:2px 0">Diagnóstico: ${escapeHtml(dx)}</div>
-      <div class="sub" style="color:#6b7280">Hora: ${fechaCorta}</div>
-      <a class="boton ghost" style="margin-top:6px" href="/medico/ver-receta.html?id=${encodeURIComponent(r.id)}">Ver receta</a>
-    </div>`;
-}
+      card.append(actions);
+      return card;
+    }
 
-function toDate(ts){
-  try{
-    if (ts && typeof ts.toDate === 'function') return ts.toDate();
-    if (ts && typeof ts.seconds === 'number') return new Date(ts.seconds*1000);
-    return new Date(ts);
-  }catch{ return new Date(); }
-}
+    function renderLista(arr){
+      resultadosEl.innerHTML = '';
+      if (!arr || arr.length === 0){
+        vacioEl.style.display = 'block';
+        return;
+      }
+      vacioEl.style.display = 'none';
+      arr.forEach(r => resultadosEl.appendChild(cardReceta(r)));
+    }
 
-function escapeHtml(s=''){
-  return String(s).replace(/[&<>"']/g, m=>({ '&':'&nbsp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));
-}
-</script>
+    function getQP(){
+      const p = new URLSearchParams(location.search);
+      return (p.get('q') || '').trim();
+    }
 
-<script>
-document.addEventListener('DOMContentLoaded', ()=>{
-  const btn = document.getElementById('btnRegresar');
-  if(btn){
-    btn.addEventListener('click', ()=>{
-      if (history.length > 1) history.back();
-      else window.location.href = '/'; // fallback si no hay historial
+    // 3) Lógica de búsqueda
+    async function buscarRecetas(nombre, medicoUid){
+      // Nota: para evitar requerir índices compuestos, hacemos un fetch por médico y
+      // filtramos en cliente por nombre (lowercase includes).
+      const col = collection(db, 'recetas');
+
+      let docs = [];
+      if (medicoUid){
+        // Filtra por médico en Firestore (pide solo un lote razonable)
+        const q = query(col, where('medicoUid','==', medicoUid), limit(200));
+        const snap = await getDocs(q);
+        docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      } else {
+        // Sin UID: trae un lote global (con aviso). Ajusta limit según tu volumen.
+        const q = query(col, limit(100));
+        const snap = await getDocs(q);
+        docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      }
+
+      const needle = nombre.toLowerCase();
+      const filtrados = docs.filter(d => {
+        const nom = (d.nombrePaciente || d.pacienteNombre || d.paciente?.nombre || '').toLowerCase();
+        return needle ? nom.includes(needle) : true;
+      });
+
+      // Opcional: ordena por fecha descendente
+      filtrados.sort((a,b)=>{
+        const ta = a.timestamp?.seconds ? a.timestamp.seconds*1000 : new Date(a.timestamp || a.fecha || 0).getTime();
+        const tb = b.timestamp?.seconds ? b.timestamp.seconds*1000 : new Date(b.timestamp || b.fecha || 0).getTime();
+        return (tb||0) - (ta||0);
+      });
+
+      return filtrados;
+    }
+
+    // 4) Boot
+    (async function init(){
+      // Muestra la query en la vista
+      const q = getQP();
+      inputEl.value = q;
+      hintEl.textContent = q ? `Resultados para “${q}”` : 'Mostrando resultados';
+
+      // Detecta UID del médico
+      let medicoUid = null;
+      const localUid = localStorage.getItem('kodrx_medico_uid') || localStorage.getItem('kodrx_doctor_id');
+      if (localUid) medicoUid = localUid;
+
+      // Intenta usar auth si está logueado
+      onAuthStateChanged(auth, async (user)=>{
+        try{
+          if (user?.uid) medicoUid = user.uid;
+          alertaEl.style.display = medicoUid ? 'none' : 'block';
+          const data = await buscarRecetas(q, medicoUid);
+          renderLista(data);
+        }catch(e){
+          console.error(e);
+          resultadosEl.innerHTML = '';
+          vacioEl.style.display = 'block';
+          vacioEl.textContent = 'Ocurrió un error al buscar.';
+        }
+      });
+
+      // Si onAuthStateChanged tarda, hacemos una primera pasada “optimista”
+      setTimeout(async ()=>{
+        if (resultadosEl.children.length === 0){ // aún no renderiza
+          alertaEl.style.display = medicoUid ? 'none' : 'block';
+          const data = await buscarRecetas(q, medicoUid);
+          renderLista(data);
+        }
+      }, 800);
+    })();
+
+    // 5) Interacciones
+    $('#btnBuscar').addEventListener('click', ()=>{
+      const val = inputEl.value.trim();
+      if (!val) return;
+      // Cambia la URL para poder compartir el resultado
+      const url = new URL(location.href);
+      url.searchParams.set('q', val);
+      location.href = url.toString();
     });
-  }
-});
-</script>
-  
+    inputEl.addEventListener('keydown', (e)=>{
+      if (e.key === 'Enter') $('#btnBuscar').click();
+    });
+    $('#btnVolver').addEventListener('click', ()=>{
+      if (history.length > 1) history.back();
+      else location.href = '/medico/historial.html';
+    });
+  </script>
 </body>
 </html>
-
