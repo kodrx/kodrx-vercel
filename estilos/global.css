@@ -76,6 +76,15 @@ body {
   margin: 10px 0;
 }
 
+/* ===== BOTONES ESTILO KODRX ===== */
+.actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;   /* centrados */
+  margin: 1rem 0;
+  flex-wrap: wrap;           /* se acomodan en móvil */
+}
+
 button {
   appearance: none;
   border: 0;
@@ -84,24 +93,26 @@ button {
   border-radius: 12px;
   padding: 10px 14px;
   transition: transform .04s ease, box-shadow .2s ease;
+  font-family: inherit;
 }
 button:active { transform: translateY(1px); }
 
-/* Azul sólido */
+/* Azul sólido (acciones principales) */
 .primary {
-  background:#0b5bd3; 
-  color:#fff;
-  box-shadow:0 6px 16px rgba(11,91,211,.2);
+  background: #0b5bd3; 
+  color: #fff;
+  box-shadow: 0 6px 16px rgba(11,91,211,.2);
 }
-.primary:hover { box-shadow:0 8px 22px rgba(11,91,211,.25); }
+.primary:hover { box-shadow: 0 8px 22px rgba(11,91,211,.25); }
 
-/* Ghost (claro, con borde) */
+/* Ghost (acciones secundarias) */
 .ghost {
-  background:#eef2ff; 
-  color:#0b1b2b; 
-  border:1px solid #dbe3ff;
+  background: #eef2ff; 
+  color: #0b1b2b; 
+  border: 1px solid #dbe3ff;
 }
-.ghost:hover { background:#e6ebff; }
+.ghost:hover { background: #e6ebff; }
+
 
 .site-header {
   background-color: #003366;
