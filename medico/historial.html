@@ -66,7 +66,10 @@
 <body>
   <h1> Historial de Recetas Emitidas</h1>
   <br>
-  
+  <div class="acciones">
+  <button id="btnRegresar" class="ghost">Regresar</button>
+</div>
+
 <div class="buscador-wrap">
   <input type="text" id="buscador" placeholder="Buscar paciente...">
   <button id="btnBuscar">Buscar</button>
@@ -93,6 +96,17 @@ document.addEventListener('DOMContentLoaded', ()=>{
   }
   q.addEventListener('keydown', e => { if(e.key === 'Enter') go(); });
   b.addEventListener('click', go);
+});
+</script>
+<script>
+document.addEventListener('DOMContentLoaded', ()=>{
+  const btn = document.getElementById('btnRegresar');
+  if(btn){
+    btn.addEventListener('click', ()=>{
+      if (history.length > 1) history.back();
+      else window.location.href = '/'; // fallback si no hay historial
+    });
+  }
 });
 </script>
 
