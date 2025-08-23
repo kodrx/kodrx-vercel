@@ -39,6 +39,11 @@
   .acordeon-header::after { content: "▼"; font-size: 0.8rem; }
   a.boton-ver { background: #2e6fd6; color: white; padding: 0.4rem 0.8rem; border-radius: 4px; text-decoration: none; font-size: 0.85rem; margin-top: 0.5rem; display: inline-block; }
 </style>
+<main class="contenedor">
+  <h1>Resultados de búsqueda</h1>
+  <p id="metaBusqueda" class="sub"></p>
+  <div id="resultados"></div>
+</main>
 
 <script type="module">
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
