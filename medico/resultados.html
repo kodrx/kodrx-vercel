@@ -15,50 +15,109 @@
   <script src="/componentes/header.js" defer></script>
 </head>
 <body>
-  <div class="wrap">
-    <h2>Resultados de búsqueda</h2>
-    <div id="results">Cargando...</div>
-  </div>
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getFirestore, collection, getDocs, query, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+  <div class="contenedor">
+  <h1>Resultados de búsqueda</h1>
+  <div id="results"></div>
+</div>
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyBIjaOe4HcGNDk0xrqen8etBv0RyjyOJHw",
-      authDomain: "kodrx-105b9.firebaseapp.com",
-      projectId: "kodrx-105b9"
-    };
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
+<style>
+  body { font-family: 'Poppins', sans-serif; margin: 0; padding: 1rem; background: #f8f9fc; }
+  h1 { color: #123f91; text-align: center; margin-bottom: 1rem; }
+  .contenedor { max-width: 800px; margin: auto; }
+  .acordeon { background: white; border: 1px solid #ccc; border-radius: 6px; margin-bottom: 0.5rem; overflow: hidden; }
+  .acordeon-header { background: #123f91; color: white; padding: 0.75rem 1rem; cursor: pointer; font-weight: 500; display: flex; justify-content: space-between; align-items: center; }
+  .acordeon-body { display: none; padding: 1rem; background: #fff; border-top: 1px solid #ddd; }
+  .acordeon-body p { margin: 0.3rem 0; }
+  .acordeon.open .acordeon-body { display: block; }
+  .acordeon.open .acordeon-header::after { content: "▲"; }
+  .acordeon-header::after { content: "▼"; font-size: 0.8rem; }
+  a.boton-ver { background: #2e6fd6; color: white; padding: 0.4rem 0.8rem; border-radius: 4px; text-decoration: none; font-size: 0.85rem; margin-top: 0.5rem; display: inline-block; }
+</style>
 
-    const qParam = new URLSearchParams(location.search).get("q") || "";
-    const resultsDiv = document.getElementById("results");
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+  import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-    async function buscar(){
-      if(!qParam){ resultsDiv.textContent="No se ingresó búsqueda"; return; }
-      const snap = await getDocs(collection(db,"recetas"));
-      const matches = [];
-      snap.forEach(doc=>{
-        const d = doc.data();
-        const nombre = d.nombrePaciente || d.pacienteNombre || d.paciente?.nombre || "";
-        if(nombre.toLowerCase().includes(qParam.toLowerCase())){
-          matches.push({id:doc.id,...d});
-        }
-      });
-      if(matches.length===0){
-        resultsDiv.textContent = "No se encontraron resultados.";
-        return;
-      }
-      resultsDiv.innerHTML = matches.map(r=>`
-        <div class="result">
-          <h3><a href="ver-receta.html?id=${r.id}">${r.nombrePaciente || r.pacienteNombre || r.paciente?.nombre}</a></h3>
-          <p>ID: ${r.id}</p>
-          <p>${r.diagnostico || "Sin diagnóstico"}</p>
-        </div>
-      `).join("");
+  const firebaseConfig = {
+    apiKey: "AIzaSyBIjaOe4HcGNDk0xrqen8etBv0RyjyOJHw",
+    authDomain: "kodrx-105b9.firebaseapp.com",
+    projectId: "kodrx-105b9"
+  };
+  const app = initializeApp(firebaseConfig);
+  const db  = getFirestore(app);
+
+  const q = (new URLSearchParams(location.search).get("q") || "").trim();
+  const resultsDiv = document.getElementById("results");
+
+  const fechaStr = (ts)=>{
+    try{
+      if (ts && typeof ts.toDate === 'function') ts = ts.toDate();
+      else if (ts && typeof ts.seconds === 'number') ts = new Date(ts.seconds*1000 + Math.floor((ts.nanoseconds||0)/1e6));
+      else if (!(ts instanceof Date)) ts = new Date(ts);
+      return ts.toLocaleString('es-MX',{year:'numeric',month:'long',day:'numeric'});
+    }catch{ return '—'; }
+  };
+
+  async function buscar(){
+    if(!q){
+      resultsDiv.textContent = "Ingresa un nombre para buscar.";
+      return;
     }
-    buscar();
-  </script>
+    resultsDiv.textContent = "Buscando…";
+
+    const snap = await getDocs(collection(db,"recetas"));
+    const term = q.toLowerCase();
+    const items = [];
+    snap.forEach(docSnap=>{
+      const d = docSnap.data();
+      const nombre = (d.nombrePaciente || d.pacienteNombre || d.paciente?.nombre || "").toString();
+      if (nombre.toLowerCase().includes(term)){
+        items.push({
+          id: docSnap.id,
+          nombre,
+          diagnostico: d.diagnostico || "Sin diagnóstico",
+          fecha: d.fecha ?? d.timestamp ?? null
+        });
+      }
+    });
+
+    if(items.length===0){
+      resultsDiv.textContent = "No se encontraron resultados.";
+      return;
+    }
+
+    items.sort((a,b)=>{
+      const ta = a.fecha?.seconds ? (a.fecha.seconds*1000 + Math.floor((a.fecha.nanoseconds||0)/1e6)) : new Date(a.fecha||0).getTime();
+      const tb = b.fecha?.seconds ? (b.fecha.seconds*1000 + Math.floor((b.fecha.nanoseconds||0)/1e6)) : new Date(b.fecha||0).getTime();
+      return tb - ta;
+    });
+
+    resultsDiv.innerHTML = items.map(it=>`
+      <div class="acordeon">
+        <div class="acordeon-header">
+          <span>${it.nombre}</span>
+          <span>${fechaStr(it.fecha)}</span>
+        </div>
+        <div class="acordeon-body">
+          <p><b>Diagnóstico:</b> ${it.diagnostico}</p>
+          <a class="boton-ver" href="ver-receta.html?id=${encodeURIComponent(it.id)}">Ver receta</a>
+        </div>
+      </div>
+    `).join("");
+
+    // Wire de toggles
+    document.querySelectorAll('.acordeon-header').forEach(head=>{
+      head.addEventListener('click', ()=>{
+        const acc = head.parentElement;
+        acc.classList.toggle('open');
+      });
+    });
+  }
+
+  buscar();
+</script>
+
+  
 </body>
 </html>
 
