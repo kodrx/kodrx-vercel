@@ -76,43 +76,56 @@ body {
   margin: 10px 0;
 }
 
-/* ===== BOTONES ESTILO KODRX ===== */
-.actions {
-  display: flex;
-  gap: 12px;
-  justify-content: center;   /* centrados */
-  margin: 1rem 0;
-  flex-wrap: wrap;           /* se acomodan en móvil */
-}
-
-button {
+/* === Botones KodRx (base) === */
+.btn {
   appearance: none;
+  -webkit-appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .5rem;
   border: 0;
-  cursor: pointer;
-  font-weight: 700;
   border-radius: 12px;
   padding: 10px 14px;
-  transition: transform .04s ease, box-shadow .2s ease;
-  font-family: inherit;
+  font: inherit;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  white-space: nowrap;
+  text-decoration: none;      /* por si es <a> */
+  width: auto;                /* ¡evita el 100%! */
+  max-width: 100%;
+  transition: box-shadow .2s ease, transform .04s ease, background-color .2s ease, color .2s ease, border-color .2s ease;
 }
-button:active { transform: translateY(1px); }
+.btn:active { transform: translateY(1px); }
 
-/* Azul sólido (acciones principales) */
-.primary {
-  background: #0b5bd3; 
+/* Variantes */
+.btn.primary {
+  background: #2e6fd6;
   color: #fff;
-  box-shadow: 0 6px 16px rgba(11,91,211,.2);
+  box-shadow: 0 6px 16px rgba(46,111,214,.2);
 }
-.primary:hover { box-shadow: 0 8px 22px rgba(11,91,211,.25); }
+.btn.primary:hover { box-shadow: 0 8px 22px rgba(46,111,214,.25); }
 
-/* Ghost (acciones secundarias) */
-.ghost {
-  background: #eef2ff; 
-  color: #0b1b2b; 
+.btn.ghost {
+  background: #eef2ff;
+  color: #0b1b2b;
   border: 1px solid #dbe3ff;
 }
-.ghost:hover { background: #e6ebff; }
+.btn.ghost:hover { background: #e6ebff; }
 
+/* Tamaños (opcional) */
+.btn.sm { padding: 8px 12px; border-radius: 10px; font-weight: 600; }
+.btn.lg { padding: 12px 18px; border-radius: 14px; font-size: 1.05rem; }
+
+/* Utilidad para ancho completo SOLO cuando la pidas */
+.btn.block { display: block; width: 100%; }
+
+/* Botón “Regresar” estilo fantasma en filas centradas */
+.btn-row { display: flex; gap: 12px; justify-content: center; align-items: center; flex-wrap: wrap; }
+
+/* Ajuste del buscador para que no se estire raro */
+.buscador-wrap .btn { height: 44px; }
 
 .site-header {
   background-color: #003366;
@@ -141,24 +154,7 @@ button:active { transform: translateY(1px); }
 }
 
 
-aside {
-  background-color: var(--color-primario);
-  color: white;
-  padding: 20px;
-}
 
-aside button {
-  display: block;
-  width: 100%;
-  margin-bottom: 10px;
-  padding: 10px;
-  background: var(--color-blanco);
-  color: var(--color-primario);
-  border: none;
-  border-radius: 4px;
-  font-weight: bold;
-  cursor: pointer;
-}
 
 main {
   padding: 20px;
@@ -250,78 +246,7 @@ details.lab-card div {
   }
 }
 
-/* Este va fuera del anterior */
-@media print {
-  .site-header {
-    display: none !important;
-  }
-}
 
-  h1, h2 {
-    font-size: 22px;
-    text-align: center;
-  }
-
-  .form-login,
-  form,
-  .seccion,
-  .card {
-    width: 100%;
-    max-width: 100%;
-    padding: 16px;
-    margin: 10px auto;
-    box-sizing: border-box;
-  }
-
-  input, select, textarea {
-    font-size: 18px;
-    padding: 14px;
-    border-radius: 6px;
-    width: 100%;
-    box-sizing: border-box;
-  }
-
-  button {
-    font-size: 18px;
-    padding: 14px 20px;
-    width: 100%;
-    margin-top: 10px;
-  }
-
-  .logo {
-    max-width: 160px;
-    height: auto;
-    display: block;
-    margin: 0 auto;
-  }
-
-  .volver {
-    text-align: center;
-    font-size: 16px;
-    margin-top: 24px;
-  }
-
-  details.lab-card summary {
-    font-size: 18px;
-    padding: 16px 16px;
-  }
-
-  details.lab-card div {
-    font-size: 16px;
-    padding: 16px;
-  }
-}
-/* Código de barras responsivo */
-.barcode-container {
-  text-align: center;
-  margin-top: 1.5rem;
-  overflow-x: auto;
-}
-
-.barcode-container canvas {
-  max-width: 100%;
-  height: auto;
-}
 
 /* Ajuste en pantallas pequeñas */
 @media (max-width: 600px) {
@@ -361,67 +286,3 @@ details.lab-card div {
   font-size: 0.9rem;
   margin-bottom: 1rem;
 }
-@media print {
-  body {
-    font-size: 9pt !important;
-  }
-
-  .receta {
-    padding: 1rem !important;
-  }
-
-  .receta,
-  .receta * {
-    font-size: 9pt !important;
-    line-height: 1.3 !important;
-  }
-
-  h1, h2, h3 {
-    font-size: 11pt !important;
-  }
-
-  .datos-horizontales {
-    font-size: 8pt !important;
-    gap: 0.75rem;
-  }
-
-  .barcode-container canvas {
-    max-width: 75%;
-  }
-
-  .site-header, footer, .botones {
-    display: none !important;
-  }
-
-  @page {
-    margin: 0.7cm;
-  }
-}
-body.modo-ultra-compacto {
-  font-size: 8pt !important;
-  line-height: 1.2 !important;
-}
-
-body.modo-ultra-compacto .receta,
-body.modo-ultra-compacto .receta * {
-  font-size: 8pt !important;
-  line-height: 1.2 !important;
-}
-
-body.modo-ultra-compacto .datos-horizontales {
-  font-size: 7.8pt !important;
-  gap: 0.5rem !important;
-}
-
-body.modo-ultra-compacto h1,
-body.modo-ultra-compacto h2,
-body.modo-ultra-compacto h3 {
-  font-size: 10pt !important;
-}
-
-body.modo-ultra-compacto .site-header,
-body.modo-ultra-compacto .botones,
-body.modo-ultra-compacto footer {
-  display: none !important;
-}
-
