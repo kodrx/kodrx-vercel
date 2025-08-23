@@ -77,55 +77,71 @@ body {
 }
 
 /* === Botones KodRx (base) === */
+/* === Botones KodRx (base + variantes) =============================== */
+button,
 .btn {
-  appearance: none;
   -webkit-appearance: none;
+  appearance: none;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: .5rem;
-  border: 0;
+  padding: 10px 16px;
   border-radius: 12px;
-  padding: 10px 14px;
   font: inherit;
-  font-weight: 700;
   line-height: 1;
   cursor: pointer;
-  white-space: nowrap;
-  text-decoration: none;      /* por si es <a> */
-  width: auto;                /* ¡evita el 100%! */
+  user-select: none;
+  text-decoration: none;         /* por si es <a class="btn"> */
+  border: 1px solid #d0d7e2;     /* borde suave por defecto */
+  background: #f7f9fc;           /* “ghost” por defecto */
+  color: #0b1b2b;
+  box-shadow: 0 1px 0 rgba(0,0,0,.04);
+  transition: background .2s ease, box-shadow .2s ease, transform .04s ease;
+  width: auto;                   /* evita botones 100% ancho */
   max-width: 100%;
-  transition: box-shadow .2s ease, transform .04s ease, background-color .2s ease, color .2s ease, border-color .2s ease;
 }
+
+button:hover,
+.btn:hover { box-shadow: 0 2px 10px rgba(0,0,0,.06); }
+
+button:active,
 .btn:active { transform: translateY(1px); }
 
-/* Variantes */
-.btn.primary {
-  background: #2e6fd6;
-  color: #fff;
-  box-shadow: 0 6px 16px rgba(46,111,214,.2);
+/* Accesibilidad */
+button:focus-visible,
+.btn:focus-visible {
+  outline: 3px solid rgba(11,91,211,.3);
+  outline-offset: 2px;
 }
-.btn.primary:hover { box-shadow: 0 8px 22px rgba(46,111,214,.25); }
 
+/* Variante: primary (azul KodRx) */
+button.primary,
+.btn.primary {
+  background: #0b5bd3;
+  border-color: #0b5bd3;
+  color: #fff;
+}
+button.primary:hover,
+.btn.primary:hover { box-shadow: 0 6px 16px rgba(11,91,211,.25); }
+
+/* Variante: ghost (claro) */
+button.ghost,
 .btn.ghost {
   background: #eef2ff;
+  border-color: #dbe3ff;
   color: #0b1b2b;
-  border: 1px solid #dbe3ff;
 }
+button.ghost:hover,
 .btn.ghost:hover { background: #e6ebff; }
 
-/* Tamaños (opcional) */
-.btn.sm { padding: 8px 12px; border-radius: 10px; font-weight: 600; }
-.btn.lg { padding: 12px 18px; border-radius: 14px; font-size: 1.05rem; }
+/* Tamaños opcionales */
+.btn-sm { padding: 8px 12px; border-radius: 10px; }
+.btn-lg { padding: 12px 18px; border-radius: 14px; }
 
-/* Utilidad para ancho completo SOLO cuando la pidas */
-.btn.block { display: block; width: 100%; }
+/* Si algún layout necesita ancho completo, úsalo explícitamente */
+.btn-block { display: flex; width: 100%; }
 
-/* Botón “Regresar” estilo fantasma en filas centradas */
-.btn-row { display: flex; gap: 12px; justify-content: center; align-items: center; flex-wrap: wrap; }
-
-/* Ajuste del buscador para que no se estire raro */
-.buscador-wrap .btn { height: 44px; }
 
 .site-header {
   background-color: #003366;
