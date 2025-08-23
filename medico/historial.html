@@ -20,6 +20,48 @@
     .acordeon-header::after { content: "▼"; font-size: 0.8rem; }
     a.boton-ver { background: #2e6fd6; color: white; padding: 0.4rem 0.8rem; border-radius: 4px; text-decoration: none; font-size: 0.85rem; margin-top: 0.5rem; display: inline-block; }
   </style>
+  <style>
+  .buscador-wrap{
+    display:flex; justify-content:center; align-items:center; gap:8px;
+    margin:1rem auto; max-width:520px; padding:0 .5rem;
+  }
+  /* blindaje contra global.css */
+  .buscador-wrap #buscador{
+    flex:1 1 auto;
+    width:100% !important;
+    max-width:400px !important;
+    min-width:260px;
+    padding:.65rem 1rem;
+    font-size:1rem; line-height:1.2;
+    border-radius:10px;
+    border:1px solid #cfd6e3 !important;
+    background:#fff !important;
+    color:#0b1b2b !important;
+    caret-color:#0b5bd3;
+    box-sizing:border-box;
+  }
+  .buscador-wrap #buscador::placeholder{ color:#8a94a6; }
+  .buscador-wrap #buscador:focus{
+    outline:2px solid #2e6fd6; outline-offset:2px;
+    border-color:#2e6fd6 !important;
+  }
+
+  .buscador-wrap #btnBuscar{
+    background:#2e6fd6; color:#fff;
+    border:none; border-radius:10px;
+    padding:.65rem 1.1rem;
+    font-weight:600; cursor:pointer;
+    transition:filter .15s ease;
+    white-space:nowrap;
+  }
+  .buscador-wrap #btnBuscar:hover{ filter:brightness(0.95); }
+
+  @media (max-width:480px){
+    .buscador-wrap{ max-width:100%; }
+    .buscador-wrap #buscador{ min-width:0; }
+  }
+</style>
+
 </head>
 <body>
   <h1> Historial de Recetas Emitidas</h1>
@@ -30,40 +72,29 @@
   <button id="btnBuscar">Buscar</button>
 </div>
 
-<style>
-  .buscador-wrap{
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 8px;
-    margin: 1rem auto;
-    max-width: 420px;
-  }
-  #buscador{
-    flex: 1;
-    padding: 0.6rem 1rem;
-    font-size: 1rem;
-    border-radius: 8px;
-    border: 1px solid #ccc;
-    width: 100%;              /* ocupa todo el ancho disponible */
-    max-width: 400px;         /* límite máximo */
-    box-sizing: border-box;
-  }
-  #btnBuscar{
-    background:#2e6fd6; color:#fff;
-    border:none; border-radius:8px;
-    padding:0.6rem 1.2rem;
-    font-weight:600;
-    cursor:pointer;
-    transition: background 0.2s ease;
-  }
-  #btnBuscar:hover{
-    background:#174a9e;
-  }
-</style>
+
 
 
   <div class="contenedor" id="historial"></div>
   <script type="module" src="/medico/historialMedico.js"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', ()=>{
+  const q = document.getElementById('buscador');
+  const b = document.getElementById('btnBuscar');
+  if(!q || !b) return;
+
+  function go(){
+    const v = q.value.trim();
+    if(!v){ q.focus(); return; }
+    const u = new URL('/medico/resultados.html', location.origin);
+    u.searchParams.set('q', v);
+    location.href = u.href;
+  }
+  q.addEventListener('keydown', e => { if(e.key === 'Enter') go(); });
+  b.addEventListener('click', go);
+});
+</script>
+
 </body>
 </html>
