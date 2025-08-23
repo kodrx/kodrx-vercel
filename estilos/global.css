@@ -77,28 +77,31 @@ body {
 }
 
 button {
-  background-color: var(--color-acento);
-  color: var(--color-blanco);
-  border: none;
-  padding: 10px 16px;
-  border-radius: 4px;
-  font-weight: bold;
+  appearance: none;
+  border: 0;
   cursor: pointer;
-  transition: background-color 0.3s ease;
-  display: inline-block;   /* ✅ evita que se estire al 100% */
-  width: auto;             /* ✅ ajusta al texto */
+  font-weight: 700;
+  border-radius: 12px;
+  padding: 10px 14px;
+  transition: transform .04s ease, box-shadow .2s ease;
 }
-.botones {
-  display: flex;
-  justify-content: center; /* o space-between / flex-start */
-  gap: 10px;
-  margin: 1rem 0;
-}
+button:active { transform: translateY(1px); }
 
-
-button:hover {
-  background-color: #00b9a2;
+/* Azul sólido */
+.primary {
+  background:#0b5bd3; 
+  color:#fff;
+  box-shadow:0 6px 16px rgba(11,91,211,.2);
 }
+.primary:hover { box-shadow:0 8px 22px rgba(11,91,211,.25); }
+
+/* Ghost (claro, con borde) */
+.ghost {
+  background:#eef2ff; 
+  color:#0b1b2b; 
+  border:1px solid #dbe3ff;
+}
+.ghost:hover { background:#e6ebff; }
 
 .site-header {
   background-color: #003366;
