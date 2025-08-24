@@ -349,12 +349,12 @@
     // --- UX: navegar con la query, volver, cargar más ---
     btnBuscarEl?.addEventListener('click', ()=>{
       const q = inputEl.value.trim();
-      location.href = `/resultados.html?q=${encodeURIComponent(q)}`;
+      location.href = `medico/resultados.html?q=${encodeURIComponent(q)}`;
     });
     inputEl?.addEventListener('keydown', (ev)=>{
       if (ev.key === 'Enter'){
         const q = inputEl.value.trim();
-        location.href = `/resultados.html?q=${encodeURIComponent(q)}`;
+        location.href = `/medico/resultados.html?q=${encodeURIComponent(q)}`;
       }
     });
     btnVolverEl?.addEventListener('click', ()=>{
