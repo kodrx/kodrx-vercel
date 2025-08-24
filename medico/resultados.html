@@ -354,7 +354,7 @@
     inputEl?.addEventListener('keydown', (ev)=>{
       if (ev.key === 'Enter'){
         const q = inputEl.value.trim();
-        location.href = `/medico/resultados.html?q=${encodeURIComponent(q)}`;
+        location.href = `/resultados.html?q=${encodeURIComponent(q)}`;
       }
     });
     btnVolverEl?.addEventListener('click', ()=>{
