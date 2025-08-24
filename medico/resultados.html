@@ -103,18 +103,13 @@
       const fecha = fmtFecha(r.timestamp || r.fecha);
       const nombre = r.nombrePaciente || r.pacienteNombre || r.paciente?.nombre || 'Paciente';
       const id = r.id;
-
       const aVer = document.createElement('a');
-      aVer.className = 'btn primary';
-      aVer.textContent = 'Ver receta';
-      aVer.href = `/ver-receta-pdf.html?id=${encodeURIComponent(id)}`;
-
-      const aAbrir = document.createElement('a');
-      aAbrir.className = 'btn ghost';
-      aAbrir.textContent = 'Abrir en nueva pestaña';
-      aAbrir.target = '_blank';
-      aAbrir.rel = 'noopener';
-      aAbrir.href = `/ver-receta-pdf.html?id=${encodeURIComponent(id)}`;
+aVer.className = 'btn primary';
+aVer.textContent = 'Ver receta';
+// usa ruta ABSOLUTA desde la raíz
+aVer.href = `/medico/ver-receta.html?id=${encodeURIComponent(id)}`;
+acciones.appendChild(aVer);
+    
 
       
       const card = document.createElement('div');
@@ -132,9 +127,8 @@
         ? r.observaciones.slice(0, 140) + (r.observaciones.length > 140 ? '…' : '')
         : '—';
 
-      const actions = document.createElement('div');
-      actions.className = 'actions';
-      actions.append(aVer, aAbrir);
+      const acciones = document.createElement('div');
+acciones.className = 'acciones';
 
       card.append(actions);
       return card;
