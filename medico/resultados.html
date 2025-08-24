@@ -10,7 +10,6 @@
   <script src="/componentes/header.js" defer></script>
 
   <style>
-    /* Ajustes mínimos propios de esta página */
     body { background:#f8f9fc; font-family: 'Poppins', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
     .wrap { max-width: 900px; margin: 16px auto; padding: 0 12px; }
     h1 { color:#123f91; text-align:center; margin: 1rem 0 .25rem; }
@@ -24,13 +23,6 @@
     #btnBuscar{ min-width: 110px; }
 
     .result-list{ max-width: 820px; margin: 0 auto; }
-    .card{ background:#fff; border:1px solid #e5e7eb; border-radius:12px; padding: 12px 14px; margin-bottom:10px; box-shadow:0 1px 3px rgba(0,0,0,.04); }
-    .card h3{ margin:.2rem 0 .4rem; font-size:1.05rem; color:#111827; }
-    .meta{ font-size:.85rem; color:#6b7280; display:flex; gap:10px; flex-wrap: wrap; }
-    .diag{ margin-top:.35rem; color:#374151; }
-    .actions{ margin-top:.6rem; display:flex; gap:8px; flex-wrap:wrap; }
-
-    /* Botones (usa tus utilidades globales .btn) */
     .btn{ display:inline-flex; align-items:center; justify-content:center; gap:.4rem; padding:.55rem .9rem; border-radius:10px; font-weight:700; border:1px solid transparent; cursor:pointer; text-decoration:none; }
     .btn.primary{ background:#0b5bd3; color:#fff; box-shadow:0 6px 16px rgba(11,91,211,.18); }
     .btn.primary:hover{ background:#0a51be; }
@@ -38,68 +30,20 @@
     .btn.ghost:hover{ background:#e6ebff; }
 
     /* ===== Acordeón ===== */
-.acordeon {
-  background: #fff;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  margin-bottom: 0.75rem;
-  overflow: hidden;
-  transition: all 0.2s ease;
-}
+    .acordeon { background:#fff; border:1px solid #ccc; border-radius:6px; margin-bottom:.75rem; overflow:hidden; transition:all .2s ease; }
+    .acordeon-header {
+      background:#123f91; color:#fff; padding:.75rem 1rem; cursor:pointer; font-weight:500;
+      display:flex; justify-content:space-between; align-items:center; position:relative; user-select:none;
+    }
+    .acordeon-header::after { content:"▼"; font-size:.8rem; transition:transform .2s ease; }
+    .acordeon.open .acordeon-header::after { content:"▲"; }
+    .acordeon-body { display:none; padding:1rem; background:#fff; border-top:1px solid #ddd; }
+    .acordeon-body p { margin:.3rem 0; color:#374151; font-size:.95rem; line-height:1.35; }
+    .acordeon.open .acordeon-body { display:block; }
+    .acordeon-body .acciones { margin-top:.75rem; display:flex; gap:.5rem; }
 
-/* ===== Encabezado ===== */
-.acordeon-header {
-  background: #123f91;            /* azul KodRx */
-  color: #fff;
-  padding: 0.75rem 1rem;
-  cursor: pointer;
-  font-weight: 500;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  position: relative;
-  user-select: none;
-}
-
-/* Flecha ▼/▲ */
-.acordeon-header::after {
-  content: "▼";
-  font-size: 0.8rem;
-  transition: transform 0.2s ease;
-}
-.acordeon.open .acordeon-header::after {
-  content: "▲";
-}
-
-/* ===== Contenido ===== */
-.acordeon-body {
-  display: none;
-  padding: 1rem;
-  background: #fff;
-  border-top: 1px solid #ddd;
-}
-.acordeon-body p {
-  margin: 0.3rem 0;
-  color: #374151;
-  font-size: 0.95rem;
-  line-height: 1.35;
-}
-
-/* Mostrar cuerpo al abrir */
-.acordeon.open .acordeon-body {
-  display: block;
-}
-
-/* ===== Acciones dentro del body ===== */
-.acordeon-body .acciones {
-  margin-top: 0.75rem;
-  display: flex;
-  gap: 0.5rem;
-}
-
-    .empty{ text-align:center; color:#6b7280; padding: 24px 12px; }
+    .empty{ text-align:center; color:#6b7280; padding:24px 12px; }
     .pill{ display:inline-block; padding:.18rem .5rem; border-radius:999px; background:#eef2ff; color:#123f91; font-size:.75rem; font-weight:700; }
-    .warn{ color:#b45309; }
   </style>
 </head>
 <body>
@@ -107,16 +51,14 @@
     <h1>Resultados de búsqueda</h1>
     <div class="hint" id="queryHint">Buscando…</div>
 
-    <!-- Buscador local para refinar (no cambia la URL) -->
+    <!-- Buscador local para navegar con la query -->
     <div class="buscador-wrap">
       <input id="buscador" type="text" placeholder="Buscar paciente…" />
       <button id="btnBuscar" class="btn primary">Buscar</button>
       <button id="btnVolver" class="btn ghost">Regresar</button>
     </div>
 
-    <div id="alertaAmbito" class="hint" style="display:none">
-      <span class="pill">Aviso</span> Mostrando resultados <b>de todos los médicos</b> (no se detectó sesión/UID).
-    </div>
+    <div id="alertaAmbito" class="hint" style="display:none"></div>
 
     <div id="resultados" class="result-list"></div>
     <div id="vacio" class="empty" style="display:none">No se encontraron recetas con ese nombre.</div>
@@ -124,198 +66,190 @@
 
   <!-- Firebase (ESM) -->
   <script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-  import { getFirestore, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-  import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getFirestore, collection, query, where, getDocs, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
-  // --- Firebase ---
-  const firebaseConfig = {
-    apiKey: "AIzaSyBIjaOe4HcGNDk0xrqen8etBv0RyjyOJHw",
-    authDomain: "kodrx-105b9.firebaseapp.com",
-    projectId: "kodrx-105b9"
-  };
-  const app  = initializeApp(firebaseConfig);
-  const db   = getFirestore(app);
-  const auth = getAuth(app);
+    // --- Firebase ---
+    const firebaseConfig = {
+      apiKey: "AIzaSyBIjaOe4HcGNDk0xrqen8etBv0RyjyOJHw",
+      authDomain: "kodrx-105b9.firebaseapp.com",
+      projectId: "kodrx-105b9"
+    };
+    const app  = initializeApp(firebaseConfig);
+    const db   = getFirestore(app);
+    const auth = getAuth(app);
 
-  // --- DOM helpers ---
-  const $ = (s) => document.querySelector(s);
-  const resultadosEl = $('#resultados');
-  const vacioEl      = $('#vacio');
-  const hintEl       = $('#queryHint');
-  const alertaEl     = $('#alertaAmbito');
-  const inputEl      = $('#buscador');
+    // --- DOM helpers ---
+    const $ = (s) => document.querySelector(s);
+    const resultadosEl = $('#resultados');
+    const vacioEl      = $('#vacio');
+    const hintEl       = $('#queryHint');
+    const alertaEl     = $('#alertaAmbito');
+    const inputEl      = $('#buscador');
+    const btnBuscarEl  = $('#btnBuscar');
+    const btnVolverEl  = $('#btnVolver');
 
-  // --- Utils ---
-  const getQ = () => (new URLSearchParams(location.search).get('q') || '').trim();
-  function fmtFecha(ts){
-    try{
-      let d = ts;
-      if (d?.toDate) d = d.toDate();
-      else if (typeof d?.seconds === 'number') d = new Date(d.seconds*1000 + Math.floor((d.nanoseconds||0)/1e6));
-      else if (!(d instanceof Date)) d = new Date(d);
-      return d.toLocaleString('es-MX',{year:'numeric',month:'long',day:'numeric', hour:'2-digit', minute:'2-digit'});
-    }catch{ return '—'; }
-  }
-  const nombrePacienteDe = (r) => (r.nombrePaciente || r.pacienteNombre || r.paciente?.nombre || '').trim();
+    // --- Utils ---
+    const getQ = () => (new URLSearchParams(location.search).get('q') || '').trim();
 
-  // --- UI: tarjeta/acordeón ---
-  function cardReceta(r){
-    const diag   = r.diagnostico || '—';
-    const fecha  = fmtFecha(r.timestamp || r.fecha);
-    const nombre = nombrePacienteDe(r) || 'Paciente';
-    const id     = r.id;
-
-    const cont = document.createElement('div');
-    cont.className = 'acordeon';
-
-    const header = document.createElement('div');
-    header.className = 'acordeon-header';
-    header.innerHTML = `<strong>${nombre}</strong><span style="font-size:.9rem;opacity:.9">${fecha}</span>`;
-
-    const body = document.createElement('div');
-    body.className = 'acordeon-body';
-    body.innerHTML = `
-      <p><strong>Diagnóstico:</strong> ${diag}</p>
-      <div class="acciones" style="margin-top:.6rem; display:flex; gap:.5rem;">
-        <a class="btn primary" href="/medico/ver-receta.html?id=${encodeURIComponent(id)}">Ver receta</a>
-        <a class="btn ghost" href="/medico/ver-receta.html?id=${encodeURIComponent(id)}" target="_blank" rel="noopener">Abrir en nueva pestaña</a>
-      </div>
-    `;
-
-    header.addEventListener('click', ()=> cont.classList.toggle('open'));
-    cont.appendChild(header);
-    cont.appendChild(body);
-    return cont;
-  }
-
-  function renderLista(arr){
-    resultadosEl.innerHTML = '';
-    if (!arr || arr.length === 0){
-      vacioEl.style.display = 'block';
-      return;
+    function fmtFecha(ts){
+      try{
+        let d = ts;
+        if (d?.toDate) d = d.toDate();
+        else if (typeof d?.seconds === 'number') d = new Date(d.seconds*1000 + Math.floor((d.nanoseconds||0)/1e6));
+        else if (!(d instanceof Date)) d = new Date(d);
+        return d.toLocaleString('es-MX',{year:'numeric',month:'long',day:'numeric', hour:'2-digit', minute:'2-digit'});
+      }catch{ return '—'; }
     }
-    vacioEl.style.display = 'none';
-    arr.forEach(r => resultadosEl.appendChild(cardReceta(r)));
-  }
 
- // Trae las recetas del médico usando el esquema real: correo == user.email
-async function queryRecetasDelMedico(db, user){
-  const col = collection(db, 'recetas');
-
-  // 1) Principal: correo == user.email (tal como lo guardas en addDoc)
-  try{
-    const qRef = query(col, where('correo','==', user.email));
-    const snap = await getDocs(qRef);
-    const rows = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    if (rows.length) {
-      console.info(`[Resultados] filtro correo==email → ${rows.length}`);
-      return rows;
+    function millisFrom(ts){
+      if (!ts) return 0;
+      if (ts?.toMillis) return ts.toMillis();
+      if (typeof ts?.seconds === 'number') return ts.seconds*1000 + Math.floor((ts.nanoseconds||0)/1e6);
+      const d = ts instanceof Date ? ts : new Date(ts);
+      return isNaN(+d) ? 0 : +d;
     }
-  }catch(err){
-    console.warn('[Resultados] Error correo==email:', err);
-  }
 
-  // 2) Respaldo: por nombre visible (menos confiable)
-  if (user.displayName){
-    try{
-      const qRef = query(col, where('medicoNombre','==', user.displayName));
-      const snap = await getDocs(qRef);
-      const rows = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      if (rows.length) {
-        console.info(`[Resultados] filtro medicoNombre==displayName → ${rows.length}`);
-        return rows;
+    const nombrePacienteDe = (r) => (r.nombrePaciente || r.pacienteNombre || r.paciente?.nombre || '').trim();
+
+    // --- UI: tarjeta/acordeón ---
+    function cardReceta(r){
+      const diag   = r.diagnostico || '—';
+      const fecha  = fmtFecha(r.timestamp || r.fecha);
+      const nombre = nombrePacienteDe(r) || 'Paciente';
+      const id     = r.id;
+
+      const cont = document.createElement('div');
+      cont.className = 'acordeon';
+
+      const header = document.createElement('div');
+      header.className = 'acordeon-header';
+      header.innerHTML = `<strong>${nombre}</strong><span style="font-size:.9rem;opacity:.9">${fecha}</span>`;
+
+      const body = document.createElement('div');
+      body.className = 'acordeon-body';
+      body.innerHTML = `
+        <p><strong>Diagnóstico:</strong> ${diag}</p>
+        <div class="acciones">
+          <a class="btn primary" href="/medico/ver-receta.html?id=${encodeURIComponent(id)}">Ver receta</a>
+          <a class="btn ghost" href="/medico/ver-receta.html?id=${encodeURIComponent(id)}" target="_blank" rel="noopener">Abrir en nueva pestaña</a>
+        </div>
+      `;
+
+      header.addEventListener('click', ()=> cont.classList.toggle('open'));
+      cont.appendChild(header);
+      cont.appendChild(body);
+      return cont;
+    }
+
+    function renderLista(arr){
+      resultadosEl.innerHTML = '';
+      if (!arr || arr.length === 0){
+        vacioEl.style.display = 'block';
+        return;
       }
-    }catch(err){
-      console.warn('[Resultados] Error medicoNombre==displayName:', err);
+      vacioEl.style.display = 'none';
+      arr.forEach(r => resultadosEl.appendChild(cardReceta(r)));
     }
-  }
 
-  return [];
-}
+    // --- Perfil del médico para obtener CÉDULA ---
+    async function getPerfilMedico(uid){
+      try{
+        const ref  = doc(db, 'medicos', uid);
+        const snap = await getDoc(ref);
+        if (snap.exists()){
+          const p = snap.data();
+          const cedula = (p.cedula || '').trim();
+          const nombre = (p.nombre || '').trim();
+          return { cedula, nombre };
+        }
+      }catch(e){
+        console.warn('[Resultados] No se pudo leer medicos/{uid}:', e);
+      }
+      return { cedula:'', nombre:'' };
+    }
 
-// Búsqueda por paciente, priorizando server-side con índice; si no, fallback cliente
-async function buscarDelMedico(user, term){
-  const t = (term || '').trim();
-  const col = collection(db, 'recetas');
+    // --- Trae recetas SOLO del médico por CÉDULA ---
+    async function queryRecetasPorCedula(cedula){
+      if (!cedula){
+        console.info('[Resultados] Sin cédula → 0 docs');
+        return [];
+      }
+      try{
+        const col  = collection(db, 'recetas');
+        const qRef = query(col, where('medicoCedula','==', cedula));
+        const snap = await getDocs(qRef);
+        const rows = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        console.info(`[Resultados] medicoCedula==${cedula} → ${rows.length}`);
+        return rows;
+      }catch(err){
+        console.warn('[Resultados] Error medicoCedula==cedula:', err);
+        return [];
+      }
+    }
 
-  // Si hay término, intentamos: correo==email + rango en nombrePaciente (requiere índice compuesto)
-  if (t){
-    try{
-      const qRef = query(
-        col,
-        where('correo','==', user.email),
-        where('nombrePaciente','>=', t),
-        where('nombrePaciente','<=', t + '\uf8ff')
-      );
-      const snap = await getDocs(qRef);
-      let data = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    // --- Búsqueda completa ---
+    async function buscarDelMedicoPorCedula(user, term){
+      const perfil = await getPerfilMedico(user.uid);
+      const all    = await queryRecetasPorCedula(perfil.cedula);
 
-      // ordenar por fecha/timestamp desc
-      data.sort((a,b)=>{
-        const ta = (a.timestamp?.seconds ?? +new Date(a.timestamp ?? a.fecha ?? 0));
-        const tb = (b.timestamp?.seconds ?? +new Date(b.timestamp ?? b.fecha ?? 0));
-        return tb - ta;
-      });
+      // Filtro por nombre de paciente en cliente (case-insensitive)
+      const needle = (term || '').toLowerCase();
+      let data = all;
+      if (needle){
+        data = all.filter(r => nombrePacienteDe(r).toLowerCase().includes(needle));
+      }
 
-      console.info(`[Resultados] server-side nombrePaciente con índice → ${data.length}`);
+      // Orden por fecha/timestamp desc
+      data.sort((a,b)=> millisFrom(b.timestamp || b.fecha) - millisFrom(a.timestamp || a.fecha));
       return data;
-    }catch(err){
-      // Si no hay índice, Firestore suele dar una URL para crearlo. Hacemos fallback.
-      console.warn('[Resultados] Índice no disponible o error, usando fallback cliente:', err);
     }
-  }
 
-  // Fallback: traer recetas del médico y filtrar en cliente (case-insensitive)
-  let data = await queryRecetasDelMedico(db, user);
-  const needle = t.toLowerCase();
-  if (needle){
-    const nombrePacienteDe = (r) =>
-      (r.nombrePaciente || r.pacienteNombre || r.paciente?.nombre || '').trim();
-    data = data.filter(r => nombrePacienteDe(r).toLowerCase().includes(needle));
-  }
-
-  data.sort((a,b)=>{
-    const ta = (a.timestamp?.seconds ?? +new Date(a.timestamp ?? a.fecha ?? 0));
-    const tb = (b.timestamp?.seconds ?? +new Date(b.timestamp ?? b.fecha ?? 0));
-    return tb - ta;
-  });
-
-  console.info(`[Resultados] fallback cliente → ${data.length}`);
-  return data;
-}
-
-
-  // --- Boot ---
-  onAuthStateChanged(auth, async (user) => {
+    // --- Boot ---
     const term = getQ();
-    hintEl && (hintEl.textContent = term ? `Resultados para: “${term}”` : '');
+    if (inputEl) inputEl.value = term;
+    if (hintEl)  hintEl.textContent = term ? `Resultados para: “${term}”` : 'Resultados';
 
-    if (!user){
-      // si no hay sesión, no mostramos nada (o redirige al login)
-      alertaEl && (alertaEl.textContent = 'Inicia sesión para ver tus resultados.');
-      renderLista([]);
-      return;
-    }
+    onAuthStateChanged(auth, async (user) => {
+      if (!user){
+        if (alertaEl){
+          alertaEl.style.display = 'block';
+          alertaEl.innerHTML = '<span class="pill">Aviso</span> Inicia sesión para ver tus resultados.';
+        }
+        renderLista([]);
+        return;
+      }
 
-    try{
-      alertaEl && (alertaEl.textContent = 'Mostrando solo tus recetas.');
-      const rows = await buscarDelMedico(user.uid, term || '');
-      renderLista(rows);
-    }catch(e){
-      console.warn('[Resultados] Error buscando por médico:', e);
-      renderLista([]);
-    }
-  });
+      try{
+        if (alertaEl){
+          alertaEl.style.display = 'block';
+          alertaEl.innerHTML = '<span class="pill">OK</span> Mostrando solo tus recetas (filtro por cédula).';
+        }
+        const rows = await buscarDelMedicoPorCedula(user, term || '');
+        renderLista(rows);
+      }catch(e){
+        console.warn('[Resultados] Error general:', e);
+        renderLista([]);
+      }
+    });
 
-  // barra de búsqueda (navega con la query)
-  inputEl?.addEventListener('keydown', (ev)=>{
-    if (ev.key === 'Enter'){
+    // --- Navegación buscador y volver ---
+    btnBuscarEl?.addEventListener('click', ()=>{
       const q = inputEl.value.trim();
       location.href = `/resultados.html?q=${encodeURIComponent(q)}`;
-    }
-  });
-</script>
+    });
 
+    inputEl?.addEventListener('keydown', (ev)=>{
+      if (ev.key === 'Enter'){
+        const q = inputEl.value.trim();
+        location.href = `/resultados.html?q=${encodeURIComponent(q)}`;
+      }
+    });
+
+    btnVolverEl?.addEventListener('click', ()=>{
+      history.length > 1 ? history.back() : (location.href = '/medico/historial.html');
+    });
+  </script>
 </body>
 </html>
