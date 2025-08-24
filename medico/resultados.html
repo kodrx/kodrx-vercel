@@ -98,41 +98,60 @@
       }catch{ return '—'; }
     }
 
-    function cardReceta(r){
-      const diag = r.diagnostico || '—';
-      const fecha = fmtFecha(r.timestamp || r.fecha);
-      const nombre = r.nombrePaciente || r.pacienteNombre || r.paciente?.nombre || 'Paciente';
-      const id = r.id;
-      const aVer = document.createElement('a');
-aVer.className = 'btn primary';
-aVer.textContent = 'Ver receta';
-// usa ruta ABSOLUTA desde la raíz
-aVer.href = `/medico/ver-receta.html?id=${encodeURIComponent(id)}`;
-acciones.appendChild(aVer);
-    
+function cardReceta(r){
+  const id      = r.id;
+  const fecha   = fmtFecha(r.timestamp || r.fecha);
+  const nombre  = r.nombrePaciente || r.pacienteNombre || r.paciente?.nombre || 'Paciente';
+  const diag    = r.diagnostico || '—';
 
-      
-      const card = document.createElement('div');
-      card.className = 'card';
-      card.innerHTML = `
-        <h3>${nombre}</h3>
-        <div class="meta">
-          <span>${fecha}</span>
-          <span>Diagnóstico: <b>${diag}</b></span>
-        </div>
-        <div class="diag"></div>
-      `;
-      const diagDiv = card.querySelector('.diag');
-      diagDiv.textContent = (r.observaciones && r.observaciones.length > 1)
-        ? r.observaciones.slice(0, 140) + (r.observaciones.length > 140 ? '…' : '')
-        : '—';
+  // Card
+  const card = document.createElement('article');
+  card.className = 'acordeon';
 
-      const acciones = document.createElement('div');
-acciones.className = 'acciones';
+  // Header
+  const header = document.createElement('div');
+  header.className = 'acordeon-header';
 
-      card.append(actions);
-      return card;
-    }
+  const title = document.createElement('div');
+  title.className = 'titulo';
+  title.textContent = nombre;
+
+  const meta = document.createElement('div');
+  meta.className = 'meta';
+  meta.textContent = fecha;
+
+  header.appendChild(title);
+  header.appendChild(meta);
+
+  // Body
+  const body = document.createElement('div');
+  body.className = 'acordeon-body';
+
+  const pDiag = document.createElement('p');
+  pDiag.innerHTML = `<b>Diagnóstico:</b> ${diag}`;
+  body.appendChild(pDiag);
+
+  // Acciones (¡declarar antes de usar!)
+  const acciones = document.createElement('div');
+  acciones.className = 'acciones';
+
+  const aVer = document.createElement('a');
+  aVer.className = 'btn primary';
+  aVer.textContent = 'Ver receta';
+  aVer.href = `/medico/ver-receta.html?id=${encodeURIComponent(id)}`; // ruta ABSOLUTA
+  acciones.appendChild(aVer);
+
+  body.appendChild(acciones);
+
+  // Toggle
+  header.addEventListener('click', () => card.classList.toggle('open'));
+
+  // Ensamblar
+  card.appendChild(header);
+  card.appendChild(body);
+  return card;
+}
+
 
     function renderLista(arr){
       resultadosEl.innerHTML = '';
