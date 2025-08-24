@@ -107,15 +107,9 @@
       const aVer = document.createElement('a');
       aVer.className = 'btn primary';
       aVer.textContent = 'Ver receta';
-      aVer.href = `/ver-receta-pdf.html?id=${encodeURIComponent(id)}`;
+      aVer.href = `/medico/ver-receta.html?id=${encodeURIComponent(id)}`;
 
-      const aAbrir = document.createElement('a');
-      aAbrir.className = 'btn ghost';
-      aAbrir.textContent = 'Abrir en nueva pestaña';
-      aAbrir.target = '_blank';
-      aAbrir.rel = 'noopener';
-      aAbrir.href = `/ver-receta-pdf.html?id=${encodeURIComponent(id)}`;
-
+      
       const card = document.createElement('div');
       card.className = 'card';
       card.innerHTML = `
