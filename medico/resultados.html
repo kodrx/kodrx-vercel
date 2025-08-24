@@ -124,224 +124,132 @@
 
   <!-- Firebase (ESM) -->
   <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-    import {
-      getFirestore, collection, query, where, getDocs, orderBy, limit
-    } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+  import { getFirestore, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+  import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
-    // 1) Configura e inicializa Firebase
-    const firebaseConfig = {
-      apiKey: "AIzaSyBIjaOe4HcGNDk0xrqen8etBv0RyjyOJHw",
-      authDomain: "kodrx-105b9.firebaseapp.com",
-      projectId: "kodrx-105b9"
-    };
-    const app  = initializeApp(firebaseConfig);
-    const db   = getFirestore(app);
-    const auth = getAuth(app);
+  // --- Firebase ---
+  const firebaseConfig = {
+    apiKey: "AIzaSyBIjaOe4HcGNDk0xrqen8etBv0RyjyOJHw",
+    authDomain: "kodrx-105b9.firebaseapp.com",
+    projectId: "kodrx-105b9"
+  };
+  const app  = initializeApp(firebaseConfig);
+  const db   = getFirestore(app);
+  const auth = getAuth(app);
 
-    // 2) Utilidades de la página
-    const $ = (sel) => document.querySelector(sel);
-    const resultadosEl = $('#resultados');
-    const vacioEl      = $('#vacio');
-    const hintEl       = $('#queryHint');
-    const alertaEl     = $('#alertaAmbito');
-    const inputEl      = $('#buscador');
+  // --- DOM helpers ---
+  const $ = (s) => document.querySelector(s);
+  const resultadosEl = $('#resultados');
+  const vacioEl      = $('#vacio');
+  const hintEl       = $('#queryHint');
+  const alertaEl     = $('#alertaAmbito');
+  const inputEl      = $('#buscador');
 
-    function fmtFecha(ts){
-      try{
-        let d = ts;
-        if (d?.toDate) d = d.toDate();
-        else if (typeof d?.seconds === 'number') d = new Date(d.seconds*1000 + Math.floor((d.nanoseconds||0)/1e6));
-        else if (!(d instanceof Date)) d = new Date(d);
-        return d.toLocaleString('es-MX',{year:'numeric',month:'long',day:'numeric', hour:'2-digit', minute:'2-digit'});
-      }catch{ return '—'; }
-    }
+  // --- Utils ---
+  const getQ = () => (new URLSearchParams(location.search).get('q') || '').trim();
+  function fmtFecha(ts){
+    try{
+      let d = ts;
+      if (d?.toDate) d = d.toDate();
+      else if (typeof d?.seconds === 'number') d = new Date(d.seconds*1000 + Math.floor((d.nanoseconds||0)/1e6));
+      else if (!(d instanceof Date)) d = new Date(d);
+      return d.toLocaleString('es-MX',{year:'numeric',month:'long',day:'numeric', hour:'2-digit', minute:'2-digit'});
+    }catch{ return '—'; }
+  }
+  const nombrePacienteDe = (r) => (r.nombrePaciente || r.pacienteNombre || r.paciente?.nombre || '').trim();
 
-function cardReceta(r){
-  const id      = r.id;
-  const fecha   = fmtFecha(r.timestamp || r.fecha);
-  const nombre  = r.nombrePaciente || r.pacienteNombre || r.paciente?.nombre || 'Paciente';
-  const diag    = r.diagnostico || '—';
+  // --- UI: tarjeta/acordeón ---
+  function cardReceta(r){
+    const diag   = r.diagnostico || '—';
+    const fecha  = fmtFecha(r.timestamp || r.fecha);
+    const nombre = nombrePacienteDe(r) || 'Paciente';
+    const id     = r.id;
 
-  // Card
-  const card = document.createElement('article');
-  card.className = 'acordeon';
+    const cont = document.createElement('div');
+    cont.className = 'acordeon';
 
-  // Header
-  const header = document.createElement('div');
-  header.className = 'acordeon-header';
+    const header = document.createElement('div');
+    header.className = 'acordeon-header';
+    header.innerHTML = `<strong>${nombre}</strong><span style="font-size:.9rem;opacity:.9">${fecha}</span>`;
 
-  const title = document.createElement('div');
-  title.className = 'titulo';
-  title.textContent = nombre;
+    const body = document.createElement('div');
+    body.className = 'acordeon-body';
+    body.innerHTML = `
+      <p><strong>Diagnóstico:</strong> ${diag}</p>
+      <div class="acciones" style="margin-top:.6rem; display:flex; gap:.5rem;">
+        <a class="btn primary" href="/medico/ver-receta.html?id=${encodeURIComponent(id)}">Ver receta</a>
+        <a class="btn ghost" href="/medico/ver-receta.html?id=${encodeURIComponent(id)}" target="_blank" rel="noopener">Abrir en nueva pestaña</a>
+      </div>
+    `;
 
-  const meta = document.createElement('div');
-  meta.className = 'meta';
-  meta.textContent = fecha;
-
-  header.appendChild(title);
-  header.appendChild(meta);
-
-  // Body
-  const body = document.createElement('div');
-  body.className = 'acordeon-body';
-
-  const pDiag = document.createElement('p');
-  pDiag.innerHTML = `<b>Diagnóstico:</b> ${diag}`;
-  body.appendChild(pDiag);
-
-  // Acciones (¡declarar antes de usar!)
-  const acciones = document.createElement('div');
-  acciones.className = 'acciones';
-
-  const aVer = document.createElement('a');
-  aVer.className = 'btn primary';
-  aVer.textContent = 'Ver receta';
-  aVer.href = `/medico/ver-receta.html?id=${encodeURIComponent(id)}`; // ruta ABSOLUTA
-  acciones.appendChild(aVer);
-
-  body.appendChild(acciones);
-
-  // Toggle
-  header.addEventListener('click', () => card.classList.toggle('open'));
-
-  // Ensamblar
-  card.appendChild(header);
-  card.appendChild(body);
-  return card;
-}
-
-
-    function renderLista(arr){
-      resultadosEl.innerHTML = '';
-      if (!arr || arr.length === 0){
-        vacioEl.style.display = 'block';
-        return;
-      }
-      vacioEl.style.display = 'none';
-      arr.forEach(r => resultadosEl.appendChild(cardReceta(r)));
-    }
-
-    function getQP(){
-      const p = new URLSearchParams(location.search);
-      return (p.get('q') || '').trim();
-    }
-
-    // 3) Lógica de búsqueda
-      // 👉 normaliza para búsqueda: minúsculas y sin acentos
-  const norm = (s) =>
-    (s ?? '')
-      .toString()
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/\p{Diacritic}/gu, '');
-
-  // ⬇️ Reemplaza tu función buscarRecetas por esta
-  async function buscarRecetas(nombre, medicoUid){
-    const col = collection(db, 'recetas');
-    const needle = norm(nombre);
-
-    // 3.1) intenta restringir por médico
-    let docs = [];
-    if (medicoUid){
-      try{
-        const q1 = query(col, where('medicoUid','==', medicoUid), limit(300));
-        const snap1 = await getDocs(q1);
-        docs = snap1.docs.map(d => ({ id: d.id, ...d.data() }));
-
-        // ⚠️ Fallback: si no hay docs (colección legacy sin medicoUid), traemos un lote global
-        if (docs.length === 0){
-          console.info('[Resultados] Sin datos con medicoUid, haciendo fallback global…');
-          const q2 = query(col, limit(500));
-          const snap2 = await getDocs(q2);
-          docs = snap2.docs.map(d => ({ id: d.id, ...d.data() }));
-        }
-      }catch(e){
-        console.warn('[Resultados] where(medicoUid) falló, fallback global:', e);
-        const q2 = query(col, limit(500));
-        const snap2 = await getDocs(q2);
-        docs = snap2.docs.map(d => ({ id: d.id, ...d.data() }));
-      }
-    } else {
-      // 3.2) sin UID: global directo (con aviso arriba)
-      const q = query(col, limit(500));
-      const snap = await getDocs(q);
-      docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    }
-
-    // 3.3) filtro por nombre en cliente (toma el campo que venga)
-    const filtrados = docs.filter(d => {
-      const nombreDoc =
-        d.nombrePaciente || d.pacienteNombre || d.paciente?.nombre || '';
-      return needle ? norm(nombreDoc).includes(needle) : true;
-    });
-
-    // 3.4) ordena por fecha desc
-    filtrados.sort((a,b)=>{
-      const ta = a.timestamp?.seconds ? a.timestamp.seconds*1000 :
-                 new Date(a.timestamp || a.fecha || 0).getTime();
-      const tb = b.timestamp?.seconds ? b.timestamp.seconds*1000 :
-                 new Date(b.timestamp || b.fecha || 0).getTime();
-      return (tb||0) - (ta||0);
-    });
-
-    return filtrados;
+    header.addEventListener('click', ()=> cont.classList.toggle('open'));
+    cont.appendChild(header);
+    cont.appendChild(body);
+    return cont;
   }
 
-    // 4) Boot
-    (async function init(){
-      // Muestra la query en la vista
-      const q = getQP();
-      inputEl.value = q;
-      hintEl.textContent = q ? `Resultados para “${q}”` : 'Mostrando resultados';
+  function renderLista(arr){
+    resultadosEl.innerHTML = '';
+    if (!arr || arr.length === 0){
+      vacioEl.style.display = 'block';
+      return;
+    }
+    vacioEl.style.display = 'none';
+    arr.forEach(r => resultadosEl.appendChild(cardReceta(r)));
+  }
 
-      // Detecta UID del médico
-      let medicoUid = null;
-      const localUid = localStorage.getItem('kodrx_medico_uid') || localStorage.getItem('kodrx_doctor_id');
-      if (localUid) medicoUid = localUid;
+  // --- Búsqueda SOLO dentro del médico logueado ---
+  async function buscarDelMedico(uid, term){
+    // Trae SOLO mis recetas
+    const qRef = query(collection(db, 'recetas'), where('medicoUid','==', uid));
+    const snap = await getDocs(qRef);
+    let data = snap.docs.map(d => ({ id: d.id, ...d.data() }));
 
-      // Intenta usar auth si está logueado
-      onAuthStateChanged(auth, async (user)=>{
-        try{
-          if (user?.uid) medicoUid = user.uid;
-          alertaEl.style.display = medicoUid ? 'none' : 'block';
-          const data = await buscarRecetas(q, medicoUid);
-          renderLista(data);
-        }catch(e){
-          console.error(e);
-          resultadosEl.innerHTML = '';
-          vacioEl.style.display = 'block';
-          vacioEl.textContent = 'Ocurrió un error al buscar.';
-        }
-      });
+    // Filtro por nombre paciente (case-insensitive)
+    const needle = term.toLowerCase();
+    data = data.filter(r => (nombrePacienteDe(r).toLowerCase().includes(needle)));
 
-      // Si onAuthStateChanged tarda, hacemos una primera pasada “optimista”
-      setTimeout(async ()=>{
-        if (resultadosEl.children.length === 0){ // aún no renderiza
-          alertaEl.style.display = medicoUid ? 'none' : 'block';
-          const data = await buscarRecetas(q, medicoUid);
-          renderLista(data);
-        }
-      }, 800);
-    })();
-
-    // 5) Interacciones
-    $('#btnBuscar').addEventListener('click', ()=>{
-      const val = inputEl.value.trim();
-      if (!val) return;
-      // Cambia la URL para poder compartir el resultado
-      const url = new URL(location.href);
-      url.searchParams.set('q', val);
-      location.href = url.toString();
+    // Orden opcional por fecha desc (cliente)
+    data.sort((a,b)=>{
+      const ta = (a.timestamp?.seconds ?? +new Date(a.timestamp ?? 0));
+      const tb = (b.timestamp?.seconds ?? +new Date(b.timestamp ?? 0));
+      return tb - ta;
     });
-    inputEl.addEventListener('keydown', (e)=>{
-      if (e.key === 'Enter') $('#btnBuscar').click();
-    });
-    $('#btnVolver').addEventListener('click', ()=>{
-      if (history.length > 1) history.back();
-      else location.href = '/medico/historial.html';
-    });
-  </script>
+
+    return data;
+  }
+
+  // --- Boot ---
+  onAuthStateChanged(auth, async (user) => {
+    const term = getQ();
+    hintEl && (hintEl.textContent = term ? `Resultados para: “${term}”` : '');
+
+    if (!user){
+      // si no hay sesión, no mostramos nada (o redirige al login)
+      alertaEl && (alertaEl.textContent = 'Inicia sesión para ver tus resultados.');
+      renderLista([]);
+      return;
+    }
+
+    try{
+      alertaEl && (alertaEl.textContent = 'Mostrando solo tus recetas.');
+      const rows = await buscarDelMedico(user.uid, term || '');
+      renderLista(rows);
+    }catch(e){
+      console.warn('[Resultados] Error buscando por médico:', e);
+      renderLista([]);
+    }
+  });
+
+  // barra de búsqueda (navega con la query)
+  inputEl?.addEventListener('keydown', (ev)=>{
+    if (ev.key === 'Enter'){
+      const q = inputEl.value.trim();
+      location.href = `/resultados.html?q=${encodeURIComponent(q)}`;
+    }
+  });
+</script>
+
 </body>
 </html>
