@@ -37,6 +37,66 @@
     .btn.ghost{ background:#eef2ff; color:#0b1b2b; border-color:#dbe3ff; }
     .btn.ghost:hover{ background:#e6ebff; }
 
+    /* ===== Acordeón ===== */
+.acordeon {
+  background: #fff;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  margin-bottom: 0.75rem;
+  overflow: hidden;
+  transition: all 0.2s ease;
+}
+
+/* ===== Encabezado ===== */
+.acordeon-header {
+  background: #123f91;            /* azul KodRx */
+  color: #fff;
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+  font-weight: 500;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: relative;
+  user-select: none;
+}
+
+/* Flecha ▼/▲ */
+.acordeon-header::after {
+  content: "▼";
+  font-size: 0.8rem;
+  transition: transform 0.2s ease;
+}
+.acordeon.open .acordeon-header::after {
+  content: "▲";
+}
+
+/* ===== Contenido ===== */
+.acordeon-body {
+  display: none;
+  padding: 1rem;
+  background: #fff;
+  border-top: 1px solid #ddd;
+}
+.acordeon-body p {
+  margin: 0.3rem 0;
+  color: #374151;
+  font-size: 0.95rem;
+  line-height: 1.35;
+}
+
+/* Mostrar cuerpo al abrir */
+.acordeon.open .acordeon-body {
+  display: block;
+}
+
+/* ===== Acciones dentro del body ===== */
+.acordeon-body .acciones {
+  margin-top: 0.75rem;
+  display: flex;
+  gap: 0.5rem;
+}
+
     .empty{ text-align:center; color:#6b7280; padding: 24px 12px; }
     .pill{ display:inline-block; padding:.18rem .5rem; border-radius:999px; background:#eef2ff; color:#123f91; font-size:.75rem; font-weight:700; }
     .warn{ color:#b45309; }
