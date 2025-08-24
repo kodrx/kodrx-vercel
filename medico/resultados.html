@@ -155,39 +155,65 @@
     }
 
     // 3) Lógica de búsqueda
-    async function buscarRecetas(nombre, medicoUid){
-      // Nota: para evitar requerir índices compuestos, hacemos un fetch por médico y
-      // filtramos en cliente por nombre (lowercase includes).
-      const col = collection(db, 'recetas');
+      // 👉 normaliza para búsqueda: minúsculas y sin acentos
+  const norm = (s) =>
+    (s ?? '')
+      .toString()
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/\p{Diacritic}/gu, '');
 
-      let docs = [];
-      if (medicoUid){
-        // Filtra por médico en Firestore (pide solo un lote razonable)
-        const q = query(col, where('medicoUid','==', medicoUid), limit(200));
-        const snap = await getDocs(q);
-        docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      } else {
-        // Sin UID: trae un lote global (con aviso). Ajusta limit según tu volumen.
-        const q = query(col, limit(100));
-        const snap = await getDocs(q);
-        docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  // ⬇️ Reemplaza tu función buscarRecetas por esta
+  async function buscarRecetas(nombre, medicoUid){
+    const col = collection(db, 'recetas');
+    const needle = norm(nombre);
+
+    // 3.1) intenta restringir por médico
+    let docs = [];
+    if (medicoUid){
+      try{
+        const q1 = query(col, where('medicoUid','==', medicoUid), limit(300));
+        const snap1 = await getDocs(q1);
+        docs = snap1.docs.map(d => ({ id: d.id, ...d.data() }));
+
+        // ⚠️ Fallback: si no hay docs (colección legacy sin medicoUid), traemos un lote global
+        if (docs.length === 0){
+          console.info('[Resultados] Sin datos con medicoUid, haciendo fallback global…');
+          const q2 = query(col, limit(500));
+          const snap2 = await getDocs(q2);
+          docs = snap2.docs.map(d => ({ id: d.id, ...d.data() }));
+        }
+      }catch(e){
+        console.warn('[Resultados] where(medicoUid) falló, fallback global:', e);
+        const q2 = query(col, limit(500));
+        const snap2 = await getDocs(q2);
+        docs = snap2.docs.map(d => ({ id: d.id, ...d.data() }));
       }
-
-      const needle = nombre.toLowerCase();
-      const filtrados = docs.filter(d => {
-        const nom = (d.nombrePaciente || d.pacienteNombre || d.paciente?.nombre || '').toLowerCase();
-        return needle ? nom.includes(needle) : true;
-      });
-
-      // Opcional: ordena por fecha descendente
-      filtrados.sort((a,b)=>{
-        const ta = a.timestamp?.seconds ? a.timestamp.seconds*1000 : new Date(a.timestamp || a.fecha || 0).getTime();
-        const tb = b.timestamp?.seconds ? b.timestamp.seconds*1000 : new Date(b.timestamp || b.fecha || 0).getTime();
-        return (tb||0) - (ta||0);
-      });
-
-      return filtrados;
+    } else {
+      // 3.2) sin UID: global directo (con aviso arriba)
+      const q = query(col, limit(500));
+      const snap = await getDocs(q);
+      docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     }
+
+    // 3.3) filtro por nombre en cliente (toma el campo que venga)
+    const filtrados = docs.filter(d => {
+      const nombreDoc =
+        d.nombrePaciente || d.pacienteNombre || d.paciente?.nombre || '';
+      return needle ? norm(nombreDoc).includes(needle) : true;
+    });
+
+    // 3.4) ordena por fecha desc
+    filtrados.sort((a,b)=>{
+      const ta = a.timestamp?.seconds ? a.timestamp.seconds*1000 :
+                 new Date(a.timestamp || a.fecha || 0).getTime();
+      const tb = b.timestamp?.seconds ? b.timestamp.seconds*1000 :
+                 new Date(b.timestamp || b.fecha || 0).getTime();
+      return (tb||0) - (ta||0);
+    });
+
+    return filtrados;
+  }
 
     // 4) Boot
     (async function init(){
