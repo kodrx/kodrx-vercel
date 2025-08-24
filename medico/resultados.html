@@ -224,7 +224,7 @@
       try{
         if (alertaEl){
           alertaEl.style.display = 'block';
-          alertaEl.innerHTML = '<span class="pill">OK</span> Mostrando solo tus recetas (filtro por cédula).';
+          alertaEl.innerHTML = '<span class="pill">OK</span> Mostrando recetas.';
         }
         const rows = await buscarDelMedicoPorCedula(user, term || '');
         renderLista(rows);
