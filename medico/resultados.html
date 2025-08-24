@@ -199,26 +199,92 @@
     arr.forEach(r => resultadosEl.appendChild(cardReceta(r)));
   }
 
-  // --- Búsqueda SOLO dentro del médico logueado ---
-  async function buscarDelMedico(uid, term){
-    // Trae SOLO mis recetas
-    const qRef = query(collection(db, 'recetas'), where('medicoUid','==', uid));
+ // Trae las recetas del médico usando el esquema real: correo == user.email
+async function queryRecetasDelMedico(db, user){
+  const col = collection(db, 'recetas');
+
+  // 1) Principal: correo == user.email (tal como lo guardas en addDoc)
+  try{
+    const qRef = query(col, where('correo','==', user.email));
     const snap = await getDocs(qRef);
-    let data = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-
-    // Filtro por nombre paciente (case-insensitive)
-    const needle = term.toLowerCase();
-    data = data.filter(r => (nombrePacienteDe(r).toLowerCase().includes(needle)));
-
-    // Orden opcional por fecha desc (cliente)
-    data.sort((a,b)=>{
-      const ta = (a.timestamp?.seconds ?? +new Date(a.timestamp ?? 0));
-      const tb = (b.timestamp?.seconds ?? +new Date(b.timestamp ?? 0));
-      return tb - ta;
-    });
-
-    return data;
+    const rows = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    if (rows.length) {
+      console.info(`[Resultados] filtro correo==email → ${rows.length}`);
+      return rows;
+    }
+  }catch(err){
+    console.warn('[Resultados] Error correo==email:', err);
   }
+
+  // 2) Respaldo: por nombre visible (menos confiable)
+  if (user.displayName){
+    try{
+      const qRef = query(col, where('medicoNombre','==', user.displayName));
+      const snap = await getDocs(qRef);
+      const rows = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      if (rows.length) {
+        console.info(`[Resultados] filtro medicoNombre==displayName → ${rows.length}`);
+        return rows;
+      }
+    }catch(err){
+      console.warn('[Resultados] Error medicoNombre==displayName:', err);
+    }
+  }
+
+  return [];
+}
+
+// Búsqueda por paciente, priorizando server-side con índice; si no, fallback cliente
+async function buscarDelMedico(user, term){
+  const t = (term || '').trim();
+  const col = collection(db, 'recetas');
+
+  // Si hay término, intentamos: correo==email + rango en nombrePaciente (requiere índice compuesto)
+  if (t){
+    try{
+      const qRef = query(
+        col,
+        where('correo','==', user.email),
+        where('nombrePaciente','>=', t),
+        where('nombrePaciente','<=', t + '\uf8ff')
+      );
+      const snap = await getDocs(qRef);
+      let data = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+      // ordenar por fecha/timestamp desc
+      data.sort((a,b)=>{
+        const ta = (a.timestamp?.seconds ?? +new Date(a.timestamp ?? a.fecha ?? 0));
+        const tb = (b.timestamp?.seconds ?? +new Date(b.timestamp ?? b.fecha ?? 0));
+        return tb - ta;
+      });
+
+      console.info(`[Resultados] server-side nombrePaciente con índice → ${data.length}`);
+      return data;
+    }catch(err){
+      // Si no hay índice, Firestore suele dar una URL para crearlo. Hacemos fallback.
+      console.warn('[Resultados] Índice no disponible o error, usando fallback cliente:', err);
+    }
+  }
+
+  // Fallback: traer recetas del médico y filtrar en cliente (case-insensitive)
+  let data = await queryRecetasDelMedico(db, user);
+  const needle = t.toLowerCase();
+  if (needle){
+    const nombrePacienteDe = (r) =>
+      (r.nombrePaciente || r.pacienteNombre || r.paciente?.nombre || '').trim();
+    data = data.filter(r => nombrePacienteDe(r).toLowerCase().includes(needle));
+  }
+
+  data.sort((a,b)=>{
+    const ta = (a.timestamp?.seconds ?? +new Date(a.timestamp ?? a.fecha ?? 0));
+    const tb = (b.timestamp?.seconds ?? +new Date(b.timestamp ?? b.fecha ?? 0));
+    return tb - ta;
+  });
+
+  console.info(`[Resultados] fallback cliente → ${data.length}`);
+  return data;
+}
+
 
   // --- Boot ---
   onAuthStateChanged(auth, async (user) => {
