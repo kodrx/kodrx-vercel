@@ -6,34 +6,37 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
 // ------- Query params -------
-const qs   = new URLSearchParams(location.search);
-const role = (qs.get("role") || "medico").toLowerCase(); // "medico" | "farmacia"
-const ret  = qs.get("return") || "";
-const msg  = qs.get("msg") || "";
+const qs = new URLSearchParams(location.search);
+const urlRole = (qs.get("role") || "medico").toLowerCase();  // medico | farmacia
+const ret     = qs.get("return") || "";
+const msg     = qs.get("msg") || "";
 
 // Destinos por defecto
 const DEFAULT_DEST = {
-  medico: "/medico/panel.html",
+  medico:   "/medico/panel.html",
   farmacia: "/farmacia/panel.html",
 };
+const go = (dest) => { console.log("[ACCESO] →", dest); location.href = dest; };
 
-function go(dest){ location.href = dest; }
+// Fuente única de verdad del rol seleccionado (inicia con el de la URL)
+let currentRole = (urlRole === "farmacia" ? "farmacia" : "medico");
+// Para evitar doble redirección (race entre onAuthStateChanged y submit)
+let isManualRedirect = false;
 
-function showMsg(text, kind = "info"){
+function showMsg(text) {
   const box = document.getElementById("accessMsg");
   if (!box) return;
   box.textContent = text;
   box.style.display = "block";
-  // Si quieres variar estilos por tipo, puedes añadir clases:
-  // box.className = "msg " + kind;
 }
 
-function selectRoleTab(r){
+function selectRoleTab(role){
+  currentRole = (role === "farmacia") ? "farmacia" : "medico";
   const tabM = document.getElementById("tabMedico");
   const tabF = document.getElementById("tabFarmacia");
   const panM = document.getElementById("panelMedico");
   const panF = document.getElementById("panelFarmacia");
-  const isMed = r === "medico";
+  const isMed = currentRole === "medico";
 
   tabM?.classList.toggle("active", isMed);
   tabF?.classList.toggle("active", !isMed);
@@ -41,19 +44,19 @@ function selectRoleTab(r){
     panM.hidden = !isMed;
     panF.hidden = isMed;
   }
+  console.log("[ACCESO] currentRole =", currentRole);
 }
 
-// Mensaje post-logout (si viene ?msg=logout_ok)
+// Mensaje amistoso post-logout
 if (msg === "logout_ok") {
-  window.addEventListener("DOMContentLoaded", () => {
-    showMsg("Sesión cerrada correctamente.", "ok");
-  });
+  window.addEventListener("DOMContentLoaded", () => showMsg("Sesión cerrada correctamente."));
 }
 
-// Si ya está logueado y ateriza en /acceso, redirige de una
+// Si ya está logueado y aterriza en /acceso, lo mandamos al destino según pestaña/URL
 onAuthStateChanged(auth, (user) => {
-  if (user) {
-    const dest = ret || DEFAULT_DEST[role] || DEFAULT_DEST.medico;
+  if (user && !isManualRedirect) {
+    const dest = ret || DEFAULT_DEST[currentRole];
+    console.log("[ACCESO] onAuthStateChanged → usuario detectado. Redirigiendo a", dest);
     go(dest);
   }
 });
@@ -61,9 +64,9 @@ onAuthStateChanged(auth, (user) => {
 // ------- UI y login -------
 document.addEventListener("DOMContentLoaded", () => {
   // Pestaña inicial según ?role=
-  selectRoleTab(role);
+  selectRoleTab(urlRole);
 
-  // Clicks de pestañas
+  // Clicks de pestañas: actualizan currentRole (clave para el redirect correcto)
   document.getElementById("tabMedico")?.addEventListener("click", () => selectRoleTab("medico"));
   document.getElementById("tabFarmacia")?.addEventListener("click", () => selectRoleTab("farmacia"));
 
@@ -84,13 +87,15 @@ document.addEventListener("DOMContentLoaded", () => {
     e.preventDefault();
     const email = document.getElementById("medicoEmail")?.value.trim();
     const pass  = document.getElementById("medicoPass")?.value.trim();
-    if (!email || !pass) return showMsg("Completa correo y contraseña.", "warn");
+    if (!email || !pass) return showMsg("Completa correo y contraseña.");
     try {
+      isManualRedirect = true; // evita que onAuth redirija al rol equivocado
       await signInWithEmailAndPassword(auth, email, pass);
       go(ret || DEFAULT_DEST.medico);
     } catch (err) {
+      isManualRedirect = false;
       console.error("Login médico:", err);
-      showMsg("No se pudo iniciar sesión. Verifica tus datos.", "error");
+      showMsg("No se pudo iniciar sesión. Verifica tus datos.");
     }
   });
 
@@ -98,13 +103,15 @@ document.addEventListener("DOMContentLoaded", () => {
     e.preventDefault();
     const email = document.getElementById("farmaciaEmail")?.value.trim();
     const pass  = document.getElementById("farmaciaPass")?.value.trim();
-    if (!email || !pass) return showMsg("Completa correo y contraseña.", "warn");
+    if (!email || !pass) return showMsg("Completa correo y contraseña.");
     try {
+      isManualRedirect = true; // evita que onAuth redirija al rol equivocado
       await signInWithEmailAndPassword(auth, email, pass);
       go(ret || DEFAULT_DEST.farmacia);
     } catch (err) {
+      isManualRedirect = false;
       console.error("Login farmacia:", err);
-      showMsg("No se pudo iniciar sesión. Verifica tus datos.", "error");
+      showMsg("No se pudo iniciar sesión. Verifica tus datos.");
     }
   });
 });
