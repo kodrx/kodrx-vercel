@@ -10,6 +10,56 @@
 </head>
 <body style="text-align: center; padding: 50px;">
   <h1 style="color: var(--color-primario);">Bienvenido a KodRx</h1>
+   <!-- Mensajes (logout_ok, errores, etc.) -->
+      <div id="accessMsg" class="msg"></div>
+
+      <!-- Tabs -->
+      <div class="tabs">
+        <button id="tabMedico" class="tab active" type="button">Médico</button>
+        <button id="tabFarmacia" class="tab" type="button">Farmacia</button>
+      </div>
+
+      <!-- Panel Médico -->
+      <section id="panelMedico" class="panel">
+        <form id="formMedico" novalidate>
+          <label for="medicoEmail">Correo electrónico</label>
+          <input id="medicoEmail" class="input" type="email" autocomplete="username" placeholder="tu@correo.com" required />
+
+          <label for="medicoPass">Contraseña</label>
+          <div class="pass">
+            <input id="medicoPass" class="input" type="password" autocomplete="current-password" placeholder="••••••••" required />
+            <button class="toggle" type="button" aria-label="Mostrar/Ocultar contraseña">👁️</button>
+          </div>
+
+          <button type="submit" class="btn primary">Entrar</button>
+          <div class="links">
+            <a href="/reset.html">¿Olvidaste tu contraseña?</a>
+            <span></span>
+          </div>
+        </form>
+      </section>
+
+      <!-- Panel Farmacia -->
+      <section id="panelFarmacia" class="panel" hidden>
+        <form id="formFarmacia" novalidate>
+          <label for="farmaciaEmail">Correo electrónico</label>
+          <input id="farmaciaEmail" class="input" type="email" autocomplete="username" placeholder="farmacia@correo.com" required />
+
+          <label for="farmaciaPass">Contraseña</label>
+          <div class="pass">
+            <input id="farmaciaPass" class="input" type="password" autocomplete="current-password" placeholder="••••••••" required />
+            <button class="toggle" type="button" aria-label="Mostrar/Ocultar contraseña">👁️</button>
+          </div>
+
+          <button type="submit" class="btn primary">Entrar</button>
+          <div class="links">
+            <a href="/reset.html">¿Olvidaste tu contraseña?</a>
+            <span></span>
+          </div>
+        </form>
+      </section>
+    </div>
+  </div>
   <script type="module" src="/acceso.js"></script>
 </body>
 </html>
