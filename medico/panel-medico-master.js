@@ -2,11 +2,39 @@
 // 🚀 Script maestro activo para panel médico
 import { db, auth } from "/firebase-init.js";
 import { collection, addDoc, updateDoc, getDoc, doc, Timestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
 
+// Inicializa auth
+const auth = getAuth();
+
+// 🔒 Verificar sesión activa
+onAuthStateChanged(auth, (user) => {
+  if (!user) {
+    console.warn("⚠️ No hay sesión, redirigiendo al login...");
+    window.location.href = "/acceso.html";  // donde tengas tu login
+  } else {
+    console.log("✅ Sesión activa:", user.email || user.uid);
+  }
+});
 
 document.addEventListener("DOMContentLoaded", () => {
   console.log("🧩 DOM cargado");
+
+    // 🔘 Botón logout 
+  const btnLogout = document.getElementById("btnLogout");
+  if (btnLogout) {
+    btnLogout.addEventListener("click", async () => {
+      try {
+        await signOut(auth);
+        console.log("👋 Sesión cerrada correctamente");
+        window.location.href = "/acceso.html";
+      } catch (err) {
+        console.error("❌ Error al cerrar sesión:", err);
+        alert("Hubo un problema al cerrar sesión, intenta de nuevo.");
+      }
+    });
+  }
 
   const form = document.querySelector("#generarRecetaForm");
   const medicamentosContainer = document.getElementById("medicamentosContainer");
