@@ -83,32 +83,30 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', ()=>{
+  // Buscar – navega a resultados.html?q=...
   const q = document.getElementById('buscador');
   const b = document.getElementById('btnBuscar');
-  if(!q || !b) return;
-
-  function go(){
-    const v = q.value.trim();
-    if(!v){ q.focus(); return; }
-    const u = new URL('/medico/resultados.html', location.origin);
-    u.searchParams.set('q', v);
-    location.href = u.href;
+  if (q && b) {
+    const go = ()=>{
+      const v = q.value.trim();
+      if (!v){ q.focus(); return; }
+      const u = new URL('/medico/resultados.html', location.origin);
+      u.searchParams.set('q', v);
+      location.href = u.href;
+    };
+    q.addEventListener('keydown', e => { if(e.key === 'Enter') go(); });
+    b.addEventListener('click', go);
   }
-  q.addEventListener('keydown', e => { if(e.key === 'Enter') go(); });
-  b.addEventListener('click', go);
-});
-</script>
-<script>
-document.addEventListener('DOMContentLoaded', ()=>{
-  const btn = document.getElementById('btnRegresar');
-  if(btn){
-    btn.addEventListener('click', ()=>{
+
+  // Regresar – back o panel
+  const volver = document.getElementById('btnVolver');
+  if (volver) {
+    volver.addEventListener('click', ()=>{
       if (history.length > 1) history.back();
-      else window.location.href = '/'; // fallback si no hay historial
+      else window.location.href = '/medico/panel.html';
     });
   }
 });
 </script>
-
 </body>
 </html>
