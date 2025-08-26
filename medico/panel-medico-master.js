@@ -7,8 +7,7 @@ import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/
 
 
 
-// Inicializa auth
-const auth = getAuth();
+
 
 // 🔒 Verificar sesión activa
 onAuthStateChanged(auth, (user) => {
