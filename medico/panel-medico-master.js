@@ -1,8 +1,10 @@
 
-// 🚀 Script maestro activo para panel médico
+
+// 🔝 IMPORTS
 import { db, auth } from "/firebase-init.js";
 import { collection, addDoc, updateDoc, getDoc, doc, Timestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
 
 
 // Inicializa auth
