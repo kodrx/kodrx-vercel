@@ -1,0 +1,50 @@
+/* /estilos/acceso.css */
+/* Todo bajo #acceso-root para no chocar con global.css */
+#acceso-root .tabs{display:flex;gap:8px;background:#f3f4f6;padding:6px;border-radius:12px;margin:12px 0;}
+#acceso-root .tab{
+  flex:1;border:0;border-radius:10px;padding:.6rem .8rem;font-weight:700;cursor:pointer;
+  background:transparent;color:#374151;transition:transform .04s ease,background .15s ease,box-shadow .15s ease;
+}
+#acceso-root .tab:hover{background:#e5e7eb;}
+#acceso-root .tab:active{transform:translateY(1px);}
+#acceso-root .tab:focus-visible{outline:2px solid #0b5bd3;outline-offset:2px;border-radius:12px;}
+#acceso-root .tab.active{background:#123f91;color:#fff;box-shadow:0 6px 16px rgba(18,63,145,.18);}
+
+#acceso-root label{display:block;margin:.5rem 0 .25rem;color:#374151;font-size:.95rem;}
+#acceso-root .input{
+  width:100%;padding:.65rem .8rem;border:1px solid #cfd6e3;border-radius:10px;background:#fff;color:#0b1b2b;
+  transition:border .15s ease, box-shadow .15s ease;
+}
+#acceso-root .input:focus{outline:2px solid #2e6fd6;outline-offset:2px;border-color:#2e6fd6;}
+
+/* Password eye */
+#acceso-root .pass{position:relative;}
+#acceso-root .pass .toggle{
+  position:absolute;top:50%;right:.5rem;transform:translateY(-50%);border:0;background:transparent;cursor:pointer;
+  width:34px;height:34px;display:grid;place-items:center;border-radius:8px;
+}
+#acceso-root .pass .toggle:hover{background:#f3f4f6;}
+#acceso-root .pass .toggle:active{transform:translateY(-50%) scale(.98);}
+
+/* Botón principal */
+#acceso-root .btn{display:inline-flex;align-items:center;justify-content:center;gap:.5rem;padding:.7rem 1rem;
+  border-radius:12px;font-weight:700;border:1px solid transparent;cursor:pointer;transition:transform .04s ease,filter .15s ease;
+}
+#acceso-root .btn.primary{background:#0b5bd3;color:#fff;box-shadow:0 6px 16px rgba(11,91,211,.18);}
+#acceso-root .btn.primary:hover{filter:brightness(0.96);}
+#acceso-root .btn.primary:active{transform:translateY(1px);}
+#acceso-root .btn[disabled]{opacity:.65;cursor:not-allowed;filter:grayscale(.1);}
+
+/* Loading spinner en el botón */
+#acceso-root .btn.loading{position:relative;}
+#acceso-root .btn.loading::after{
+  content:"";width:16px;height:16px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;
+  animation:accSpin .7s linear infinite;
+}
+@keyframes accSpin{to{transform:rotate(360deg);}}
+
+/* Mensajes (usa clases .ok .warn .error si quieres variarlos desde JS) */
+#acceso-root .msg{display:none;margin:.8rem 0;padding:.6rem .8rem;border-radius:10px;border:1px solid #dbe3ff;background:#eef2ff;color:#123f91;font-weight:600;}
+#acceso-root .msg.ok{background:#e8fff3;border-color:#b6f6d3;color:#065f46;}
+#acceso-root .msg.warn{background:#fff6e6;border-color:#fde68a;color:#92400e;}
+#acceso-root .msg.error{background:#fee2e2;border-color:#fecaca;color:#991b1b;}
