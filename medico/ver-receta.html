@@ -590,7 +590,6 @@ document.addEventListener('DOMContentLoaded', async ()=>{
       if(!RECETA_ACTUAL) await loadAndRender();
       await generarPDF(RECETA_ACTUAL, QRS, {mode:'print'});
     } finally { btnImp.__busy=false; btnImp.disabled=false; }
-    console.log('[RECETA]', receta.bloque, receta.hash, receta);
 
   });
 
