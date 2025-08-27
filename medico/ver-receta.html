@@ -597,39 +597,61 @@ document.addEventListener('DOMContentLoaded', async ()=>{
 });
 
 
-  async function verificarBlockchain(receta){
-  if (!bcEl) return;
-  const idx  = receta?.bloque;
-  const hash = receta?.hash;
+ async function verificarBlockchain(receta){
+  // Re-consulta SIEMPRE (por si el render reemplazó nodos)
+  const el = document.getElementById('bcStatus');
+  if (!el) { console.warn('[BC] No se encontró #bcStatus'); return; }
 
-  const set = (txt, color) => {
-    bcEl.textContent = txt;
-    bcEl.style.background = color === 'ok' ? '#e8fff3' : color === 'warn' ? '#fff6e6' : color === 'error' ? '#fee2e2' : '#eef2ff';
-    bcEl.style.color      = color === 'ok' ? '#065f46' : color === 'warn' ? '#92400e' : color === 'error' ? '#991b1b' : '#123f91';
-    bcEl.style.border     = '1px solid rgba(0,0,0,0.06)';
+  // estado inicial
+  el.textContent = 'Verificando blockchain…';
+  el.style.background = '#eef2ff';
+  el.style.color = '#123f91';
+  el.style.border = '1px solid rgba(0,0,0,.06)';
+  // evita duplicar links si vuelves a llamar
+  el.querySelectorAll('a').forEach(a => a.remove());
+
+  const idx  = receta?.bloque ?? receta?.bloqueIndex ?? receta?.index ?? null;
+  const hash = receta?.hash   ?? receta?.blockHash   ?? null;
+
+  const paint = (txt, tone) => {
+    el.textContent = txt;
+    el.style.background = tone === 'ok'   ? '#e8fff3'
+                        : tone === 'warn' ? '#fff6e6'
+                        : tone === 'error'? '#fee2e2' : '#eef2ff';
+    el.style.color      = tone === 'ok'   ? '#065f46'
+                        : tone === 'warn' ? '#92400e'
+                        : tone === 'error'? '#991b1b' : '#123f91';
+    el.style.border     = '1px solid rgba(0,0,0,.06)';
   };
-  const appendLink = (label = 'ver') => {
+
+  const addLink = (label='ver')=>{
     const a = document.createElement('a');
     a.href = 'https://kodrx-blockchain.onrender.com/consulta.html';
     a.target = '_blank'; a.rel = 'noopener';
-    a.textContent = ` ${label}`;
+    a.textContent = ' ' + label;
     a.style.marginLeft = '8px';
-    bcEl.appendChild(a);
+    el.appendChild(a);
   };
 
-  if (!idx || !hash){ set('Blockchain: sin datos', 'warn'); appendLink('abrir'); return; }
+  if (!idx || !hash){
+    paint('Blockchain: sin datos', 'warn');
+    addLink('abrir');
+    return;
+  }
 
-  try {
+  try{
     const r = await fetch(`https://kodrx-blockchain.onrender.com/bloques/${encodeURIComponent(idx)}`);
-    if (!r.ok) throw new Error('No disponible');
+    if (!r.ok) throw new Error('BC no disponible');
     const data = await r.json();
-    const hashRemoto = data?.bloque?.hash || data?.hash;
+    const hashRemoto = data?.bloque?.hash || data?.hash || null;
     const ok = !!hashRemoto && (hashRemoto === hash);
-    set(ok ? `Blockchain: OK (bloque #${idx})` : 'Blockchain: NO COINCIDE', ok ? 'ok' : 'error');
-    appendLink();
-  } catch {
-    set('Blockchain: no disponible', 'warn');
-    appendLink('abrir');
+
+    paint(ok ? `Blockchain: OK (bloque #${idx})` : 'Blockchain: NO COINCIDE', ok ? 'ok' : 'error');
+    addLink();
+  }catch(err){
+    console.warn('[BC] Error consulta:', err);
+    paint('Blockchain: no disponible', 'warn');
+    addLink('abrir');
   }
 }
 
