@@ -1,4 +1,4 @@
-// /acceso.js — Login + redirección por rol real + banners de mensaje
+// /acceso.js — Login + redirección por rol real + banners + UX loading
 import { auth, db } from "/firebase-init.js";
 import {
   onAuthStateChanged,
@@ -32,16 +32,14 @@ function showMsg(text, kind = "info"){
   box.style.display = "block";
   box.setAttribute("role", "alert");
   box.setAttribute("aria-live", "polite");
-  // Ajusta estas clases si tu global.css tiene estilos para mensajes
   box.classList.remove("ok","warn","error","info");
   box.classList.add(kind);
 }
 
-// lee ?msg= y muestra banner bonito
 function hydrateMsgFromParam(){
   const map = {
     logout_ok:   { text: "Sesión cerrada correctamente.", kind: "ok" },
-    suspendido:  { text: "Tu cuenta está suspendida. Contacta al soporte para reactivación.", kind: "warn" },
+    suspendido:  { text: "Tu cuenta está suspendida. Contacta al soporte.", kind: "warn" },
     sin_permiso: { text: "No tienes permisos para esta sección.", kind: "warn" },
     error_guard: { text: "No pudimos validar tu sesión. Inicia sesión nuevamente.", kind: "error" },
     cred:        { text: "Correo o contraseña incorrectos.", kind: "error" },
@@ -66,7 +64,29 @@ function selectRoleTab(role){
   console.log("[ACCESO] currentRole(UI) =", currentRole);
 }
 
-// Determina el ROL REAL del usuario desde Firestore
+function focusFirstInput(panelId){
+  const first = document.querySelector(`#${panelId} input`);
+  if (first) first.focus();
+}
+
+// Loading / anti-doble submit
+function setLoading(formEl, isLoading){
+  const btn = formEl.querySelector('.btn.primary');
+  const controls = formEl.querySelectorAll('input, button, select, textarea');
+  controls.forEach(el => el.disabled = isLoading);
+  if (btn){
+    if (isLoading){
+      btn.dataset.prev = btn.textContent;
+      btn.textContent = "Entrando…";
+      btn.classList.add('loading'); // acceso.css añade spinner con ::after
+    }else{
+      btn.textContent = btn.dataset.prev || "Entrar";
+      btn.classList.remove('loading');
+    }
+  }
+}
+
+// ---------- Rol real desde Firestore ----------
 async function determineRole(uid){
   try{
     const m = await getDoc(doc(db, "medicos", uid));
@@ -119,10 +139,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Pestaña inicial por ?role=
   selectRoleTab(urlRole);
+  focusFirstInput(currentRole === "medico" ? "panelMedico" : "panelFarmacia");
 
-  // Cambiar pestañas (solo UI)
-  document.getElementById("tabMedico")?.addEventListener("click", () => selectRoleTab("medico"));
-  document.getElementById("tabFarmacia")?.addEventListener("click", () => selectRoleTab("farmacia"));
+  // Cambiar pestañas (solo UI + foco)
+  document.getElementById("tabMedico")?.addEventListener("click", () => { selectRoleTab("medico");   focusFirstInput("panelMedico"); });
+  document.getElementById("tabFarmacia")?.addEventListener("click", () => { selectRoleTab("farmacia"); focusFirstInput("panelFarmacia"); });
 
   // Mostrar/Ocultar contraseña
   document.querySelectorAll(".pass .toggle").forEach((btn) => {
@@ -139,46 +160,56 @@ document.addEventListener("DOMContentLoaded", () => {
   // Login MÉDICO
   formMed?.addEventListener("submit", async (e) => {
     e.preventDefault();
+    if (formMed.dataset.busy === "1") return;   // anti doble submit
     const email = document.getElementById("medicoEmail")?.value.trim();
     const pass  = document.getElementById("medicoPass")?.value.trim();
     if (!email || !pass) return showMsg("Completa correo y contraseña.", "warn");
 
     try {
+      formMed.dataset.busy = "1"; setLoading(formMed, true);
       isManualRedirect = true;
       const cred = await signInWithEmailAndPassword(auth, email, pass);
       const realRole = await determineRole(cred.user.uid);
       if (realRole !== "medico") {
         isManualRedirect = false;
-        return showMsg("Tu cuenta no es de médico. Cambia a la pestaña correcta.", "warn");
+        showMsg("Tu cuenta no es de médico. Cambia a la pestaña correcta.", "warn");
+        return;
       }
       go((ret && allowedFor("medico", ret)) ? ret : DEFAULT_DEST.medico);
     } catch (err) {
       isManualRedirect = false;
       console.error("Login médico:", err);
       showMsg("No se pudo iniciar sesión. Verifica tus datos.", "error");
+    } finally {
+      formMed.dataset.busy = "0"; setLoading(formMed, false);
     }
   });
 
   // Login FARMACIA
   formFar?.addEventListener("submit", async (e) => {
     e.preventDefault();
+    if (formFar.dataset.busy === "1") return;   // anti doble submit
     const email = document.getElementById("farmaciaEmail")?.value.trim();
     const pass  = document.getElementById("farmaciaPass")?.value.trim();
     if (!email || !pass) return showMsg("Completa correo y contraseña.", "warn");
 
     try {
+      formFar.dataset.busy = "1"; setLoading(formFar, true);
       isManualRedirect = true;
       const cred = await signInWithEmailAndPassword(auth, email, pass);
       const realRole = await determineRole(cred.user.uid);
       if (realRole !== "farmacia") {
         isManualRedirect = false;
-        return showMsg("Esta cuenta no es de farmacia. Cambia a la pestaña de Médico si corresponde.", "warn");
+        showMsg("Esta cuenta no es de farmacia. Cambia a la pestaña de Médico si corresponde.", "warn");
+        return;
       }
       go((ret && allowedFor("farmacia", ret)) ? ret : DEFAULT_DEST.farmacia);
     } catch (err) {
       isManualRedirect = false;
       console.error("Login farmacia:", err);
       showMsg("No se pudo iniciar sesión. Verifica tus datos.", "error");
+    } finally {
+      formFar.dataset.busy = "0"; setLoading(formFar, false);
     }
   });
 });
