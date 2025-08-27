@@ -1,12 +1,9 @@
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-  <title>Panel Farmacia - KodRx</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Panel Farmacia - KodRx</title>
   <link rel="stylesheet" href="/estilos/global.css" />
   <script src="/componentes/header.js" defer></script>
 </head>
@@ -15,52 +12,68 @@
     <h2>Bienvenido a KodRx</h2>
     <p id="nombre-farmacia">Cargando...</p>
 
-    <div style="display: flex; flex-direction: column; gap: 10px; max-width: 320px; margin: auto; margin-top: 20px;">
-      <button onclick="location.href='verificador.html'"> Verificador de Recetas</button>
-      <button onclick="location.href='historial.html'"> Mis Recetas Surtidas</button>
-      <button onclick="window.open('https://kodrx-blockchain.onrender.com/consulta.html', '_blank')">
-   Verificar receta en blockchain
-</button>
-
-      <button onclick="cerrarSesion()"> Cerrar sesión</button>
+    <div style="display:flex;flex-direction:column;gap:10px;max-width:320px;margin:auto;margin-top:20px;">
+      <button onclick="location.href='verificador.html'">Verificador de Recetas</button>
+      <button onclick="location.href='historial.html'">Mis Recetas Surtidas</button>
+      <button onclick="window.open('https://kodrx-blockchain.onrender.com/consulta.html','_blank')">Verificar receta en blockchain</button>
+      <button onclick="cerrarSesion()">Cerrar sesión</button>
     </div>
   </main>
 
-  <script type="module" src="/firebase-init.js"></script>
-<script type="module">
-  import { auth, db } from '/firebase-init.js';
-  import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-  import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+  <!-- JS (un solo módulo) -->
+  <script type="module">
+    import { auth, db } from '/firebase-init.js';
+    import { onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+    import { doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
-  const nombreFarmacia = document.getElementById("nombre-farmacia");
+    const nombreFarmacia = document.getElementById('nombre-farmacia');
+    const ACCESS_URL = '/acceso?role=farmacia';
 
-  onAuthStateChanged(auth, async (user) => {
-    if (!user) {
-      location.href = "login.html";
-      return;
-    }
-
-    const snap = await getDoc(doc(db, "farmacias", user.uid));
-    if (snap.exists()) {
-      const data = snap.data();
-
-      if (data.suspendido === true) {
-        location.href = "/suspendido.html";
+    // Guard + carga de datos
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        location.href = ACCESS_URL;
         return;
       }
 
-      nombreFarmacia.innerText = data.nombreFarmacia || "Farmacia sin nombre";
-    } else {
-      nombreFarmacia.innerText = "Farmacia sin registro";
-    }
-  });
+      try {
+        const snap = await getDoc(doc(db, 'farmacias', user.uid));
+        if (!snap.exists()) {
+          await signOut(auth);
+          location.href = '/acceso?role=farmacia&msg=sin_permiso';
+          return;
+        }
 
-  window.cerrarSesion = () => {
-    signOut(auth).then(() => {
-      location.href = "login.html";
+        const data = snap.data();
+        const estado = (data.estado || '').toLowerCase();
+        const suspendido = data.suspendido === true;
+
+        if (estado === 'suspendido' || suspendido) {
+          await signOut(auth);
+          location.href = '/acceso?role=farmacia&msg=suspendido';
+          return;
+        }
+
+        // Intentamos varios nombres posibles
+        const nombre =
+          (data.nombreFarmacia || data.nombre || data.razonSocial || '').trim() || 'Farmacia';
+        nombreFarmacia.textContent = nombre;
+      } catch (e) {
+        console.error('Error cargando farmacia:', e);
+        nombreFarmacia.textContent = '—';
+      }
     });
-  };
-</script>
 
+    // Logout global (usado por el botón inline)
+    window.cerrarSesion = async () => {
+      try {
+        await signOut(auth);
+        location.href = '/acceso?role=farmacia&msg=logout_ok';
+      } catch (err) {
+        console.error('❌ Error al cerrar sesión:', err);
+        alert('Hubo un problema al cerrar sesión, intenta de nuevo.');
+      }
+    };
+  </script>
 </body>
 </html>
