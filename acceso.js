@@ -1,13 +1,11 @@
-// /acceso.js — redirección robusta por ROL REAL (Firestore)
+
+// /acceso.js — Login + redirección por rol real + banners de mensaje
 import { auth, db } from "/firebase-init.js";
 import {
   onAuthStateChanged,
   signInWithEmailAndPassword,
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import {
-  doc,
-  getDoc,
-} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 // ------- Query params -------
 const qs      = new URLSearchParams(location.search);
@@ -22,19 +20,39 @@ const DEFAULT_DEST = {
 };
 const go = (dest) => { console.log("[ACCESO] →", dest); location.href = dest; };
 
-// Estado de UI (solo visual)
+// Estado UI (solo visual)
 let currentRole = (urlRole === "farmacia") ? "farmacia" : "medico";
-// Para evitar doble redirect (race entre onAuth y submit)
+// Evitar doble redirect (race entre onAuth y submit)
 let isManualRedirect = false;
 
-// ---------- Helpers ----------
-function showMsg(text){
+// ---------- BANNERS ----------
+function showMsg(text, kind = "info"){
   const box = document.getElementById("accessMsg");
   if (!box) return;
   box.textContent = text;
   box.style.display = "block";
+  box.setAttribute("role", "alert");
+  box.setAttribute("aria-live", "polite");
+  // Ajusta estas clases si tu global.css tiene estilos para mensajes
+  box.classList.remove("ok","warn","error","info");
+  box.classList.add(kind);
 }
 
+// lee ?msg= y muestra banner bonito
+function hydrateMsgFromParam(){
+  const map = {
+    logout_ok:   { text: "Sesión cerrada correctamente.", kind: "ok" },
+    suspendido:  { text: "Tu cuenta está suspendida. Contacta al soporte para reactivación.", kind: "warn" },
+    sin_permiso: { text: "No tienes permisos para esta sección.", kind: "warn" },
+    error_guard: { text: "No pudimos validar tu sesión. Inicia sesión nuevamente.", kind: "error" },
+    cred:        { text: "Correo o contraseña incorrectos.", kind: "error" },
+    expired:     { text: "Tu sesión expiró. Vuelve a iniciar sesión.", kind: "info" },
+  };
+  const cfg = map[msg];
+  if (cfg) showMsg(cfg.text, cfg.kind);
+}
+
+// ---------- UI helpers ----------
 function selectRoleTab(role){
   currentRole = (role === "farmacia") ? "farmacia" : "medico";
   const tabM = document.getElementById("tabMedico");
@@ -51,36 +69,28 @@ function selectRoleTab(role){
 
 // Determina el ROL REAL del usuario desde Firestore
 async function determineRole(uid){
-  // 1) ¿Es médico?
   try{
     const m = await getDoc(doc(db, "medicos", uid));
     if (m.exists()){
       const estado = (m.data().estado || "").toLowerCase();
-      if (estado === "suspendido"){
-        showMsg("Tu cuenta de médico está suspendida.");
-        return "suspendido";
-      }
+      if (estado === "suspendido") return "suspendido";
       return "medico";
     }
-  }catch(e){ console.warn("[ACCESO] Error leyendo medicos/{uid}:", e); }
+  }catch(e){ console.warn("[ACCESO] Error medicos/{uid}:", e); }
 
-  // 2) ¿Es farmacia?
   try{
     const f = await getDoc(doc(db, "farmacias", uid));
     if (f.exists()){
       const estado = (f.data().estado || "").toLowerCase();
-      if (estado === "suspendido"){
-        showMsg("La cuenta de farmacia está suspendida.");
-        return "suspendido";
-      }
+      if (estado === "suspendido") return "suspendido";
       return "farmacia";
     }
-  }catch(e){ console.warn("[ACCESO] Error leyendo farmacias/{uid}:", e); }
+  }catch(e){ console.warn("[ACCESO] Error farmacias/{uid}:", e); }
 
   return "desconocido";
 }
 
-// Solo permite return hacia el área del rol real
+// Permite return solo si corresponde al área del rol real
 function allowedFor(role, urlStr){
   try{
     const p = new URL(urlStr, location.origin).pathname;
@@ -90,44 +100,36 @@ function allowedFor(role, urlStr){
   }catch{ return false; }
 }
 
-// ---------- Mensaje post-logout ----------
-if (msg === "logout_ok") {
-  window.addEventListener("DOMContentLoaded", () => showMsg("Sesión cerrada correctamente."));
-}
-
-// ---------- Guard: si ya hay sesión, redirige por ROL REAL ----------
+// ---------- Guard: sesión existente → redirige por ROL REAL ----------
 onAuthStateChanged(auth, async (user) => {
   if (user && !isManualRedirect) {
     const realRole = await determineRole(user.uid);
     console.log("[ACCESO] onAuth: realRole =", realRole);
 
-    if (realRole === "suspendido") return; // se quedó en la página con el mensaje
-    if (realRole === "desconocido") {
-      showMsg("No se encontró rol asociado a tu cuenta.");
-      return;
-    }
+    if (realRole === "suspendido") { showMsg("Tu cuenta está suspendida. Contacta al soporte.", "warn"); return; }
+    if (realRole === "desconocido") { showMsg("No se encontró rol asociado a tu cuenta.", "warn"); return; }
 
-    // Respeta return SOLO si coincide con el área del rol real
     const dest = (ret && allowedFor(realRole, ret)) ? ret : DEFAULT_DEST[realRole];
     go(dest);
   }
 });
 
-// ---------- UI y login ----------
+// ---------- UI + Login ----------
 document.addEventListener("DOMContentLoaded", () => {
-  // Pestaña inicial según ?role=
+  hydrateMsgFromParam();
+
+  // Pestaña inicial por ?role=
   selectRoleTab(urlRole);
 
-  // Cambios de pestaña (solo UI)
+  // Cambiar pestañas (solo UI)
   document.getElementById("tabMedico")?.addEventListener("click", () => selectRoleTab("medico"));
   document.getElementById("tabFarmacia")?.addEventListener("click", () => selectRoleTab("farmacia"));
 
-  // Mostrar/Ocultar contraseña (ambos formularios)
+  // Mostrar/Ocultar contraseña
   document.querySelectorAll(".pass .toggle").forEach((btn) => {
     btn.addEventListener("click", () => {
       const input = btn.parentElement.querySelector("input");
-      if (!input) return;
-      input.type = input.type === "password" ? "text" : "password";
+      if (input) input.type = input.type === "password" ? "text" : "password";
     });
   });
 
@@ -140,22 +142,21 @@ document.addEventListener("DOMContentLoaded", () => {
     e.preventDefault();
     const email = document.getElementById("medicoEmail")?.value.trim();
     const pass  = document.getElementById("medicoPass")?.value.trim();
-    if (!email || !pass) return showMsg("Completa correo y contraseña.");
+    if (!email || !pass) return showMsg("Completa correo y contraseña.", "warn");
 
     try {
       isManualRedirect = true;
       const cred = await signInWithEmailAndPassword(auth, email, pass);
       const realRole = await determineRole(cred.user.uid);
       if (realRole !== "medico") {
-        showMsg("Tu cuenta no es de médico. Revisa la pestaña correcta.");
         isManualRedirect = false;
-        return;
+        return showMsg("Tu cuenta no es de médico. Cambia a la pestaña correcta.", "warn");
       }
       go((ret && allowedFor("medico", ret)) ? ret : DEFAULT_DEST.medico);
     } catch (err) {
       isManualRedirect = false;
       console.error("Login médico:", err);
-      showMsg("No se pudo iniciar sesión. Verifica tus datos.");
+      showMsg("No se pudo iniciar sesión. Verifica tus datos.", "error");
     }
   });
 
@@ -164,22 +165,21 @@ document.addEventListener("DOMContentLoaded", () => {
     e.preventDefault();
     const email = document.getElementById("farmaciaEmail")?.value.trim();
     const pass  = document.getElementById("farmaciaPass")?.value.trim();
-    if (!email || !pass) return showMsg("Completa correo y contraseña.");
+    if (!email || !pass) return showMsg("Completa correo y contraseña.", "warn");
 
     try {
       isManualRedirect = true;
       const cred = await signInWithEmailAndPassword(auth, email, pass);
       const realRole = await determineRole(cred.user.uid);
       if (realRole !== "farmacia") {
-        showMsg("Esta cuenta no es de farmacia. Cambia a la pestaña de Médico si corresponde.");
         isManualRedirect = false;
-        return;
+        return showMsg("Esta cuenta no es de farmacia. Cambia a la pestaña de Médico si corresponde.", "warn");
       }
       go((ret && allowedFor("farmacia", ret)) ? ret : DEFAULT_DEST.farmacia);
     } catch (err) {
       isManualRedirect = false;
       console.error("Login farmacia:", err);
-      showMsg("No se pudo iniciar sesión. Verifica tus datos.");
+      showMsg("No se pudo iniciar sesión. Verifica tus datos.", "error");
     }
   });
 });
