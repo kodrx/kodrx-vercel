@@ -580,6 +580,10 @@ document.addEventListener('DOMContentLoaded', ()=>{
       await generarPDF(RECETA_ACTUAL, QRS);
     } finally { btnDesc.__busy=false; btnDesc.disabled=false; }
   });
+
+  await verificarBlockchain(receta);   // 👈 aquí
+
+  return receta; 
   const btnImp=document.getElementById('btnImprimir');
   btnImp?.addEventListener('click', async ()=>{
     if(btnImp.__busy) return; btnImp.__busy=true; btnImp.disabled=true;
