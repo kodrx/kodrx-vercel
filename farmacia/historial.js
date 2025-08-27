@@ -1,12 +1,11 @@
-import { db, auth } from "../firebase-init.js";
-import {
-  collection,
-  getDocs,
-  query,
-  where,
-  orderBy
-} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+import { auth, db } from "/firebase-init.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import {
+  collection, query, where, getDocs, orderBy, startAfter, limit,
+  doc, getDoc
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
 
 let recetasGlobal = [];
 
