@@ -581,7 +581,7 @@ document.addEventListener('DOMContentLoaded', async ()=>{
       await generarPDF(RECETA_ACTUAL, QRS);
     } finally { btnDesc.__busy=false; btnDesc.disabled=false; }
   });
-console.log('[RECETA]', receta.bloque, receta.hash, receta);
+
 
   const btnImp=document.getElementById('btnImprimir');
   btnImp?.addEventListener('click', async ()=>{
@@ -590,6 +590,8 @@ console.log('[RECETA]', receta.bloque, receta.hash, receta);
       if(!RECETA_ACTUAL) await loadAndRender();
       await generarPDF(RECETA_ACTUAL, QRS, {mode:'print'});
     } finally { btnImp.__busy=false; btnImp.disabled=false; }
+    console.log('[RECETA]', receta.bloque, receta.hash, receta);
+
   });
 
   // 🟢 Arranque
