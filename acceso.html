@@ -1,68 +1,71 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta charset="UTF-8">
-  <title>KodRx - Inicio</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>KodRx - Acceso</title>
+
+  <!-- Estilos: global primero, acceso después -->
   <link rel="stylesheet" href="/estilos/global.css" />
   <link rel="stylesheet" href="/estilos/acceso.css" />
 
   <script src="/componentes/header.js" defer></script>
-
 </head>
-<body style="text-align: center; padding: 50px;">
-  <h1 style="color: var(--color-primario);">Bienvenido a KodRx</h1>
-   <!-- Mensajes (logout_ok, errores, etc.) -->
-      <div id="accessMsg" class="msg"></div>
-<div id="accessMsg" class="msg" role="alert" aria-live="polite" style="display:none"></div>
+<body>
+  <div id="acceso-root" style="max-width: 480px; margin: 40px auto; padding: 0 12px; text-align:center;">
+    <h1 style="color: var(--color-primario);">Bienvenido a KodRx</h1>
 
-      <!-- Tabs -->
-      <div class="tabs">
-        <button id="tabMedico" class="tab active" type="button">Médico</button>
-        <button id="tabFarmacia" class="tab" type="button">Farmacia</button>
-      </div>
+    <!-- Mensajes -->
+    <div id="accessMsg" class="msg" role="alert" aria-live="polite" style="display:none"></div>
 
-      <!-- Panel Médico -->
-      <section id="panelMedico" class="panel">
-        <form id="formMedico" novalidate>
-          <label for="medicoEmail">Correo electrónico</label>
-          <input id="medicoEmail" class="input" type="email" autocomplete="username" placeholder="tu@correo.com" required />
-
-          <label for="medicoPass">Contraseña</label>
-          <div class="pass">
-            <input id="medicoPass" class="input" type="password" autocomplete="current-password" placeholder="••••••••" required />
-            <button class="toggle" type="button" aria-label="Mostrar/Ocultar contraseña">👁️</button>
-          </div>
-
-          <button type="submit" class="btn primary">Entrar</button>
-          <div class="links">
-            <a href="/reset.html">¿Olvidaste tu contraseña?</a>
-            <span></span>
-          </div>
-        </form>
-      </section>
-
-      <!-- Panel Farmacia -->
-      <section id="panelFarmacia" class="panel" hidden>
-        <form id="formFarmacia" novalidate>
-          <label for="farmaciaEmail">Correo electrónico</label>
-          <input id="farmaciaEmail" class="input" type="email" autocomplete="username" placeholder="farmacia@correo.com" required />
-
-          <label for="farmaciaPass">Contraseña</label>
-          <div class="pass">
-            <input id="farmaciaPass" class="input" type="password" autocomplete="current-password" placeholder="••••••••" required />
-            <button class="toggle" type="button" aria-label="Mostrar/Ocultar contraseña">👁️</button>
-          </div>
-
-          <button type="submit" class="btn primary">Entrar</button>
-          <div class="links">
-            <a href="/reset.html">¿Olvidaste tu contraseña?</a>
-            <span></span>
-          </div>
-        </form>
-      </section>
+    <!-- Tabs -->
+    <div class="tabs">
+      <button id="tabMedico" class="tab active" type="button">Médico</button>
+      <button id="tabFarmacia" class="tab" type="button">Farmacia</button>
     </div>
+
+    <!-- Panel Médico -->
+    <section id="panelMedico" class="panel">
+      <form id="formMedico" novalidate>
+        <label for="medicoEmail">Correo electrónico</label>
+        <input id="medicoEmail" class="input" type="email" autocomplete="username" placeholder="tu@correo.com" required />
+
+        <label for="medicoPass">Contraseña</label>
+        <div class="pass">
+          <input id="medicoPass" class="input" type="password" autocomplete="current-password" placeholder="••••••••" required />
+          <button class="toggle" type="button" aria-label="Mostrar/Ocultar contraseña">👁️</button>
+        </div>
+
+        <button type="submit" class="btn primary">Entrar</button>
+        <div class="links">
+          <a href="/reset.html">¿Olvidaste tu contraseña?</a>
+          <span></span>
+        </div>
+      </form>
+    </section>
+
+    <!-- Panel Farmacia -->
+    <section id="panelFarmacia" class="panel" hidden>
+      <form id="formFarmacia" novalidate>
+        <label for="farmaciaEmail">Correo electrónico</label>
+        <input id="farmaciaEmail" class="input" type="email" autocomplete="username" placeholder="farmacia@correo.com" required />
+
+        <label for="farmaciaPass">Contraseña</label>
+        <div class="pass">
+          <input id="farmaciaPass" class="input" type="password" autocomplete="current-password" placeholder="••••••••" required />
+          <button class="toggle" type="button" aria-label="Mostrar/Ocultar contraseña">👁️</button>
+        </div>
+
+        <button type="submit" class="btn primary">Entrar</button>
+        <div class="links">
+          <a href="/reset.html">¿Olvidaste tu contraseña?</a>
+          <span></span>
+        </div>
+      </form>
+    </section>
   </div>
+
+  <!-- Lógica -->
   <script type="module" src="/acceso.js"></script>
 </body>
 </html>
