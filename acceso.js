@@ -1,4 +1,3 @@
-
 // /acceso.js — Login + redirección por rol real + banners de mensaje
 import { auth, db } from "/firebase-init.js";
 import {
