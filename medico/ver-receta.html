@@ -568,23 +568,20 @@ async function loadAndRender(){
   QRS = await window.prepararReceta(receta);
 }
 
-document.addEventListener('DOMContentLoaded', ()=>{
+document.addEventListener('DOMContentLoaded', async ()=>{
   document.getElementById('btnRegresar')?.addEventListener('click',()=>{
     if(history.length>1) history.back(); else location.href='/';
   });
+
   const btnDesc=document.getElementById('btnDescargar');
   btnDesc?.addEventListener('click', async ()=>{
     if(btnDesc.__busy) return; btnDesc.__busy=true; btnDesc.disabled=true;
     try{
       if(!RECETA_ACTUAL) await loadAndRender();
       await generarPDF(RECETA_ACTUAL, QRS);
-       await verificarBlockchain(receta);   // 👈 aquí
-
-  return receta; 
     } finally { btnDesc.__busy=false; btnDesc.disabled=false; }
   });
 
- 
   const btnImp=document.getElementById('btnImprimir');
   btnImp?.addEventListener('click', async ()=>{
     if(btnImp.__busy) return; btnImp.__busy=true; btnImp.disabled=true;
@@ -594,9 +591,10 @@ document.addEventListener('DOMContentLoaded', ()=>{
     } finally { btnImp.__busy=false; btnImp.disabled=false; }
   });
 
-  
-  // Arranque
-  loadAndRender();
+  // 🟢 Arranque
+  const receta = await loadAndRender();   // 👈 aseguramos que ya cargó y se pintó
+  await verificarBlockchain(receta);      // 👈 ahora sí actualiza el badge
+});
 
 
   async function verificarBlockchain(receta){
