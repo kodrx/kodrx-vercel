@@ -578,6 +578,9 @@ document.addEventListener('DOMContentLoaded', ()=>{
     try{
       if(!RECETA_ACTUAL) await loadAndRender();
       await generarPDF(RECETA_ACTUAL, QRS);
+       await verificarBlockchain(receta);   // 👈 aquí
+
+  return receta; 
     } finally { btnDesc.__busy=false; btnDesc.disabled=false; }
   });
 
@@ -590,9 +593,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
       await generarPDF(RECETA_ACTUAL, QRS, {mode:'print'});
     } finally { btnImp.__busy=false; btnImp.disabled=false; }
   });
- await verificarBlockchain(receta);   // 👈 aquí
 
-  return receta; 
   
   // Arranque
   loadAndRender();
