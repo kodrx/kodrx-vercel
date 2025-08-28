@@ -565,6 +565,7 @@ async function loadAndRender(){
   const id=p.get('id') || 'RECETA-DE-EJEMPLO-001';
   const receta = p.get('id') ? await smartLoadReceta(id) : await smartLoadReceta(id);
   RECETA_ACTUAL=receta;
+  console.log('[RECETA]', receta.bloque, receta.hash, receta);
   renderReceta(receta);          // 👈 aquí se crea #bcStatus en el DOM
   return receta;   
   QRS = await window.prepararReceta(receta);
