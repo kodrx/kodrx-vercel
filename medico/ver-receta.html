@@ -564,7 +564,7 @@ async function loadAndRender(){
   const p=new URLSearchParams(location.search);
   const id=p.get('id') || 'RECETA-DE-EJEMPLO-001';
   const receta = p.get('id') ? await smartLoadReceta(id) : await smartLoadReceta(id);
-    const receta = await smartLoadReceta(id); // carga real
+   
   RECETA_ACTUAL = receta;
 
   console.log('[RECETA]', receta.bloque, receta.hash, receta);
