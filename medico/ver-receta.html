@@ -159,13 +159,28 @@ button{appearance:none;border:0;border-radius:12px;padding:10px 14px;font-weight
 <!-- QRCode.js -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
-<!-- Firebase opcional (modular) solo para leer receta si hay ?id= -->
 <script type="module">
-  // 1) IMPORTS — usa tu init global
+  // 1) IMPORTS (usa tu init global)
   import { db } from "/firebase-init.js";
   import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-  // 2) Render mínimo (stub) — crea el badge si no existe
+  // 2) Stub de render (solo si NO hay una real cargada antes)
+  if (typeof window.renderReceta !== 'function') {
+    window.renderReceta = function(receta){
+      // crea el badge si no existe
+      if (!document.getElementById('bcStatus')) {
+        const wrap = document.getElementById('recetaRoot') || document.body;
+        const p = document.createElement('p');
+        p.id = 'bcStatus';
+        p.className = 'pill';
+        p.textContent = 'Verificando blockchain…';
+        wrap.prepend(p);
+      }
+      // TODO: aquí puedes poner un mínimo de datos si quieres
+    };
+  }
+
+  // 3) Helpers UI
   function ensureBadge() {
     if (!document.getElementById('bcStatus')) {
       const wrap = document.getElementById('recetaRoot') || document.body;
@@ -176,12 +191,8 @@ button{appearance:none;border:0;border-radius:12px;padding:10px 14px;font-weight
       wrap.prepend(p);
     }
   }
-  function renderReceta(receta){
-    ensureBadge();
-    // TODO: aquí tu render real (datos médico/paciente/medicamentos, etc.)
-  }
 
-  // 3) Loader REAL (incluye bloque/hash)
+  // 4) Loader con bloque/hash
   async function smartLoadReceta(id){
     const ref  = doc(db, 'recetas', id);
     const snap = await getDoc(ref);
@@ -195,12 +206,9 @@ button{appearance:none;border:0;border-radius:12px;padding:10px 14px;font-weight
             : ts ? new Date(ts) : new Date();
 
     // bloque numérico + hash
-    const parseIdx = (v) => {
-      if (typeof v === 'number' && Number.isFinite(v)) return v;
-      if (typeof v === 'string' && /^\d+$/.test(v))     return Number(v);
-      return null;
-    };
-    const bloque = [d.bloque, d.bloqueIndex, d.index].map(parseIdx).find(v => Number.isFinite(v)) ?? null;
+    const toNum = v => (typeof v==='number' && Number.isFinite(v)) ? v
+                          : (typeof v==='string' && /^\d+$/.test(v)) ? Number(v) : null;
+    const bloque = [d.bloque, d.bloqueIndex, d.index].map(toNum).find(v => Number.isFinite(v)) ?? null;
     const hash   = d.hash || d.blockHash || null;
 
     return {
@@ -232,19 +240,17 @@ button{appearance:none;border:0;border-radius:12px;padding:10px 14px;font-weight
       observaciones: d.observaciones || '—',
       diagnostico:   d.diagnostico   || '—',
       timestamp: dt,
-      bloque,                 // 👈 YA VIENE
-      hash,                   // 👈 YA VIENE
-      urlVerificacion: bloque
-        ? `https://kodrx-blockchain.onrender.com/consulta.html?block=${bloque}`
-        : `https://kodrx-blockchain.onrender.com/consulta.html`,
+      bloque,   // 👈 INCLUIDO
+      hash,     // 👈 INCLUIDO
       _origen: 'firestore'
     };
   }
 
-  // 4) Verificación blockchain
+  // 5) Verificación blockchain
   async function verificarBlockchain(receta){
+    ensureBadge();
     const el = document.getElementById('bcStatus');
-    if (!el) { console.warn('[BC] No se encontró #bcStatus'); return; }
+    if (!el) return;
 
     el.textContent = 'Verificando blockchain…';
     el.style.background = '#eef2ff';
@@ -295,18 +301,69 @@ button{appearance:none;border:0;border-radius:12px;padding:10px 14px;font-weight
     }
   }
 
-  // 5) BOOT: carga → render → verificar
+  // 6) Estado y boot
+  let RECETA_ACTUAL = null, QRS = null;
+
   document.addEventListener('DOMContentLoaded', async ()=>{
+    // botones
+    document.getElementById('btnRegresar')?.addEventListener('click',()=>{
+      if(history.length>1) history.back(); else location.href='/';
+    });
+    document.getElementById('btnDescargar')?.addEventListener('click', async (ev)=>{
+      const b = ev.currentTarget;
+      if (b.__busy) return; b.__busy = true; b.disabled = true;
+      try{
+        if(!RECETA_ACTUAL) await mainLoad();
+        await generarPDF(RECETA_ACTUAL, QRS);
+      } finally { b.__busy=false; b.disabled=false; }
+    });
+    document.getElementById('btnImprimir')?.addEventListener('click', async (ev)=>{
+      const b = ev.currentTarget;
+      if (b.__busy) return; b.__busy = true; b.disabled = true;
+      try{
+        if(!RECETA_ACTUAL) await mainLoad();
+        await generarPDF(RECETA_ACTUAL, QRS, {mode:'print'});
+      } finally { b.__busy=false; b.disabled=false; }
+    });
+
+    // arranque
+    await mainLoad();
+  });
+
+  async function mainLoad(){
     const id = new URLSearchParams(location.search).get('id');
     if (!id) { console.warn('Falta ?id'); return; }
 
-    const receta = await smartLoadReceta(id);
+    // 1) carga y render
+    let receta = await smartLoadReceta(id);
+    RECETA_ACTUAL = receta;
     console.log('[RECETA]', receta.bloque, receta.hash, receta);
 
-    renderReceta(receta);           // crea #bcStatus
+    renderReceta(receta);                 // asegura #bcStatus
+    if (typeof window.prepararReceta === 'function') {
+      QRS = await window.prepararReceta(receta);
+    }
+
+    // 2) refresh por si el update de bloque/hash tardó
+    if (!receta?.bloque || !receta?.hash) {
+      try {
+        const snap = await getDoc(doc(db, 'recetas', receta.id));
+        if (snap.exists()) {
+          const newer = { id: snap.id, ...snap.data() };
+          if (newer.bloque && newer.hash) {
+            receta = { ...receta, ...{ bloque: newer.bloque, hash: newer.hash } };
+            RECETA_ACTUAL = receta;
+            console.log('[RECETA·REFRESH]', receta.bloque, receta.hash);
+          }
+        }
+      } catch {}
+    }
+
+    // 3) verifica
     await verificarBlockchain(receta);
-  });
+  }
 </script>
+
 
 <script>
 /* ===================== UTILIDADES ===================== */
@@ -648,30 +705,6 @@ async function generarPDF(receta, qrs, {mode='save'}={}){
 }
 
 /* ============== Boot & Listeners ============== */
-let RECETA_ACTUAL = null, QRS = null;
-
-async function loadAndRender(){
-  await waitForLibs();
-
-  const id = new URLSearchParams(location.search).get('id');
-  if (!id) throw new Error('Falta parámetro ?id');
-
-  const receta = await smartLoadReceta(id); // carga real
-  RECETA_ACTUAL = receta;
-
-  console.log('[RECETA]', receta.bloque, receta.hash, receta);
-
-  // 1) render (crea #bcStatus)
-  renderReceta(receta);
-
-  // 2) prepara QRS ANTES del return
-  if (typeof window.prepararReceta === 'function') {
-    QRS = await window.prepararReceta(receta);
-  }
-
-  // 3) devuelve receta
-  return receta;
-} // 👈 ESTA LLAVE FALTABA
 
 document.addEventListener('DOMContentLoaded', async ()=>{
   // listeners
@@ -697,26 +730,7 @@ document.addEventListener('DOMContentLoaded', async ()=>{
     } finally { btnImp.__busy = false; btnImp.disabled = false; }
   });
 
-  // 🟢 Arranque: carga → posible refresh → verificar
-  let receta = await loadAndRender();
-
-  // si aún no hay bloque/hash, re-lee una vez (por si el update tardó)
-  if (!receta?.bloque || !receta?.hash) {
-    try {
-      const snap = await getDoc(doc(db, 'recetas', receta.id));
-      if (snap.exists()) {
-        const newer = { id: snap.id, ...snap.data() };
-        if (newer.bloque && newer.hash) {
-          RECETA_ACTUAL = newer;
-          receta = newer;
-          console.log('[RECETA·REFRESH]', receta.bloque, receta.hash);
-        }
-      }
-    } catch {}
-  }
-
-  await verificarBlockchain(receta);
-});
+  
 
 
  
