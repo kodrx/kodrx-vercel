@@ -567,7 +567,7 @@ async function loadAndRender(){
   RECETA_ACTUAL=receta;
   QRS = await window.prepararReceta(receta);
 }
-
+console.log('[RECETA]', receta.bloque, receta.hash, receta);
 document.addEventListener('DOMContentLoaded', async ()=>{
   document.getElementById('btnRegresar')?.addEventListener('click',()=>{
     if(history.length>1) history.back(); else location.href='/';
