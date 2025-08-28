@@ -176,6 +176,21 @@ document.addEventListener("DOMContentLoaded", () => {
       } catch (blockErr) {
         console.error("❌ Error de conexión con blockchain:", blockErr?.message || blockErr);
       }
+// ...tras recibir blockchainResp...
+const blockchainData = await blockchainResp.json().catch(() => ({}));
+if (blockchainResp.ok) {
+  const bloqueIndex = blockchainData?.bloque?.index ?? blockchainData?.bloqueIndex ?? blockchainData?.index ?? null;
+  const bloqueHash  = blockchainData?.bloque?.hash  ?? blockchainData?.hash       ?? null;
+
+  if (bloqueIndex != null && bloqueHash) {
+    await updateDoc(doc(db, "recetas", recetaRef.id), { bloque: bloqueIndex, hash: bloqueHash });
+    console.log("✅ Guardado en receta:", { bloque: bloqueIndex, hash: bloqueHash });
+  } else {
+    console.warn("⚠️ Respuesta BC sin index/hash esperado:", blockchainData);
+  }
+} else {
+  console.warn("⚠️ Blockchain falló:", blockchainData?.error || blockchainData);
+}
 
       // 🎯 QR + redirect
       const qrUrl = `/medico/ver-receta.html?id=${recetaRef.id}`;
