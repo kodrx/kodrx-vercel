@@ -129,68 +129,74 @@ document.addEventListener("DOMContentLoaded", () => {
 
       console.log("✅ Receta guardada con ID:", recetaRef.id);
 
-      // 📦 Enviar receta a blockchain (compat + campos nuevos)
-      try {
-        const recetaResumen = medicamentos
-          .map(m => `${m.nombre} ${m.dosis} por ${m.duracion}`)
-          .join(", ");
+// 📦 Enviar receta a blockchain (compat + campos nuevos, mapeo robusto)
+try {
+  const recetaResumen = medicamentos
+    .map(m => `${m.nombre} ${m.dosis} por ${m.duracion}`)
+    .join(", ");
 
-        const payload = {
-          // ——— Compat (lo que ya consume hoy tu backend) ———
-          receta: recetaResumen,
-          medico: medico.nombre,
-          cedula: medico.cedula,
-          // ——— Nuevos (tu backend puede ignorarlos si no los usa aún) ———
-          medicamentos,                           // [{ nombre, dosis, duracion, ini }]
-          iniciales: medicamentos.map(m => m.ini) // ["AMOX", "IBU", ...]
-        };
+  const payload = {
+    // Compat
+    receta: recetaResumen,
+    medico: medico.nombre,
+    cedula: medico.cedula,
+    // Nuevos (tu backend puede ignorarlos sin romper)
+    medicamentos,
+    iniciales: medicamentos.map(m => m.ini),
+    // (Opcional) ayuda para trazabilidad del lado servidor
+    idReceta: recetaRef.id
+  };
 
-        const blockchainResp = await fetch("https://kodrx-blockchain.onrender.com/bloques", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": "Bearer kodrx-secret-2025"
-          },
-          body: JSON.stringify(payload)
-        });
+  const resp = await fetch("https://kodrx-blockchain.onrender.com/bloques", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer kodrx-secret-2025"
+    },
+    body: JSON.stringify(payload)
+  });
 
-        const blockchainData = await blockchainResp.json().catch(() => ({}));
+  const raw = await resp.json().catch(() => ({}));
+  console.log("[BC][raw]", raw);
 
-        if (blockchainResp.ok) {
-          // Soporta distintas formas de respuesta
-          const bloqueIndex = blockchainData?.bloque?.index ?? blockchainData?.bloqueIndex ?? blockchainData?.index ?? null;
-          const bloqueHash  = blockchainData?.bloque?.hash  ?? blockchainData?.hash       ?? null;
+  // Helpers de parseo seguro
+  const num = (x) => {
+    if (typeof x === "number" && Number.isFinite(x)) return x;
+    if (typeof x === "string" && /^\d+$/.test(x)) return Number(x);
+    return null;
+  };
+  const pickIndex = (...cands) => cands.map(num).find(v => Number.isFinite(v)) ?? null;
+  const pickHash  = (...cands) => cands.find(h => typeof h === "string" && h.length >= 10) ?? null;
 
-          if (bloqueIndex != null && bloqueHash) {
-            await updateDoc(doc(db, "recetas", recetaRef.id), {
-              bloque: bloqueIndex,
-              hash:   bloqueHash
-            });
-            console.log("✅ Blockchain actualizado:", { bloqueIndex, bloqueHash });
-          } else {
-            console.warn("⚠️ Respuesta BC sin index/hash esperado:", blockchainData);
-          }
-        } else {
-          console.warn("⚠️ Blockchain falló:", blockchainData?.error || blockchainData);
-        }
-      } catch (blockErr) {
-        console.error("❌ Error de conexión con blockchain:", blockErr?.message || blockErr);
-      }
-// ...tras recibir blockchainResp...
-const blockchainData = await blockchainResp.json().catch(() => ({}));
-if (blockchainResp.ok) {
-  const bloqueIndex = blockchainData?.bloque?.index ?? blockchainData?.bloqueIndex ?? blockchainData?.index ?? null;
-  const bloqueHash  = blockchainData?.bloque?.hash  ?? blockchainData?.hash       ?? null;
+  // Intentamos las formas más comunes
+  const idx = pickIndex(
+    raw?.bloque?.index,
+    raw?.block?.index,
+    raw?.index,
+    raw?.bloqueIndex
+    // ❌ JAMÁS uses recetaRef.id como fallback aquí
+  );
+  const hsh = pickHash(
+    raw?.bloque?.hash,
+    raw?.block?.hash,
+    raw?.hash,
+    raw?.blockHash
+  );
 
-  if (bloqueIndex != null && bloqueHash) {
-    await updateDoc(doc(db, "recetas", recetaRef.id), { bloque: bloqueIndex, hash: bloqueHash });
-    console.log("✅ Guardado en receta:", { bloque: bloqueIndex, hash: bloqueHash });
+  if (resp.ok && Number.isFinite(idx) && hsh) {
+    await updateDoc(doc(db, "recetas", recetaRef.id), { bloque: idx, hash: hsh });
+    console.log("✅ Guardado en receta:", { bloque: idx, hash: hsh });
   } else {
-    console.warn("⚠️ Respuesta BC sin index/hash esperado:", blockchainData);
+    console.warn("⚠️ Respuesta BC sin index/hash numérico. No se actualiza la receta.", { idx, hsh, raw });
+    // (Opcional) guarda un URL de consulta si tu backend lo entrega
+    if (raw?.url || raw?.consultaUrl) {
+      await updateDoc(doc(db, "recetas", recetaRef.id), { urlBlockchain: raw.url || raw.consultaUrl });
+    }
   }
-} else {
-  console.warn("⚠️ Blockchain falló:", blockchainData?.error || blockchainData);
+} catch (blockErr) {
+  console.error("❌ Error de conexión con blockchain:", blockErr?.message || blockErr);
 }
+
 
       // 🎯 QR + redirect
       const qrUrl = `/medico/ver-receta.html?id=${recetaRef.id}`;
