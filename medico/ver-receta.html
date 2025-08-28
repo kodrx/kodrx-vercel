@@ -564,27 +564,32 @@ async function loadAndRender(){
   const p=new URLSearchParams(location.search);
   const id=p.get('id') || 'RECETA-DE-EJEMPLO-001';
   const receta = p.get('id') ? await smartLoadReceta(id) : await smartLoadReceta(id);
-  RECETA_ACTUAL=receta;
+    const receta = await smartLoadReceta(id); // carga real
+  RECETA_ACTUAL = receta;
+
   console.log('[RECETA]', receta.bloque, receta.hash, receta);
-  renderReceta(receta);          // 👈 aquí se crea #bcStatus en el DOM
-  return receta;   
-  QRS = await window.prepararReceta(receta);
+
+  renderReceta(receta);                       // aquí se crea #bcStatus
+  QRS = await window.prepararReceta(receta);  // 👈 mover ANTES del return
+
+  return receta;                              
 }
 
-document.addEventListener('DOMContentLoaded', ()=>{
+document.addEventListener('DOMContentLoaded', async ()=>{
   document.getElementById('btnRegresar')?.addEventListener('click',()=>{
     if(history.length>1) history.back(); else location.href='/';
   });
+
   const btnDesc=document.getElementById('btnDescargar');
   btnDesc?.addEventListener('click', async ()=>{
     if(btnDesc.__busy) return; btnDesc.__busy=true; btnDesc.disabled=true;
     try{
       if(!RECETA_ACTUAL) await loadAndRender();
       await generarPDF(RECETA_ACTUAL, QRS);
-      const receta = await loadAndRender();   // ya renderizada
-  await verificarBlockchain(receta);  
+      // ❌ no vuelvas a llamar loadAndRender aquí, no hace falta
     } finally { btnDesc.__busy=false; btnDesc.disabled=false; }
   });
+
   const btnImp=document.getElementById('btnImprimir');
   btnImp?.addEventListener('click', async ()=>{
     if(btnImp.__busy) return; btnImp.__busy=true; btnImp.disabled=true;
@@ -593,6 +598,11 @@ document.addEventListener('DOMContentLoaded', ()=>{
       await generarPDF(RECETA_ACTUAL, QRS, {mode:'print'});
     } finally { btnImp.__busy=false; btnImp.disabled=false; }
   });
+
+  // 🟢 Arranque correcto: carga → render → verifica
+  const receta = await loadAndRender();
+  await verificarBlockchain(receta);
+});
 
   // Arranque
   loadAndRender();
