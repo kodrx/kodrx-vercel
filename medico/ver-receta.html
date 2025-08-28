@@ -160,27 +160,11 @@ button{appearance:none;border:0;border-radius:12px;padding:10px 14px;font-weight
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
 <script type="module">
-  // 1) IMPORTS (usa tu init global)
+  // IMPORTS
   import { db } from "/firebase-init.js";
   import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-  // 2) Stub de render (solo si NO hay una real cargada antes)
-  if (typeof window.renderReceta !== 'function') {
-    window.renderReceta = function(receta){
-      // crea el badge si no existe
-      if (!document.getElementById('bcStatus')) {
-        const wrap = document.getElementById('recetaRoot') || document.body;
-        const p = document.createElement('p');
-        p.id = 'bcStatus';
-        p.className = 'pill';
-        p.textContent = 'Verificando blockchain…';
-        wrap.prepend(p);
-      }
-      // TODO: aquí puedes poner un mínimo de datos si quieres
-    };
-  }
-
-  // 3) Helpers UI
+  // --- UI helpers ---
   function ensureBadge() {
     if (!document.getElementById('bcStatus')) {
       const wrap = document.getElementById('recetaRoot') || document.body;
@@ -191,8 +175,9 @@ button{appearance:none;border:0;border-radius:12px;padding:10px 14px;font-weight
       wrap.prepend(p);
     }
   }
+  function renderReceta(){ ensureBadge(); } // el render fuerte lo hace prepararReceta/renderPreview
 
-  // 4) Loader con bloque/hash
+  // --- Cargar receta (incluye bloque/hash + URLs para QRs) ---
   async function smartLoadReceta(id){
     const ref  = doc(db, 'recetas', id);
     const snap = await getDoc(ref);
@@ -210,6 +195,12 @@ button{appearance:none;border:0;border-radius:12px;padding:10px 14px;font-weight
                           : (typeof v==='string' && /^\d+$/.test(v)) ? Number(v) : null;
     const bloque = [d.bloque, d.bloqueIndex, d.index].map(toNum).find(v => Number.isFinite(v)) ?? null;
     const hash   = d.hash || d.blockHash || null;
+
+    // URLs para QRs (fallbacks seguros)
+    const urlVerificacion = `${location.origin}/medico/ver-receta.html?id=${encodeURIComponent(snap.id)}`;
+    const urlBlockchain   = bloque
+      ? `https://kodrx-blockchain.onrender.com/consulta.html?block=${bloque}`
+      : `https://kodrx-blockchain.onrender.com/consulta.html`;
 
     return {
       id: snap.id,
@@ -240,13 +231,15 @@ button{appearance:none;border:0;border-radius:12px;padding:10px 14px;font-weight
       observaciones: d.observaciones || '—',
       diagnostico:   d.diagnostico   || '—',
       timestamp: dt,
-      bloque,   // 👈 INCLUIDO
-      hash,     // 👈 INCLUIDO
+      bloque,
+      hash,
+      urlVerificacion,   // 👈 necesarios para prepararReceta
+      urlBlockchain,     // 👈 necesarios para prepararReceta
       _origen: 'firestore'
     };
   }
 
-  // 5) Verificación blockchain
+  // --- Verificación blockchain ---
   async function verificarBlockchain(receta){
     ensureBadge();
     const el = document.getElementById('bcStatus');
@@ -301,67 +294,61 @@ button{appearance:none;border:0;border-radius:12px;padding:10px 14px;font-weight
     }
   }
 
-  // 6) Estado y boot
-  let RECETA_ACTUAL = null, QRS = null;
-
-  document.addEventListener('DOMContentLoaded', async ()=>{
-    // botones
-    document.getElementById('btnRegresar')?.addEventListener('click',()=>{
-      if(history.length>1) history.back(); else location.href='/';
-    });
-    document.getElementById('btnDescargar')?.addEventListener('click', async (ev)=>{
-      const b = ev.currentTarget;
-      if (b.__busy) return; b.__busy = true; b.disabled = true;
-      try{
-        if(!RECETA_ACTUAL) await mainLoad();
-        await generarPDF(RECETA_ACTUAL, QRS);
-      } finally { b.__busy=false; b.disabled=false; }
-    });
-    document.getElementById('btnImprimir')?.addEventListener('click', async (ev)=>{
-      const b = ev.currentTarget;
-      if (b.__busy) return; b.__busy = true; b.disabled = true;
-      try{
-        if(!RECETA_ACTUAL) await mainLoad();
-        await generarPDF(RECETA_ACTUAL, QRS, {mode:'print'});
-      } finally { b.__busy=false; b.disabled=false; }
-    });
-
-    // arranque
-    await mainLoad();
-  });
+  // --- Estado + boot ---
+  let RECETA_ACTUAL = null;
+  let QRS = null;
 
   async function mainLoad(){
     const id = new URLSearchParams(location.search).get('id');
     if (!id) { console.warn('Falta ?id'); return; }
 
-    // 1) carga y render
+    // Carga
     let receta = await smartLoadReceta(id);
     RECETA_ACTUAL = receta;
+    window.RECETA_ACTUAL = receta; // expón para el script no-módulo
     console.log('[RECETA]', receta.bloque, receta.hash, receta);
 
-    renderReceta(receta);                 // asegura #bcStatus
+    // Render base + QRs + campos
+    renderReceta(receta);
     if (typeof window.prepararReceta === 'function') {
       QRS = await window.prepararReceta(receta);
+      window.QRS = QRS; // expón para el script no-módulo
     }
 
-    // 2) refresh por si el update de bloque/hash tardó
-    if (!receta?.bloque || !receta?.hash) {
-      try {
-        const snap = await getDoc(doc(db, 'recetas', receta.id));
-        if (snap.exists()) {
-          const newer = { id: snap.id, ...snap.data() };
-          if (newer.bloque && newer.hash) {
-            receta = { ...receta, ...{ bloque: newer.bloque, hash: newer.hash } };
-            RECETA_ACTUAL = receta;
-            console.log('[RECETA·REFRESH]', receta.bloque, receta.hash);
-          }
-        }
-      } catch {}
-    }
-
-    // 3) verifica
+    // Verificación BC
     await verificarBlockchain(receta);
   }
+
+  // Exponer para botones del script no-módulo (si los usas)
+  window.loadAndRender = mainLoad;
+
+  // Listeners (un solo lugar)
+  document.addEventListener('DOMContentLoaded', async ()=>{
+    document.getElementById('btnRegresar')?.addEventListener('click', ()=>{
+      if (history.length > 1) history.back(); else location.href = '/';
+    });
+
+    document.getElementById('btnDescargar')?.addEventListener('click', async (ev)=>{
+      const b = ev.currentTarget;
+      if (b.__busy) return; b.__busy = true; b.disabled = true;
+      try{
+        if (!window.RECETA_ACTUAL) await window.loadAndRender();
+        await generarPDF(window.RECETA_ACTUAL, window.QRS);
+      } finally { b.__busy=false; b.disabled=false; }
+    });
+
+    document.getElementById('btnImprimir')?.addEventListener('click', async (ev)=>{
+      const b = ev.currentTarget;
+      if (b.__busy) return; b.__busy = true; b.disabled = true;
+      try{
+        if (!window.RECETA_ACTUAL) await window.loadAndRender();
+        await generarPDF(window.RECETA_ACTUAL, window.QRS, {mode:'print'});
+      } finally { b.__busy=false; b.disabled=false; }
+    });
+
+    // Arranque
+    await mainLoad();
+  });
 </script>
 
 
@@ -420,6 +407,10 @@ function makeQRDataURL(text,size=260){
 }
 
 /* ============== PREVIEW (pantalla) ============== */
+<script>
+/* ...tus utilidades arriba (KODRX_BLUE, fechaLarga, prefixMedico, medsToText, hashSimulado, makeQRDataURL, etc.) ... */
+
+/* Render de pantalla + QRs */
 function setTextById(id,txt){ const el=document.getElementById(id); if(el) el.textContent = txt; }
 
 async function renderPreview(receta, mainQRDataURL, chainQRDataURL){
@@ -451,19 +442,17 @@ async function renderPreview(receta, mainQRDataURL, chainQRDataURL){
   const medsEl = document.getElementById('listaMedsDerecha');
   if (medsEl) medsEl.textContent = medsToText(receta.medicamentos);
 
-  // Hash y bloque
+  // Hash y bloque (mostrar)
   setTextById('hashTexto','hash: '+hashSimulado(receta));
-  const bnum = (()=>{ try{ const u=new URL(receta.urlBlockchain); return u.searchParams.get('id')||u.searchParams.get('block')||'—'; }catch{ return '—'; } })();
-  setTextById('blockNum','Bloque: '+bnum);
+  setTextById('blockNum','Bloque: ' + (receta.bloque ?? '—'));
 
-  // QR receta
+  // QRs en pantalla
   const qrMain=document.getElementById('qrMain');
   if(qrMain){ qrMain.innerHTML=''; const i=new Image(); i.alt='QR Receta'; i.src=mainQRDataURL; i.style.width='220px'; i.style.height='220px'; qrMain.appendChild(i); }
-  // QR blockchain
   const qrChain=document.getElementById('qrChain');
   if(qrChain){ qrChain.innerHTML=''; const i=new Image(); i.alt='QR Blockchain'; i.src=chainQRDataURL; i.style.width='110px'; i.style.height='110px'; qrChain.appendChild(i); }
 
-  // Código de barras (pantalla)
+  // Código de barras
   try{
     await ensureJsBarcode();
     const c=document.getElementById('barcodeCanvas');
@@ -477,57 +466,36 @@ async function renderPreview(receta, mainQRDataURL, chainQRDataURL){
   // Badge
   const badge=document.getElementById('badgeOrigen');
   if (badge){
-    if (receta._origen==='firestore'){ badge.textContent='Receta Verificada'; badge.className='badge ok'; }
-    else if (receta._origen==='mock-id'){ badge.textContent='MOCK (ID)'; badge.className='badge warn'; }
-    else { badge.textContent='MOCK'; badge.className='badge warn'; }
+    badge.textContent='Receta Verificada';
+    badge.className='badge ok';
   }
 }
 
-/* Exponer prepararReceta global */
+/* prepara QRs (usa URLs de receta; si no vienen, las arma) */
 window.prepararReceta = async function prepararReceta(receta){
-  const mainQRUrl  = await makeQRDataURL(receta.urlVerificacion, 520);
-  const chainQRUrl = await makeQRDataURL(receta.urlBlockchain, 260);
+  // Asegura URLs
+  const recetaUrl = receta.urlVerificacion || `${location.origin}/medico/ver-receta.html?id=${encodeURIComponent(receta.id)}`;
+  const bcUrl     = receta.urlBlockchain   || (receta.bloque
+    ? `https://kodrx-blockchain.onrender.com/consulta.html?block=${receta.bloque}`
+    : `https://kodrx-blockchain.onrender.com/consulta.html`
+  );
+
+  // Asegura lib QR (ya la cargas en <head>, esto por si acaso)
+  if (!window.QRCode) {
+    const s=document.createElement('script');
+    s.src='https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';
+    document.head.appendChild(s);
+    await new Promise(r=>s.onload=r);
+  }
+
+  const mainQRUrl  = await makeQRDataURL(recetaUrl, 520);
+  const chainQRUrl = await makeQRDataURL(bcUrl, 260);
+
   await renderPreview(receta, mainQRUrl, chainQRUrl);
   return { mainQRUrl, chainQRUrl };
 };
 
-/* ============== Carga inteligente de receta ============== */
-async function waitForFirestoreHelper(maxMs=8000){
-  const t0=Date.now();
-  while(Date.now()-t0<maxMs){
-    if(typeof window.kodrxGetReceta==='function') return true;
-    await new Promise(r=>setTimeout(r,120));
-  }
-  return false;
-}
-async function smartLoadReceta(id){
-  // Si ya está el helper => intenta real
-  if (await waitForFirestoreHelper(0)){
-    try{ const r=await window.kodrxGetReceta(id); if(r) return r; }catch{}
-  }
-  // MOCK inmediato
-  const receta = {
-    id,
-    medico:{nombre:`Demo ${id.slice(0,6)}`,genero:'M',cedula:`MX-${id.slice(0,6)}`,especialidad:'Medicina General',telefono:'—',direccion:'—'},
-    paciente:{nombre:`Paciente ${id.slice(0,6)}`,edad:'—',sexo:'—',peso:'—',talla:'—',imc:'—',temperatura:'—',presion:'—'},
-    medicamentos:[],
-    observaciones:'—',diagnostico:'—',
-    timestamp:Date.now(),
-    urlVerificacion:location.origin+'/public/verificar.html?id='+encodeURIComponent(id),
-    urlBlockchain:location.origin+'/public/consulta.html?block='+encodeURIComponent(id),
-    _origen:'mock-id'
-  };
-  // Reintento en background para swap si llega Firestore
-  (async()=>{
-    const ready=await waitForFirestoreHelper(2500);
-    if(!ready) return;
-    try{
-      const r=await window.kodrxGetReceta(id);
-      if(r){ RECETA_ACTUAL=r; QRS=await window.prepararReceta(r); }
-    }catch{}
-  })();
-  return receta;
-}
+
 
 /* ============== Generación de PDF ============== */
 async function generarPDF(receta, qrs, {mode='save'}={}){
