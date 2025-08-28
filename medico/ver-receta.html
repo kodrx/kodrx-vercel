@@ -591,7 +591,6 @@ document.addEventListener('DOMContentLoaded', async ()=>{
     } finally { btnImp.__busy=false; btnImp.disabled=false; }
 
   });
-console.log('[RECETA]', receta.bloque, receta.hash, receta);
   // 🟢 Arranque
   const receta = await loadAndRender();   // 👈 aseguramos que ya cargó y se pintó
   await verificarBlockchain(receta);      // 👈 ahora sí actualiza el badge
