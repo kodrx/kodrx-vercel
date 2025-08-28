@@ -161,16 +161,12 @@ button{appearance:none;border:0;border-radius:12px;padding:10px 14px;font-weight
 
 <!-- Firebase opcional (modular) solo para leer receta si hay ?id= -->
 <script type="module">
+  // 1) IMPORTS — usa tu init global
+  import { db } from "/firebase-init.js";
+  import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-
-  // 1) IMPORTS
-import { db } from "/firebase-init.js";
-import { doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-
-// 2) STUB (solo si no tienes una render real cargada antes)
-if (typeof window.renderReceta !== 'function') {
-  window.renderReceta = function(receta){
-    // crea el badge si no existe
+  // 2) Render mínimo (stub) — crea el badge si no existe
+  function ensureBadge() {
     if (!document.getElementById('bcStatus')) {
       const wrap = document.getElementById('recetaRoot') || document.body;
       const p = document.createElement('p');
@@ -179,66 +175,137 @@ if (typeof window.renderReceta !== 'function') {
       p.textContent = 'Verificando blockchain…';
       wrap.prepend(p);
     }
-    // TODO: aquí luego va tu render real
-  };
-}
+  }
+  function renderReceta(receta){
+    ensureBadge();
+    // TODO: aquí tu render real (datos médico/paciente/medicamentos, etc.)
+  }
 
-// 3) ESTADO GLOBAL
-let RECETA_ACTUAL = null, QRS = null;
-
-// 4) loadAndRender (usa renderReceta adentro)
-async function loadAndRender(){ /* ... */ }
-
-// 5) verificarBlockchain(receta)
-async function verificarBlockchain(receta){ /* ... */ }
-
-// 6) BOOT
-document.addEventListener('DOMContentLoaded', async ()=>{ /* ... */ });
-
-  const app = initializeApp(firebaseConfig);
-  const db  = getFirestore(app);
-  window.kodrxGetReceta = async (id)=>{
-    const ref = doc(db,'recetas',id); const snap = await getDoc(ref);
-    if(!snap.exists()) return null;
+  // 3) Loader REAL (incluye bloque/hash)
+  async function smartLoadReceta(id){
+    const ref  = doc(db, 'recetas', id);
+    const snap = await getDoc(ref);
+    if (!snap.exists()) throw new Error('Receta no encontrada');
     const d = snap.data();
+
+    // fecha robusta
     const ts = d.fecha ?? d.timestamp;
-    const dt = (ts && typeof ts.toDate==='function')? ts.toDate() :
-               (ts && typeof ts.seconds==='number')? new Date(ts.seconds*1000 + Math.floor((ts.nanoseconds||0)/1e6)) :
-               (ts? new Date(ts) : new Date());
-    return {
-      id,
-      medico:{
-        nombre:d.medicoNombre||d.medico?.nombre||'—',
-        genero:d.medicoGenero||d.medico?.genero||'',
-        cedula:d.medicoCedula||d.medico?.cedula||'—',
-        especialidad:d.medicoEspecialidad||d.medico?.especialidad||'—',
-        telefono:d.medicoTelefono||d.medico?.telefono||'—',
-        direccion:d.medicoDomicilio||d.medico?.domicilio||d.medico?.direccion||'—'
-      },
-      paciente:{
-        nombre:d.nombrePaciente||d.pacienteNombre||d.paciente?.nombre||'—',
-        edad:d.edad ?? d.paciente?.edad ?? '—',
-        sexo:d.sexo ?? d.paciente?.sexo ?? '—',
-        peso:d.peso ?? d.paciente?.peso ?? '—',
-        talla:d.talla ?? d.paciente?.talla ?? '—',
-        imc:d.imc ?? d.paciente?.imc ?? '—',
-        temperatura:d.temperatura ?? d.paciente?.temperatura ?? '—',
-        presion:d.presion ?? d.paciente?.presion ?? '—'
-      },
-      medicamentos:(d.medicamentos||d.items||[]).map((m,i)=>({
-        nombre:m.nombre||m.medicamento||`Medicamento ${i+1}`,
-        dosis:m.dosis||m.indicaciones||'—',
-        duracion:m.duracion||m.tiempo||'—'
-      })),
-      observaciones:d.observaciones||'—',
-      diagnostico:d.diagnostico||'—',
-      timestamp:dt,
-      urlVerificacion:`https://kodrx.app/verificar.html?id=${encodeURIComponent(id)}`,
-      urlBlockchain:`https://kodrx-blockchain.onrender.com/verificar.html?id=${encodeURIComponent(d.bloque||id)}`,
-      _origen:'firestore'
+    const dt = (ts && typeof ts?.toDate === 'function') ? ts.toDate()
+            : (ts && typeof ts?.seconds === 'number')   ? new Date(ts.seconds*1000 + Math.floor((ts.nanoseconds||0)/1e6))
+            : ts ? new Date(ts) : new Date();
+
+    // bloque numérico + hash
+    const parseIdx = (v) => {
+      if (typeof v === 'number' && Number.isFinite(v)) return v;
+      if (typeof v === 'string' && /^\d+$/.test(v))     return Number(v);
+      return null;
     };
-  };
-}catch(e){ console.warn('[KodRx] Firebase no disponible (modo demo).', e); }
+    const bloque = [d.bloque, d.bloqueIndex, d.index].map(parseIdx).find(v => Number.isFinite(v)) ?? null;
+    const hash   = d.hash || d.blockHash || null;
+
+    return {
+      id: snap.id,
+      medico: {
+        nombre: d.medicoNombre || d.medico?.nombre || '—',
+        genero: d.medicoGenero || d.medico?.genero || '',
+        cedula: d.medicoCedula || d.medico?.cedula || '—',
+        especialidad: d.medicoEspecialidad || d.medico?.especialidad || '—',
+        telefono: d.medicoTelefono || d.medico?.telefono || '—',
+        direccion: d.medicoDomicilio || d.medico?.domicilio || d.medico?.direccion || '—'
+      },
+      paciente: {
+        nombre: d.nombrePaciente || d.pacienteNombre || d.paciente?.nombre || '—',
+        edad: d.edad ?? d.paciente?.edad ?? '—',
+        sexo: d.sexo ?? d.paciente?.sexo ?? '—',
+        peso: d.peso ?? d.paciente?.peso ?? '—',
+        talla: d.talla ?? d.paciente?.talla ?? '—',
+        imc: d.imc ?? d.paciente?.imc ?? '—',
+        temperatura: d.temperatura ?? d.paciente?.temperatura ?? '—',
+        presion: d.presion ?? d.paciente?.presion ?? '—'
+      },
+      medicamentos: (d.medicamentos || d.items || []).map((m,i)=>({
+        nombre:   m.nombre || m.medicamento || `Medicamento ${i+1}`,
+        dosis:    m.dosis  || m.indicaciones || '—',
+        duracion: m.duracion || m.tiempo || '—',
+        ini:      m.ini || null
+      })),
+      observaciones: d.observaciones || '—',
+      diagnostico:   d.diagnostico   || '—',
+      timestamp: dt,
+      bloque,                 // 👈 YA VIENE
+      hash,                   // 👈 YA VIENE
+      urlVerificacion: bloque
+        ? `https://kodrx-blockchain.onrender.com/consulta.html?block=${bloque}`
+        : `https://kodrx-blockchain.onrender.com/consulta.html`,
+      _origen: 'firestore'
+    };
+  }
+
+  // 4) Verificación blockchain
+  async function verificarBlockchain(receta){
+    const el = document.getElementById('bcStatus');
+    if (!el) { console.warn('[BC] No se encontró #bcStatus'); return; }
+
+    el.textContent = 'Verificando blockchain…';
+    el.style.background = '#eef2ff';
+    el.style.color = '#123f91';
+    el.style.border = '1px solid rgba(0,0,0,.06)';
+    el.querySelectorAll('a').forEach(a => a.remove());
+
+    const idx  = receta?.bloque ?? null;
+    const hash = receta?.hash   ?? null;
+
+    const paint = (txt, tone) => {
+      el.textContent = txt;
+      el.style.background = tone === 'ok'   ? '#e8fff3'
+                          : tone === 'warn' ? '#fff6e6'
+                          : tone === 'error'? '#fee2e2' : '#eef2ff';
+      el.style.color      = tone === 'ok'   ? '#065f46'
+                          : tone === 'warn' ? '#92400e'
+                          : tone === 'error'? '#991b1b' : '#123f91';
+    };
+    const addLink = (label='ver')=>{
+      const a = document.createElement('a');
+      a.href = 'https://kodrx-blockchain.onrender.com/consulta.html';
+      a.target = '_blank'; a.rel = 'noopener';
+      a.textContent = ' ' + label;
+      a.style.marginLeft = '8px';
+      el.appendChild(a);
+    };
+
+    if (!idx || !hash){
+      paint('Blockchain: sin datos', 'warn');
+      addLink('abrir');
+      return;
+    }
+
+    try{
+      const r = await fetch(`https://kodrx-blockchain.onrender.com/bloques/${encodeURIComponent(idx)}`);
+      if (!r.ok) throw new Error('BC no disponible');
+      const data = await r.json();
+      const hashRemoto = data?.bloque?.hash || data?.hash || null;
+      const ok = !!hashRemoto && (hashRemoto === hash);
+
+      paint(ok ? `Blockchain: OK (bloque #${idx})` : 'Blockchain: NO COINCIDE', ok ? 'ok' : 'error');
+      addLink();
+    }catch(err){
+      console.warn('[BC] Error consulta:', err);
+      paint('Blockchain: no disponible', 'warn');
+      addLink('abrir');
+    }
+  }
+
+  // 5) BOOT: carga → render → verificar
+  document.addEventListener('DOMContentLoaded', async ()=>{
+    const id = new URLSearchParams(location.search).get('id');
+    if (!id) { console.warn('Falta ?id'); return; }
+
+    const receta = await smartLoadReceta(id);
+    console.log('[RECETA]', receta.bloque, receta.hash, receta);
+
+    renderReceta(receta);           // crea #bcStatus
+    await verificarBlockchain(receta);
+  });
 </script>
 
 <script>
@@ -586,11 +653,10 @@ let RECETA_ACTUAL = null, QRS = null;
 async function loadAndRender(){
   await waitForLibs();
 
-  const p  = new URLSearchParams(location.search);
-  const id = p.get('id');
+  const id = new URLSearchParams(location.search).get('id');
   if (!id) throw new Error('Falta parámetro ?id');
 
-  const receta = await smartLoadReceta(id);  // carga real por ID
+  const receta = await smartLoadReceta(id); // carga real
   RECETA_ACTUAL = receta;
 
   console.log('[RECETA]', receta.bloque, receta.hash, receta);
@@ -599,46 +665,52 @@ async function loadAndRender(){
   renderReceta(receta);
 
   // 2) prepara QRS ANTES del return
-  QRS = await window.prepararReceta(receta);
+  if (typeof window.prepararReceta === 'function') {
+    QRS = await window.prepararReceta(receta);
+  }
 
   // 3) devuelve receta
   return receta;
+} // 👈 ESTA LLAVE FALTABA
 
 document.addEventListener('DOMContentLoaded', async ()=>{
   // listeners
   document.getElementById('btnRegresar')?.addEventListener('click', ()=>{
-    if(history.length>1) history.back(); else location.href='/';
+    if (history.length > 1) history.back(); else location.href = '/';
   });
 
   const btnDesc = document.getElementById('btnDescargar');
   btnDesc?.addEventListener('click', async ()=>{
-    if(btnDesc.__busy) return; btnDesc.__busy=true; btnDesc.disabled=true;
+    if (btnDesc.__busy) return; btnDesc.__busy = true; btnDesc.disabled = true;
     try{
-      if(!RECETA_ACTUAL) await loadAndRender();
+      if (!RECETA_ACTUAL) await loadAndRender();
       await generarPDF(RECETA_ACTUAL, QRS);
-    } finally { btnDesc.__busy=false; btnDesc.disabled=false; }
+    } finally { btnDesc.__busy = false; btnDesc.disabled = false; }
   });
 
   const btnImp = document.getElementById('btnImprimir');
   btnImp?.addEventListener('click', async ()=>{
-    if(btnImp.__busy) return; btnImp.__busy=true; btnImp.disabled=true;
+    if (btnImp.__busy) return; btnImp.__busy = true; btnImp.disabled = true;
     try{
-      if(!RECETA_ACTUAL) await loadAndRender();
-      await generarPDF(RECETA_ACTUAL, QRS, {mode:'print'});
-    } finally { btnImp.__busy=false; btnImp.disabled=false; }
+      if (!RECETA_ACTUAL) await loadAndRender();
+      await generarPDF(RECETA_ACTUAL, QRS, { mode:'print' });
+    } finally { btnImp.__busy = false; btnImp.disabled = false; }
   });
 
-  // 🟢 Arranque: carga, re-lee si faltan bc, y verifica
+  // 🟢 Arranque: carga → posible refresh → verificar
   let receta = await loadAndRender();
 
-  // si aún no hay bloque/hash, re-lee el doc una vez (puede tardar el update)
+  // si aún no hay bloque/hash, re-lee una vez (por si el update tardó)
   if (!receta?.bloque || !receta?.hash) {
     try {
       const snap = await getDoc(doc(db, 'recetas', receta.id));
       if (snap.exists()) {
-        receta = { ...receta, ...snap.data() };
-        RECETA_ACTUAL = receta;
-        console.log('[RECETA·REFRESH]', receta.bloque, receta.hash);
+        const newer = { id: snap.id, ...snap.data() };
+        if (newer.bloque && newer.hash) {
+          RECETA_ACTUAL = newer;
+          receta = newer;
+          console.log('[RECETA·REFRESH]', receta.bloque, receta.hash);
+        }
       }
     } catch {}
   }
@@ -647,63 +719,7 @@ document.addEventListener('DOMContentLoaded', async ()=>{
 });
 
 
-  async function verificarBlockchain(receta){
-  // Re-consulta SIEMPRE (por si el render reemplazó nodos)
-  const el = document.getElementById('bcStatus');
-  if (!el) { console.warn('[BC] No se encontró #bcStatus'); return; }
-
-  // estado inicial
-  el.textContent = 'Verificando blockchain…';
-  el.style.background = '#eef2ff';
-  el.style.color = '#123f91';
-  el.style.border = '1px solid rgba(0,0,0,.06)';
-  // evita duplicar links si vuelves a llamar
-  el.querySelectorAll('a').forEach(a => a.remove());
-
-  const idx  = receta?.bloque ?? receta?.bloqueIndex ?? receta?.index ?? null;
-  const hash = receta?.hash   ?? receta?.blockHash   ?? null;
-
-  const paint = (txt, tone) => {
-    el.textContent = txt;
-    el.style.background = tone === 'ok'   ? '#e8fff3'
-                        : tone === 'warn' ? '#fff6e6'
-                        : tone === 'error'? '#fee2e2' : '#eef2ff';
-    el.style.color      = tone === 'ok'   ? '#065f46'
-                        : tone === 'warn' ? '#92400e'
-                        : tone === 'error'? '#991b1b' : '#123f91';
-    el.style.border     = '1px solid rgba(0,0,0,.06)';
-  };
-
-  const addLink = (label='ver')=>{
-    const a = document.createElement('a');
-    a.href = 'https://kodrx-blockchain.onrender.com/consulta.html';
-    a.target = '_blank'; a.rel = 'noopener';
-    a.textContent = ' ' + label;
-    a.style.marginLeft = '8px';
-    el.appendChild(a);
-  };
-
-  if (!idx || !hash){
-    paint('Blockchain: sin datos', 'warn');
-    addLink('abrir');
-    return;
-  }
-
-  try{
-    const r = await fetch(`https://kodrx-blockchain.onrender.com/bloques/${encodeURIComponent(idx)}`);
-    if (!r.ok) throw new Error('BC no disponible');
-    const data = await r.json();
-    const hashRemoto = data?.bloque?.hash || data?.hash || null;
-    const ok = !!hashRemoto && (hashRemoto === hash);
-
-    paint(ok ? `Blockchain: OK (bloque #${idx})` : 'Blockchain: NO COINCIDE', ok ? 'ok' : 'error');
-    addLink();
-  }catch(err){
-    console.warn('[BC] Error consulta:', err);
-    paint('Blockchain: no disponible', 'warn');
-    addLink('abrir');
-  }
-}
+ 
 
 </script>
 
