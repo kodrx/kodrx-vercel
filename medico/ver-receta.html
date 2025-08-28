@@ -166,11 +166,49 @@ const firebaseConfig = {
   authDomain: "kodrx-105b9.firebaseapp.com",
   projectId: "kodrx-105b9"
 };
+
+  
 try{
   const [{initializeApp},{getFirestore,doc,getDoc}] = await Promise.all([
     import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js'),
     import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js')
+    import { db } from "/firebase-init.js";
+import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
   ]);
+
+  // 1) IMPORTS
+import { db } from "/firebase-init.js";
+import { doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+// 2) STUB (solo si no tienes una render real cargada antes)
+if (typeof window.renderReceta !== 'function') {
+  window.renderReceta = function(receta){
+    // crea el badge si no existe
+    if (!document.getElementById('bcStatus')) {
+      const wrap = document.getElementById('recetaRoot') || document.body;
+      const p = document.createElement('p');
+      p.id = 'bcStatus';
+      p.className = 'pill';
+      p.textContent = 'Verificando blockchain…';
+      wrap.prepend(p);
+    }
+    // TODO: aquí luego va tu render real
+  };
+}
+
+// 3) ESTADO GLOBAL
+let RECETA_ACTUAL = null, QRS = null;
+
+// 4) loadAndRender (usa renderReceta adentro)
+async function loadAndRender(){ /* ... */ }
+
+// 5) verificarBlockchain(receta)
+async function verificarBlockchain(receta){ /* ... */ }
+
+// 6) BOOT
+document.addEventListener('DOMContentLoaded', async ()=>{ /* ... */ });
+
   const app = initializeApp(firebaseConfig);
   const db  = getFirestore(app);
   window.kodrxGetReceta = async (id)=>{
@@ -557,40 +595,45 @@ async function generarPDF(receta, qrs, {mode='save'}={}){
 }
 
 /* ============== Boot & Listeners ============== */
-let RECETA_ACTUAL=null, QRS=null;
+let RECETA_ACTUAL = null, QRS = null;
 
 async function loadAndRender(){
   await waitForLibs();
-  const p=new URLSearchParams(location.search);
-  const id=p.get('id') || 'RECETA-DE-EJEMPLO-001';
-  const receta = p.get('id') ? await smartLoadReceta(id) : await smartLoadReceta(id);
-   
+
+  const p  = new URLSearchParams(location.search);
+  const id = p.get('id');
+  if (!id) throw new Error('Falta parámetro ?id');
+
+  const receta = await smartLoadReceta(id);  // carga real por ID
   RECETA_ACTUAL = receta;
 
   console.log('[RECETA]', receta.bloque, receta.hash, receta);
 
-  renderReceta(receta);                       // aquí se crea #bcStatus
-  QRS = await window.prepararReceta(receta);  // 👈 mover ANTES del return
+  // 1) render (crea #bcStatus)
+  renderReceta(receta);
 
-  return receta;                              
-}
+  // 2) prepara QRS ANTES del return
+  QRS = await window.prepararReceta(receta);
+
+  // 3) devuelve receta
+  return receta;
 
 document.addEventListener('DOMContentLoaded', async ()=>{
-  document.getElementById('btnRegresar')?.addEventListener('click',()=>{
+  // listeners
+  document.getElementById('btnRegresar')?.addEventListener('click', ()=>{
     if(history.length>1) history.back(); else location.href='/';
   });
 
-  const btnDesc=document.getElementById('btnDescargar');
+  const btnDesc = document.getElementById('btnDescargar');
   btnDesc?.addEventListener('click', async ()=>{
     if(btnDesc.__busy) return; btnDesc.__busy=true; btnDesc.disabled=true;
     try{
       if(!RECETA_ACTUAL) await loadAndRender();
       await generarPDF(RECETA_ACTUAL, QRS);
-      // ❌ no vuelvas a llamar loadAndRender aquí, no hace falta
     } finally { btnDesc.__busy=false; btnDesc.disabled=false; }
   });
 
-  const btnImp=document.getElementById('btnImprimir');
+  const btnImp = document.getElementById('btnImprimir');
   btnImp?.addEventListener('click', async ()=>{
     if(btnImp.__busy) return; btnImp.__busy=true; btnImp.disabled=true;
     try{
@@ -599,11 +642,23 @@ document.addEventListener('DOMContentLoaded', async ()=>{
     } finally { btnImp.__busy=false; btnImp.disabled=false; }
   });
 
-  // 🟢 Arranque correcto: carga → render → verifica
-  const receta = await loadAndRender();
+  // 🟢 Arranque: carga, re-lee si faltan bc, y verifica
+  let receta = await loadAndRender();
+
+  // si aún no hay bloque/hash, re-lee el doc una vez (puede tardar el update)
+  if (!receta?.bloque || !receta?.hash) {
+    try {
+      const snap = await getDoc(doc(db, 'recetas', receta.id));
+      if (snap.exists()) {
+        receta = { ...receta, ...snap.data() };
+        RECETA_ACTUAL = receta;
+        console.log('[RECETA·REFRESH]', receta.bloque, receta.hash);
+      }
+    } catch {}
+  }
+
   await verificarBlockchain(receta);
 });
-
 
 
   async function verificarBlockchain(receta){
