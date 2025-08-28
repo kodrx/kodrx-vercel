@@ -648,7 +648,75 @@ async function generarPDF(receta, qrs, {mode='save'}={}){
 }
 
 /* ============== Boot & Listeners ============== */
+let RECETA_ACTUAL = null, QRS = null;
 
+async function loadAndRender(){
+  await waitForLibs();
+
+  const id = new URLSearchParams(location.search).get('id');
+  if (!id) throw new Error('Falta parámetro ?id');
+
+  const receta = await smartLoadReceta(id); // carga real
+  RECETA_ACTUAL = receta;
+
+  console.log('[RECETA]', receta.bloque, receta.hash, receta);
+
+  // 1) render (crea #bcStatus)
+  renderReceta(receta);
+
+  // 2) prepara QRS ANTES del return
+  if (typeof window.prepararReceta === 'function') {
+    QRS = await window.prepararReceta(receta);
+  }
+
+  // 3) devuelve receta
+  return receta;
+} // 👈 ESTA LLAVE FALTABA
+
+document.addEventListener('DOMContentLoaded', async ()=>{
+  // listeners
+  document.getElementById('btnRegresar')?.addEventListener('click', ()=>{
+    if (history.length > 1) history.back(); else location.href = '/';
+  });
+
+  const btnDesc = document.getElementById('btnDescargar');
+  btnDesc?.addEventListener('click', async ()=>{
+    if (btnDesc.__busy) return; btnDesc.__busy = true; btnDesc.disabled = true;
+    try{
+      if (!RECETA_ACTUAL) await loadAndRender();
+      await generarPDF(RECETA_ACTUAL, QRS);
+    } finally { btnDesc.__busy = false; btnDesc.disabled = false; }
+  });
+
+  const btnImp = document.getElementById('btnImprimir');
+  btnImp?.addEventListener('click', async ()=>{
+    if (btnImp.__busy) return; btnImp.__busy = true; btnImp.disabled = true;
+    try{
+      if (!RECETA_ACTUAL) await loadAndRender();
+      await generarPDF(RECETA_ACTUAL, QRS, { mode:'print' });
+    } finally { btnImp.__busy = false; btnImp.disabled = false; }
+  });
+
+  // 🟢 Arranque: carga → posible refresh → verificar
+  let receta = await loadAndRender();
+
+  // si aún no hay bloque/hash, re-lee una vez (por si el update tardó)
+  if (!receta?.bloque || !receta?.hash) {
+    try {
+      const snap = await getDoc(doc(db, 'recetas', receta.id));
+      if (snap.exists()) {
+        const newer = { id: snap.id, ...snap.data() };
+        if (newer.bloque && newer.hash) {
+          RECETA_ACTUAL = newer;
+          receta = newer;
+          console.log('[RECETA·REFRESH]', receta.bloque, receta.hash);
+        }
+      }
+    } catch {}
+  }
+
+  await verificarBlockchain(receta);
+});
 
 
  
