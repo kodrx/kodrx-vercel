@@ -715,20 +715,32 @@ document.addEventListener('DOMContentLoaded', async ()=>{
   const btnDesc = document.getElementById('btnDescargar');
   btnDesc?.addEventListener('click', async ()=>{
     if (btnDesc.__busy) return; btnDesc.__busy = true; btnDesc.disabled = true;
-    try{
+    try {
       if (!RECETA_ACTUAL) await loadAndRender();
       await generarPDF(RECETA_ACTUAL, QRS);
-    } finally { btnDesc.__busy = false; btnDesc.disabled = false; }
+    } finally {
+      btnDesc.__busy = false; btnDesc.disabled = false;
+    }
   });
 
   const btnImp = document.getElementById('btnImprimir');
   btnImp?.addEventListener('click', async ()=>{
     if (btnImp.__busy) return; btnImp.__busy = true; btnImp.disabled = true;
-    try{
+    try {
       if (!RECETA_ACTUAL) await loadAndRender();
       await generarPDF(RECETA_ACTUAL, QRS, { mode:'print' });
-    } finally { btnImp.__busy = false; btnImp.disabled = false; }
+    } finally {
+      btnImp.__busy = false; btnImp.disabled = false;
+    }
   });
+
+  // 🔵 Arranque inicial (opcional pero recomendado)
+  try {
+    await loadAndRender();
+  } catch (e) {
+    console.error('[ver-receta] init error:', e);
+  }
+}); // 👈 ¡Esta línea faltaba!
 
   
 
