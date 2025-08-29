@@ -198,10 +198,10 @@ button{appearance:none;border:0;border-radius:12px;padding:10px 14px;font-weight
     const hash   = d.hash || d.blockHash || null;
 
     // URLs para QRs (fallbacks seguros)
-    const urlVerificacion = `${location.origin}/medico/ver-receta.html?id=${encodeURIComponent(snap.id)}`;
+    const urlVerificacion = `${location.origin}/verificar.html?id=${encodeURIComponent(snap.id)}`;
     const urlBlockchain   = bloque
-      ? `https://kodrx-blockchain.onrender.com/consulta.html?block=${bloque}`
-      : `https://kodrx-blockchain.onrender.com/consulta.html`;
+      ? `https://kodrx-blockchain.onrender.com/verificar.html?id=${bloque}`
+      : `https://kodrx-blockchain.onrender.com/verificar.html`;
 
     return {
       id: snap.id,
@@ -266,7 +266,7 @@ button{appearance:none;border:0;border-radius:12px;padding:10px 14px;font-weight
     };
     const addLink = (label='ver')=>{
       const a = document.createElement('a');
-      a.href = 'https://kodrx-blockchain.onrender.com/consulta.html';
+      a.href = 'https://kodrx-blockchain.onrender.com/verificar.html';
       a.target = '_blank'; a.rel = 'noopener';
       a.textContent = ' ' + label;
       a.style.marginLeft = '8px';
@@ -475,10 +475,10 @@ async function renderPreview(receta, mainQRDataURL, chainQRDataURL){
 /* prepara QRs (usa URLs de receta; si no vienen, las arma) */
 window.prepararReceta = async function prepararReceta(receta){
   // Asegura URLs
-  const recetaUrl = receta.urlVerificacion || `${location.origin}/medico/ver-receta.html?id=${encodeURIComponent(receta.id)}`;
+  const recetaUrl = receta.urlVerificacion || `${location.origin}/verificar.html?id=${encodeURIComponent(receta.id)}`;
   const bcUrl     = receta.urlBlockchain   || (receta.bloque
-    ? `https://kodrx-blockchain.onrender.com/consulta.html?block=${receta.bloque}`
-    : `https://kodrx-blockchain.onrender.com/consulta.html`
+    ? `https://kodrx-blockchain.onrender.com/verificar.html?id=${receta.bloque}`
+    : `https://kodrx-blockchain.onrender.com/verificar.html`
   );
 
   // Asegura lib QR (ya la cargas en <head>, esto por si acaso)
