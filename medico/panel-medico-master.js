@@ -8,25 +8,15 @@ import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/
 // Utils
 // =========================
 
-// Iniciales del medicamento (sin acentos, ignora stopwords/unidades, hasta 4 letras)
-function inicialesMedicamento(nombre = "") {
-  let s = (nombre || "")
-    .normalize('NFD').replace(/\p{Diacritic}/gu, '')        // sin acentos
-    .toUpperCase()
-    .replace(/[^A-Z0-9\s\/\-\+]/g, ' ');                   // limpia símbolos raros
-
-  const stop = new Set([
-    'DE','DEL','LA','EL','LOS','LAS','CON','Y','PARA',
-    'MG','ML','MCG','G','GR','XR','SR','DR','HRS','TAB','CAP','SOL','SUSP','INJ'
-  ]);
-
-  const tokens = s.split(/[\s\-\/\+]+/).filter(Boolean);
-  const letras = tokens
-    .filter(t => !stop.has(t) && !/^\d+/.test(t))
-    .map(t => t[0]);
-
-  const ini = letras.slice(0, 4).join('');
-  return ini || (tokens[0]?.[0] || 'M');
+// 3 primeras letras del PRIMER token del nombre (sin acentos/ruido)
+function iniciales3(nombre = "") {
+  const s = (nombre || "")
+    .normalize("NFD").replace(/\p{Diacritic}/gu, "")   // sin acentos
+    .toUpperCase();
+  // toma el primer token que tenga letras, quita números/unidades
+  const token = s.replace(/[^A-Z0-9\s]/g, " ").split(/\s+/).find(t => /[A-Z]/.test(t)) || "";
+  const letters = token.replace(/[^A-Z]/g, "");
+  return letters.slice(0, 3) || "MED";
 }
 
 
@@ -98,11 +88,10 @@ document.addEventListener("DOMContentLoaded", () => {
 // Tratamiento (💊 con iniciales) — filtra filas vacías
 const medicamentos = [];
 document.querySelectorAll(".medicamento").forEach(med => {
-  const nombre   = (med.querySelector(".nombre")?.value || "").trim();
-  const dosis    = (med.querySelector(".dosis")?.value || "").trim();
-  const duracion = (med.querySelector(".duracion")?.value || "").trim();
-  if (!nombre && !dosis && !duracion) return; // ignora fila vacía
-  const ini      = inicialesMedicamento(nombre);
+  const nombre   = med.querySelector(".nombre").value.trim();
+  const dosis    = med.querySelector(".dosis").value.trim();
+  const duracion = med.querySelector(".duracion").value.trim();
+  const ini      = iniciales3(nombre);   // 👈 ahora 3 letras
   medicamentos.push({ nombre, dosis, duracion, ini });
 });
 
