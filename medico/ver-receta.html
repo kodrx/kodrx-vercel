@@ -444,7 +444,11 @@ async function renderPreview(receta, mainQRDataURL, chainQRDataURL){
   if (medsEl) medsEl.textContent = medsToText(receta.medicamentos);
 
   // Hash y bloque (mostrar)
-  setTextById('hashTexto','hash: '+hashSimulado(receta));
+  const hashLabel = receta.hash
+  ? `hash (BC): ${receta.hash}`          // real de blockchain si existe
+  : `hash (local): ${hashSimulado(receta)}`; // fallback
+setTextById('hashTexto', hashLabel);
+
   setTextById('blockNum','Bloque: ' + (receta.bloque ?? '—'));
 
   // QRs en pantalla
@@ -645,9 +649,18 @@ async function generarPDF(receta, qrs, {mode='save'}={}){
   }
 
   // HASH
-  { const s=sectionBox(rightX,yR,colW,20,'HASH');
-    doc.setFont(FONT,'normal'); doc.setFontSize(9.5); doc.setTextColor(...COLORS.sub);
-    drawClamp(s.cx,s.cy,colW-16,s.innerH,'hash: '+hashSimulado(receta),11); yR=s.ny; }
+  { 
+  const s = sectionBox(rightX, yR, colW, 20, 'HASH');
+  doc.setFont(FONT,'normal'); doc.setFontSize(9.5); doc.setTextColor(...COLORS.sub);
+
+  const hashLabel = receta.hash
+    ? `hash (BC): ${receta.hash}`            // real de blockchain
+    : `hash (local): ${hashSimulado(receta)}`; // fallback visual
+
+  drawClamp(s.cx, s.cy, colW-16, s.innerH, hashLabel, 11);
+  yR = s.ny;
+}
+
 
   // QR blockchain + bloque
   { const mini=90, rectW=mini,rectH=mini; const qrX=rightX+colW-rectW;
