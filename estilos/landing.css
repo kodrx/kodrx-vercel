@@ -83,6 +83,73 @@ body {
   font-size: 0.9rem;
 }
 
+/* === Trust / Verificación === */
+.trust {
+  max-width: 960px;
+  margin: 2.5rem auto;
+  padding: 1.5rem;
+  background: #fff;
+  border: 1px solid #e6e9ef;
+  border-radius: 14px;
+  box-shadow: 0 2px 10px rgba(0,0,0,.04);
+}
+
+.trust h2 {
+  margin: 0 0 .25rem;
+  color: #003366;
+  font-size: 1.6rem;
+}
+
+.trust p.lead {
+  margin: .25rem 0 1rem;
+  color: #4b5563;
+  line-height: 1.45;
+}
+
+.trust-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.trust-card {
+  background: #f8fafc;
+  border: 1px solid #e6e9ef;
+  border-radius: 12px;
+  padding: 12px;
+}
+.trust-card b { color: #111; }
+.trust-card span { color: #6b7280; font-size: .95rem; }
+
+.badges {
+  display: flex; gap: 8px; flex-wrap: wrap;
+  margin-top: 12px;
+}
+.pill {
+  display: inline-block;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 12px;
+  border: 1px solid transparent;
+}
+.pill.ok    { background:#e7f6e8; color:#065f46; border-color:#bbf7d0; }
+.pill.brand { background:#eef6ff; color:#003366; border-color:#cfe6ff; }
+.pill.warn  { background:#fff7ed; color:#9a3412; border-color:#fed7aa; }
+
+.trust-foot {
+  margin-top: 10px;
+  color: #6b7280;
+  font-size: .85rem;
+}
+
+/* Responsive */
+@media (max-width: 820px){ .trust-grid { grid-template-columns:1fr 1fr; } }
+@media (max-width: 520px){ .trust-grid { grid-template-columns:1fr; } }
+
 footer {
   background: #003366;
   color: white;
