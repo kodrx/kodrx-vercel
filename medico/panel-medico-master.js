@@ -151,14 +151,11 @@ try {
 
   console.log("[BC][payload]", payload);
 
-  const resp = await fetch("https://kodrx-blockchain.onrender.com/bloques", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": "Bearer kodrx-secret-2025"
-    },
-    body: JSON.stringify(payload)
-  });
+  const resp = await fetch('/api/bloques', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify(payload) // receta, medico, cedula, medicamentos, iniciales, idReceta
+});
 
   const raw = await resp.json().catch(() => ({}));
   console.log("[BC][raw]", raw);
