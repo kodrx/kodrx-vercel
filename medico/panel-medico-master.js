@@ -151,10 +151,11 @@ try {
 
   console.log("[BC][payload]", payload);
 
-  const resp = await fetch('/api/bloques', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify(payload) // receta, medico, cedula, medicamentos, iniciales, idReceta
+- const blockchainResp = await fetch("https://kodrx-blockchain.onrender.com/bloques", {
++ const blockchainResp = await fetch("/api/bloques", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
 });
 
   const raw = await resp.json().catch(() => ({}));
