@@ -1,37 +1,20 @@
-// /api/bloques.js
 export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    res.setHeader('Allow', 'POST');
-    return res.status(405).json({ error: 'Método no permitido' });
-  }
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   try {
-    const body = req.body || {};
-    // Validación mínima (evita enviar payload vacío)
-    if (!body || typeof body !== 'object') {
-      return res.status(400).json({ error: 'JSON inválido' });
-    }
-
-    const RENDER_API = process.env.RENDER_BLOCKCHAIN_URL || 'https://kodrx-blockchain.onrender.com/bloques';
-    const RENDER_KEY = process.env.RENDER_API_KEY; // <-- define esto en Vercel
-
-    if (!RENDER_KEY) {
-      return res.status(500).json({ error: 'Falta RENDER_API_KEY' });
-    }
-
-    const upstream = await fetch(RENDER_API, {
+    const BASE = (process.env.RENDER_BLOCKCHAIN_URL || 'https://kodrx-blockchain.onrender.com').replace(/\/$/, '');
+    const resp = await fetch(`${BASE}/bloques`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${RENDER_KEY}`,
+        'Authorization': `Bearer ${process.env.BLOCKCHAIN_API_KEY}`,
       },
-      body: JSON.stringify(body),
+      body: JSON.stringify(req.body),
     });
 
-    const data = await upstream.json().catch(() => ({}));
-    return res.status(upstream.status).json(data);
-  } catch (err) {
-    console.error('[proxy bloques] error:', err);
-    return res.status(500).json({ error: 'Proxy error' });
+    const data = await resp.json().catch(() => ({}));
+    return res.status(resp.status).json(data);
+  } catch (e) {
+    return res.status(500).json({ error: 'proxy_error', detail: String(e) });
   }
 }
