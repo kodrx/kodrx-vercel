@@ -151,12 +151,12 @@ try {
 
   console.log("[BC][payload]", payload);
 
-- const blockchainResp = await fetch("https://kodrx-blockchain.onrender.com/bloques", {
-+ const blockchainResp = await fetch("/api/bloques", {
+const blockchainResp = await fetch("https://kodrx-blockchain.onrender.com/bloques"), {
+const blockchainResp = await fetch("/api/bloques"), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload)
-});
+};
 
   const raw = await resp.json().catch(() => ({}));
   console.log("[BC][raw]", raw);
