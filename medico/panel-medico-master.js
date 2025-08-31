@@ -121,29 +121,16 @@ document.querySelectorAll(".medicamento").forEach(med => {
       console.log("✅ Receta guardada con ID:", recetaRef.id);
 
 // 📦 Enviar receta a blockchain (compat + campos nuevos, mapeo robusto)
+// 📦 Enviar receta a blockchain (vía proxy /api/bloques en Vercel)
 try {
-  // Receta legible (fallback si no hay meds)
-  const medsResumen = medicamentos.map(m => `${m.nombre} ${m.dosis} por ${m.duracion}`).join(", ");
-  const recetaResumen = medsResumen || `Sin medicamentos; Dx: ${diagnostico || "—"}`;
-
-  // Validaciones mínimas (evita 400)
-  const medicoNombre = (medico?.nombre || "").trim();
-  const medicoCedula = (medico?.cedula || medico?.medicoCedula || "").trim();
-  if (!medicoNombre || !medicoCedula) {
-    console.warn("[BC] Falta nombre o cédula del médico:", { medicoNombre, medicoCedula });
-    // No abortamos todo el flujo: solo omitimos blockchain para no romper UX
-    // Si prefieres abortar: throw new Error("Falta nombre o cédula del médico.");
-  }
-  if (!recetaResumen.trim()) {
-    console.warn("[BC] 'receta' vacío. Usando fallback.");
-  }
+  const recetaResumen = medicamentos
+    .map(m => `${m.nombre} ${m.dosis} por ${m.duracion}`)
+    .join(", ");
 
   const payload = {
-    // Campos requeridos por tu API:
     receta: recetaResumen,
-    medico: medicoNombre || "—",
-    cedula: medicoCedula || "—",
-    // Extra (tu backend puede ignorar):
+    medico: medico.nombre,
+    cedula: medico.cedula,
     medicamentos,
     iniciales: medicamentos.map(m => m.ini),
     idReceta: recetaRef.id
@@ -151,34 +138,25 @@ try {
 
   console.log("[BC][payload]", payload);
 
-const blockchainResp = await fetch("https://kodrx-blockchain.onrender.com/bloques"), {
-const blockchainResp = await fetch("/api/bloques"), {
+  const resp = await fetch("/api/bloques", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json" }, // no pongas Authorization aquí
     body: JSON.stringify(payload)
-};
+  });
 
   const raw = await resp.json().catch(() => ({}));
   console.log("[BC][raw]", raw);
 
-  // Helpers de parseo seguro
-  const num = (x) => {
-    if (typeof x === "number" && Number.isFinite(x)) return x;
-    if (typeof x === "string" && /^\d+$/.test(x)) return Number(x);
-    return null;
-  };
-  const pickIndex = (...cands) => cands.map(num).find(v => Number.isFinite(v)) ?? null;
-  const pickHash  = (...cands) => cands.find(h => typeof h === "string" && h.length >= 10) ?? null;
-
-  const idx = pickIndex(raw?.bloque?.index, raw?.block?.index, raw?.index, raw?.bloqueIndex);
-  const hsh = pickHash(raw?.bloque?.hash, raw?.block?.hash, raw?.hash, raw?.blockHash);
+  // Parseo robusto
+  const num = x => (typeof x === "number" ? x : (/^\d+$/.test(x) ? Number(x) : NaN));
+  const idx = [raw?.bloque?.index, raw?.index, raw?.bloqueIndex].map(num).find(Number.isFinite);
+  const hsh = raw?.bloque?.hash || raw?.hash || raw?.blockHash || null;
 
   if (resp.ok && Number.isFinite(idx) && hsh) {
     await updateDoc(doc(db, "recetas", recetaRef.id), { bloque: idx, hash: hsh });
     console.log("✅ Guardado en receta:", { bloque: idx, hash: hsh });
   } else {
-    console.warn("⚠️ Respuesta BC sin index/hash numérico. No se actualiza la receta.", { idx, hsh, raw });
-    // Guarda URL si viene (opcional)
+    console.warn("⚠️ Respuesta BC sin index/hash numérico.", { idx, hsh, raw });
     if (raw?.url || raw?.consultaUrl) {
       await updateDoc(doc(db, "recetas", recetaRef.id), { urlBlockchain: raw.url || raw.consultaUrl });
     }
