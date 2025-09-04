@@ -1,21 +1,30 @@
-// firebase-init.js (versión 10.7.1 compatible)
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { getFirestore } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+// /firebase-init.js
+
+import {
+  initializeApp,
+  getApp,
+  getApps,
+  SDK_VERSION
+} from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
+
+import { getAuth } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js";
+import { getFirestore } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
+
 
 const firebaseConfig = {
   apiKey: "AIzaSyBIjaOe4HcGNDk0xrqen8etBv0RyjyOJHw",
   authDomain: "kodrx-105b9.firebaseapp.com",
-  databaseURL: "https://kodrx-105b9-default-rtdb.firebaseio.com",
-  projectId: "kodrx-105b9",
-  storageBucket: "kodrx-105b9.appspot.com",
-  messagingSenderId: "239675098141",
-  appId: "1:239675098141:web:152ae3741b0ac79db7f2f4"
+  projectId: "kodrx-105b9"
 };
 
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
+
+const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 
 
-export { app, db, auth, signOut, onAuthStateChanged };
+export const auth = getAuth(app);
+export const db   = getFirestore(app);
+
+
+console.log("[Firebase] SDK", SDK_VERSION);
+
