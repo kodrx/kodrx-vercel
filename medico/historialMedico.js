@@ -6,7 +6,7 @@ import {
   where,
   getDocs,
   orderBy
-} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+} from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
 
 document.addEventListener("DOMContentLoaded", () => {
   const historialDiv = document.getElementById("historial");
