@@ -1,30 +1,29 @@
-// /acceso.js — Login + redirección por rol real + banners + UX loading
+// /acceso.js — Login + guard de sesión por rol (Firebase 12.2.1)
 import { auth, db } from "/firebase-init.js";
 import {
   onAuthStateChanged,
   signInWithEmailAndPassword,
+  signOut,
 } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js";
 import { doc, getDoc } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
 
-// ------- Query params -------
+/* ========== Query params & destinos ========== */
 const qs      = new URLSearchParams(location.search);
 const urlRole = (qs.get("role") || "medico").toLowerCase();   // "medico" | "farmacia"
 const ret     = qs.get("return") || "";
 const msg     = qs.get("msg") || "";
 
-// Destinos por defecto
 const DEFAULT_DEST = {
   medico:   "/medico/panel.html",
   farmacia: "/farmacia/panel.html",
 };
 const go = (dest) => { console.log("[ACCESO] →", dest); location.href = dest; };
 
-// Estado UI (solo visual)
+/* ========== Estado de UI ========== */
 let currentRole = (urlRole === "farmacia") ? "farmacia" : "medico";
-// Evitar doble redirect (race entre onAuth y submit)
-let isManualRedirect = false;
+let isManualRedirect = false; // evita carreras entre onAuth y submit
 
-// ---------- BANNERS ----------
+/* ========== Banners ========== */
 function showMsg(text, kind = "info"){
   const box = document.getElementById("accessMsg");
   if (!box) return;
@@ -35,7 +34,6 @@ function showMsg(text, kind = "info"){
   box.classList.remove("ok","warn","error","info");
   box.classList.add(kind);
 }
-
 function hydrateMsgFromParam(){
   const map = {
     logout_ok:   { text: "Sesión cerrada correctamente.", kind: "ok" },
@@ -49,7 +47,7 @@ function hydrateMsgFromParam(){
   if (cfg) showMsg(cfg.text, cfg.kind);
 }
 
-// ---------- UI helpers ----------
+/* ========== UI helpers ========== */
 function selectRoleTab(role){
   currentRole = (role === "farmacia") ? "farmacia" : "medico";
   const tabM = document.getElementById("tabMedico");
@@ -63,13 +61,10 @@ function selectRoleTab(role){
   if (panM && panF){ panM.hidden = !isMed; panF.hidden = isMed; }
   console.log("[ACCESO] currentRole(UI) =", currentRole);
 }
-
 function focusFirstInput(panelId){
   const first = document.querySelector(`#${panelId} input`);
   if (first) first.focus();
 }
-
-// Loading / anti-doble submit
 function setLoading(formEl, isLoading){
   const btn = formEl.querySelector('.btn.primary');
   const controls = formEl.querySelectorAll('input, button, select, textarea');
@@ -78,7 +73,7 @@ function setLoading(formEl, isLoading){
     if (isLoading){
       btn.dataset.prev = btn.textContent;
       btn.textContent = "Entrando…";
-      btn.classList.add('loading'); // acceso.css añade spinner con ::after
+      btn.classList.add('loading');
     }else{
       btn.textContent = btn.dataset.prev || "Entrar";
       btn.classList.remove('loading');
@@ -86,30 +81,32 @@ function setLoading(formEl, isLoading){
   }
 }
 
-// ---------- Rol real desde Firestore ----------
+/* ========== Rol real desde Firestore (doc, no collection) ========== */
 async function determineRole(uid){
+  // helper susp
+  const isSusp = (d) =>
+    d?.suspendido === true || String(d?.estado || "").toLowerCase() === "suspendido";
+
   try{
     const m = await getDoc(doc(db, "medicos", uid));
     if (m.exists()){
-      const estado = (m.data().estado || "").toLowerCase();
-      if (estado === "suspendido") return "suspendido";
-      return "medico";
+      const d = m.data();
+      return isSusp(d) ? "suspendido" : "medico";
     }
   }catch(e){ console.warn("[ACCESO] Error medicos/{uid}:", e); }
 
   try{
     const f = await getDoc(doc(db, "farmacias", uid));
     if (f.exists()){
-      const estado = (f.data().estado || "").toLowerCase();
-      if (estado === "suspendido") return "suspendido";
-      return "farmacia";
+      const d = f.data();
+      return isSusp(d) ? "suspendido" : "farmacia";
     }
   }catch(e){ console.warn("[ACCESO] Error farmacias/{uid}:", e); }
 
   return "desconocido";
 }
 
-// Permite return solo si corresponde al área del rol real
+/* ========== Validación de ?return por rol ========== */
 function allowedFor(role, urlStr){
   try{
     const p = new URL(urlStr, location.origin).pathname;
@@ -119,21 +116,21 @@ function allowedFor(role, urlStr){
   }catch{ return false; }
 }
 
-// ---------- Guard: sesión existente → redirige por ROL REAL ----------
+/* ========== Guard: sesión existente → redirect por rol real ========== */
 onAuthStateChanged(auth, async (user) => {
-  if (user && !isManualRedirect) {
-    const realRole = await determineRole(user.uid);
-    console.log("[ACCESO] onAuth: realRole =", realRole);
+  if (!user || isManualRedirect) return;
 
-    if (realRole === "suspendido") { showMsg("Tu cuenta está suspendida. Contacta al soporte.", "warn"); return; }
-    if (realRole === "desconocido") { showMsg("No se encontró rol asociado a tu cuenta.", "warn"); return; }
+  const realRole = await determineRole(user.uid);
+  console.log("[ACCESO] onAuth: realRole =", realRole);
 
-    const dest = (ret && allowedFor(realRole, ret)) ? ret : DEFAULT_DEST[realRole];
-    go(dest);
-  }
+  if (realRole === "suspendido") { showMsg("Tu cuenta está suspendida. Contacta al soporte.", "warn"); return; }
+  if (realRole === "desconocido") { showMsg("No se encontró rol asociado a tu cuenta.", "warn"); return; }
+
+  const dest = (ret && allowedFor(realRole, ret)) ? ret : DEFAULT_DEST[realRole];
+  go(dest);
 });
 
-// ---------- UI + Login ----------
+/* ========== UI + Login ========== */
 document.addEventListener("DOMContentLoaded", () => {
   hydrateMsgFromParam();
 
@@ -149,7 +146,7 @@ document.addEventListener("DOMContentLoaded", () => {
   document.querySelectorAll(".pass .toggle").forEach((btn) => {
     btn.addEventListener("click", () => {
       const input = btn.parentElement.querySelector("input");
-      if (input) input.type = input.type === "password" ? "text" : "password";
+      if (input) input.type = (input.type === "password") ? "text" : "password";
     });
   });
 
@@ -160,7 +157,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // Login MÉDICO
   formMed?.addEventListener("submit", async (e) => {
     e.preventDefault();
-    if (formMed.dataset.busy === "1") return;   // anti doble submit
+    if (formMed.dataset.busy === "1") return;
     const email = document.getElementById("medicoEmail")?.value.trim();
     const pass  = document.getElementById("medicoPass")?.value.trim();
     if (!email || !pass) return showMsg("Completa correo y contraseña.", "warn");
@@ -188,7 +185,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // Login FARMACIA
   formFar?.addEventListener("submit", async (e) => {
     e.preventDefault();
-    if (formFar.dataset.busy === "1") return;   // anti doble submit
+    if (formFar.dataset.busy === "1") return;
     const email = document.getElementById("farmaciaEmail")?.value.trim();
     const pass  = document.getElementById("farmaciaPass")?.value.trim();
     if (!email || !pass) return showMsg("Completa correo y contraseña.", "warn");
