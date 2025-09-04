@@ -3,10 +3,10 @@ import {
   doc,
   getDoc,
   updateDoc
-} from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
+} from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
 import {
   createUserWithEmailAndPassword
-} from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
+} from "https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js";
 
 const urlParams = new URLSearchParams(window.location.search);
 const token = urlParams.get("token");
@@ -44,7 +44,7 @@ if (!token) {
       try {
         await createUserWithEmailAndPassword(auth, data.correo, password);
 
-        // ✅ Aquí marcamos el token como USADO
+        // Aquí marcamos el token como USADO
         await updateDoc(docRef, {
           estado: "usado",
           usadoEn: new Date().toISOString()
