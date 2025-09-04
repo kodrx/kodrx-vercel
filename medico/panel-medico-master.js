@@ -1,7 +1,7 @@
 // 🔝 IMPORTS
 import { db, auth } from "/firebase-init.js";
-import { collection, addDoc, updateDoc, getDoc, doc, Timestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { collection, addDoc, updateDoc, getDoc, doc, Timestamp } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
+import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js";
 
 
 // =========================
@@ -20,18 +20,18 @@ function iniciales3(nombre = "") {
 }
 
 
-// 🔒 Verificar sesión activa
+//  Verificar sesión activa
 onAuthStateChanged(auth, (user) => {
   if (!user) {
     console.warn("⚠️ No hay sesión, redirigiendo al login...");
     window.location.href = "/acceso.html";
   } else {
-    console.log("✅ Sesión activa:", user.email || user.uid);
+    console.log(" Sesión activa:", user.email || user.uid);
   }
 });
 
 document.addEventListener("DOMContentLoaded", () => {
-  console.log("🧩 DOM cargado");
+  console.log(" DOM cargado");
 
   // 🔘 Botón logout
   const btnLogout = document.getElementById("btnLogout");
@@ -39,10 +39,10 @@ document.addEventListener("DOMContentLoaded", () => {
     btnLogout.addEventListener("click", async () => {
       try {
         await signOut(auth);
-        console.log("👋 Sesión cerrada correctamente");
+        console.log(" Sesión cerrada correctamente");
         window.location.href = "/acceso.html?role=medico&msg=logout_ok";
       } catch (err) {
-        console.error("❌ Error al cerrar sesión:", err);
+        console.error(" Error al cerrar sesión:", err);
         alert("Hubo un problema al cerrar sesión, intenta de nuevo.");
       }
     });
@@ -85,7 +85,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
       const medico = medicoSnap.data();
 
-// Tratamiento (💊 con iniciales) — filtra filas vacías
+// Tratamiento ( con iniciales) — filtra filas vacías
 const medicamentos = [];
 document.querySelectorAll(".medicamento").forEach(med => {
   const nombre   = med.querySelector(".nombre").value.trim();
@@ -118,10 +118,10 @@ document.querySelectorAll(".medicamento").forEach(med => {
         timestamp: Timestamp.now()
       });
 
-      console.log("✅ Receta guardada con ID:", recetaRef.id);
+      console.log(" Receta guardada con ID:", recetaRef.id);
 
-// 📦 Enviar receta a blockchain (compat + campos nuevos, mapeo robusto)
-// 📦 Enviar receta a blockchain (vía proxy /api/bloques en Vercel)
+
+// Enviar receta a blockchain (vía proxy /api/bloques en Vercel)
 try {
   const recetaResumen = medicamentos
     .map(m => `${m.nombre} ${m.dosis} por ${m.duracion}`)
@@ -154,15 +154,15 @@ try {
 
   if (resp.ok && Number.isFinite(idx) && hsh) {
     await updateDoc(doc(db, "recetas", recetaRef.id), { bloque: idx, hash: hsh });
-    console.log("✅ Guardado en receta:", { bloque: idx, hash: hsh });
+    console.log(" Guardado en receta:", { bloque: idx, hash: hsh });
   } else {
-    console.warn("⚠️ Respuesta BC sin index/hash numérico.", { idx, hsh, raw });
+    console.warn("⚠ Respuesta BC sin index/hash numérico.", { idx, hsh, raw });
     if (raw?.url || raw?.consultaUrl) {
       await updateDoc(doc(db, "recetas", recetaRef.id), { urlBlockchain: raw.url || raw.consultaUrl });
     }
   }
 } catch (blockErr) {
-  console.error("❌ Error de conexión con blockchain:", blockErr?.message || blockErr);
+  console.error(" Error de conexión con blockchain:", blockErr?.message || blockErr);
 }
 
 
@@ -179,7 +179,7 @@ try {
       setTimeout(() => { window.location.href = qrUrl; }, 3000);
 
     } catch (error) {
-      console.error("❌ Error al guardar la receta:", error);
+      console.error(" Error al guardar la receta:", error);
       alert("No se pudo generar la receta. Revisa los campos e intenta de nuevo.");
       // reactivar botón
       const btnGenerar = document.querySelector("button[type='submit']");
