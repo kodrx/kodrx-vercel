@@ -1,7 +1,7 @@
 import { auth } from "/firebase-init.js";
 import {
   signInWithEmailAndPassword
-} from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
+} from "https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js";
 
 // Detecta el módulo automáticamente por la ruta
 const ruta = window.location.pathname;
