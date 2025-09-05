@@ -226,5 +226,3 @@ onAuthStateChanged(auth, async (user)=>{
 });
 
 
-  }); // cierre onAuthStateChanged
-}); // cierre DOMContentLoaded
