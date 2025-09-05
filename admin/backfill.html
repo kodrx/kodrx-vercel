@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>KodRx · Backfill medicoUid</title>
+  <link rel="stylesheet" href="/estilos/global.css" />
+  <style>
+    body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; background:#f6f7fb; padding:20px; }
+    .wrap { max-width: 860px; margin: 0 auto; }
+    h1 { margin: 0 0 12px; color:#123f91; }
+    .card { background:#fff; border:1px solid #e5e7eb; border-radius:14px; padding:16px 18px; box-shadow:0 2px 12px rgba(10,22,50,.04); }
+    .row { display:flex; gap:12px; flex-wrap:wrap; align-items:center; }
+    .btn { padding:.6rem 1rem; border:0; border-radius:12px; background:#0b5bd3; color:#fff; font-weight:600; cursor:pointer; }
+    .btn:disabled { opacity:.6; cursor:not-allowed; }
+    .btn.alt { background:#334155; }
+    .btn.warn { background:#b91c1c; }
+    .muted { color:#64748b; font-size:13px; }
+    .field { padding:.5rem .7rem; border:1px solid #cbd5e1; border-radius:10px; min-width: 220px; }
+    .badge { display:inline-block; padding:2px 8px; border-radius:999px; background:#eef2ff; color:#334155; font-size:12px; }
+    pre#log { background:#0b1220; color:#e2e8f0; padding:12px; border-radius:10px; max-height:40vh; overflow:auto; font-size:12px; }
+    .ok { color:#16a34a; } .warn { color:#b45309; } .err { color:#ef4444; }
+    .grid { display:grid; grid-template-columns: 1fr 1fr; gap:14px; }
+    @media (max-width:720px){ .grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Backfill de <code>medicoUid</code> en recetas</h1>
+    <div class="card" style="margin-bottom:14px;">
+      <div id="userBox" class="muted">Verificando sesión…</div>
+      <div class="row" style="margin-top:10px;">
+        <label><input type="checkbox" id="onlyMissing" checked /> Solo si <code>medicoUid</code> falta</label>
+        <label><input type="checkbox" id="dryRun" /> Dry-run (no escribir)</label>
+      </div>
+    </div>
+
+    <div class="grid">
+      <div class="card">
+        <h3 style="margin:0 0 8px;">Estrategia A — Por correo</h3>
+        <div class="muted">Buscar recetas con <code>medicoEmail == user.email</code> y asignar <code>medicoUid = user.uid</code>.</div>
+        <div class="row" style="margin-top:10px;">
+          <button class="btn alt" id="scanEmail">📊 Scan por correo</button>
+          <span id="scanEmailCount" class="badge">—</span>
+        </div>
+        <div class="row" style="margin-top:10px;">
+          <button class="btn" id="runEmail" disabled>▶️ Backfill por correo</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3 style="margin:0 0 8px;">Estrategia B — Por uid</h3>
+        <div class="muted">Buscar recetas con <code>medicoId/uidMedico == user.uid</code> y asignar <code>medicoUid = user.uid</code>.</div>
+        <div class="row" style="margin-top:10px;">
+          <button class="btn alt" id="scanUid">📊 Scan por uid</button>
+          <span id="scanUidCount" class="badge">—</span>
+        </div>
+        <div class="row" style="margin-top:10px;">
+          <button class="btn" id="runUid" disabled>▶️ Backfill por uid</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:14px;">
+      <div class="row" style="justify-content:space-between; align-items:center;">
+        <div><strong>Progreso & Logs</strong></div>
+        <div class="muted">Consulta paginada, lotes de hasta 500 actualizaciones.</div>
+      </div>
+      <pre id="log"></pre>
+    </div>
+  </div>
+
+  <!-- MÓDULO -->
+  <script type="module">
+    console.log('[backfill] módulo cargado');
+    import { auth, db } from "/firebase-init.js";
+    import {
+      collection, query, where, orderBy, limit, startAfter, getDocs,
+      writeBatch, doc, documentId
+    } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
+    import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js";
+
+    const PAGE = 250;       // docs por página de lectura
+    const BATCH_MAX = 500;  // docs por batch de escritura
+
+    const $ = (s)=>document.querySelector(s);
+    const logEl = $('#log');
+    const userBox = $('#userBox');
+
+    const log = (msg, cls='')=>{
+      const line = (cls?`<span class="${cls}">`:'') + msg + (cls?'</span>':'');
+      logEl.insertAdjacentHTML('beforeend', line + '\\n');
+      logEl.scrollTop = logEl.scrollHeight;
+      console.log('[backfill]', msg);
+    };
+
+    const setBusy = (el, busy=true)=>{
+      if (!el) return;
+      el.disabled = !!busy;
+      el.__busy = !!busy;
+    };
+
+    const scan = async ({ field, value })=>{
+      // Usamos orderBy(documentId()) para paginar SIN índices compuestos
+      let last = null, total = 0;
+      for (;;) {
+        let q = query(
+          collection(db, 'recetas'),
+          where(field, '==', value),
+          orderBy(documentId()),
+          limit(PAGE)
+        );
+        if (last) q = query(
+          collection(db, 'recetas'),
+          where(field, '==', value),
+          orderBy(documentId()),
+          startAfter(last),
+          limit(PAGE)
+        );
+        const snap = await getDocs(q);
+        total += snap.size;
+        if (snap.size < PAGE) break;
+        last = snap.docs[snap.docs.length-1];
+      }
+      return total;
+    };
+
+    const backfill = async ({ field, value, targetUid, onlyMissing=true, dryRun=false })=>{
+      log(`Comenzando backfill por ${field} = ${value} (onlyMissing=${onlyMissing}, dryRun=${dryRun})`, 'ok');
+
+      let last = null, totalRead = 0, totalUpd = 0, batch = writeBatch(db), batchCount = 0;
+
+      const flush = async ()=>{
+        if (batchCount === 0) return;
+        if (dryRun) { log(`DRY-RUN: omito commit de ${batchCount} docs`, 'warn'); }
+        else {
+          await batch.commit();
+          log(`Commit de ${batchCount} docs ✅`, 'ok');
+        }
+        batch = writeBatch(db);
+        batchCount = 0;
+      };
+
+      try {
+        for (;;) {
+          let q = query(
+            collection(db, 'recetas'),
+            where(field, '==', value),
+            orderBy(documentId()),
+            limit(PAGE)
+          );
+          if (last) q = query(
+            collection(db, 'recetas'),
+            where(field, '==', value),
+            orderBy(documentId()),
+            startAfter(last),
+            limit(PAGE)
+          );
+
+          const snap = await getDocs(q);
+          if (snap.empty) break;
+
+          totalRead += snap.size;
+
+          for (const d of snap.docs) {
+            const data = d.data() || {};
+            const current = data.medicoUid;
+
+            // Condición de actualización
+            const needs =
+              (onlyMissing && (!current || typeof current !== 'string' || !current.trim())) ||
+              (!onlyMissing && current !== targetUid);
+
+            if (needs) {
+              if (!dryRun) {
+                batch.set(doc(db, 'recetas', d.id), { medicoUid: targetUid }, { merge: true });
+              }
+              batchCount++; totalUpd++;
+
+              if (batchCount >= BATCH_MAX) {
+                await flush();
+              }
+            }
+          }
+
+          last = snap.docs[snap.docs.length-1];
+
+          log(`Página procesada: leídos ${totalRead}, marcados para actualizar ${totalUpd}`, '');
+          if (snap.size < PAGE) break;
+        }
+
+        await flush();
+        log(`Backfill terminado. Leídos: ${totalRead}, actualizados: ${totalUpd}`, 'ok');
+      } catch (e) {
+        console.error(e);
+        log(`ERROR: ${e.code || ''} ${e.message || e}`, 'err');
+        if (e.code === 'permission-denied') {
+          log('Las reglas bloquearon la escritura. Ejecuta como admin (Admin SDK) o ajusta reglas temporalmente para este proceso.', 'err');
+        }
+        throw e;
+      }
+      return { totalRead, totalUpd };
+    };
+
+    let currentUser = null;
+    let counts = { email: null, uid: null };
+
+    onAuthStateChanged(auth, async (user)=>{
+      if (!user) {
+        userBox.innerHTML = 'Sin sesión. <a href="/acceso?role=admin">Inicia sesión</a>';
+        log('No hay sesión. Inicia sesión para continuar.', 'err');
+        return;
+      }
+      currentUser = user;
+      userBox.innerHTML = `
+        Sesión: <strong>${user.email || '(sin correo)'}</strong>
+        <span class="badge">uid: ${user.uid}</span>
+      `;
+      log(`Autenticado como ${user.email} (${user.uid})`, 'ok');
+    });
+
+    // UI events
+    const scanEmailBtn = $('#scanEmail');
+    const scanEmailCount = $('#scanEmailCount');
+    const runEmailBtn = $('#runEmail');
+
+    const scanUidBtn = $('#scanUid');
+    const scanUidCount = $('#scanUidCount');
+    const runUidBtn = $('#runUid');
+
+    const onlyMissingEl = $('#onlyMissing');
+    const dryRunEl = $('#dryRun');
+
+    scanEmailBtn?.addEventListener('click', async ()=>{
+      if (!currentUser?.email) { log('Tu usuario no tiene email. No se puede usar estrategia por correo.', 'err'); return; }
+      setBusy(scanEmailBtn, true); scanEmailCount.textContent = '…';
+      try{
+        const c = await scan({ field: 'medicoEmail', value: currentUser.email });
+        counts.email = c;
+        scanEmailCount.textContent = String(c);
+        runEmailBtn.disabled = c === 0;
+        log(`Scan por correo → candidatos: ${c}`, c ? 'ok' : 'warn');
+      } finally { setBusy(scanEmailBtn, false); }
+    });
+
+    runEmailBtn?.addEventListener('click', async ()=>{
+      if (!currentUser?.email) return;
+      setBusy(runEmailBtn, true);
+      try {
+        await backfill({
+          field: 'medicoEmail',
+          value: currentUser.email,
+          targetUid: currentUser.uid,
+          onlyMissing: !!onlyMissingEl.checked,
+          dryRun: !!dryRunEl.checked
+        });
+      } finally { setBusy(runEmailBtn, false); }
+    });
+
+    scanUidBtn?.addEventListener('click', async ()=>{
+      if (!currentUser?.uid) return;
+      setBusy(scanUidBtn, true); scanUidCount.textContent = '…';
+      try{
+        // Escaneamos médicoId y uidMedico y sumamos (sin de-dupe, es aproximado)
+        const c1 = await scan({ field: 'medicoId', value: currentUser.uid }).catch(()=>0);
+        const c2 = await scan({ field: 'uidMedico', value: currentUser.uid }).catch(()=>0);
+        const total = c1 + c2;
+        counts.uid = total;
+        scanUidCount.textContent = String(total);
+        runUidBtn.disabled = total === 0;
+        log(`Scan por uid → medicoId:${c1} + uidMedico:${c2} = ${total}`, total ? 'ok' : 'warn');
+      } finally { setBusy(scanUidBtn, false); }
+    });
+
+    runUidBtn?.addEventListener('click', async ()=>{
+      if (!currentUser?.uid) return;
+      setBusy(runUidBtn, true);
+      try {
+        // Ejecuta ambas estrategias, una tras otra
+        await backfill({
+          field: 'medicoId',
+          value: currentUser.uid,
+          targetUid: currentUser.uid,
+          onlyMissing: !!onlyMissingEl.checked,
+          dryRun: !!dryRunEl.checked
+        }).catch(e => log(`medicoId: ${e.message||e}`, 'err'));
+
+        await backfill({
+          field: 'uidMedico',
+          value: currentUser.uid,
+          targetUid: currentUser.uid,
+          onlyMissing: !!onlyMissingEl.checked,
+          dryRun: !!dryRunEl.checked
+        }).catch(e => log(`uidMedico: ${e.message||e}`, 'err'));
+
+      } finally { setBusy(runUidBtn, false); }
+    });
+
+    // Captura global de errores
+    window.addEventListener('error', e => log(`JS ERROR: ${e.message}`, 'err'));
+    window.addEventListener('unhandledrejection', e => log(`PROMISE REJECTION: ${e.reason?.message || e.reason}`, 'err'));
+  </script>
+</body>
+</html>
