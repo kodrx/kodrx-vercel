@@ -1,6 +1,6 @@
 // 🔝 IMPORTS
 import { db, auth } from "/firebase-init.js";
-import { collection, addDoc, updateDoc, getDoc, doc, Timestamp } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
+import { collection, addDoc, updateDoc, getDoc, doc, Timestamp, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js";
 
 
@@ -95,9 +95,18 @@ document.querySelectorAll(".medicamento").forEach(med => {
   medicamentos.push({ nombre, dosis, duracion, ini });
 });
 
+const user = auth.currentUser;
+
+const recetaData = {
+  // ...lo que ya guardas...
+  medicoUid: user.uid,                                 // 👈 clave estandar
+  medicoNombre: perfil?.nombre || user.displayName || "",
+  medicoCorreo: user.email || "",
+  timestamp: serverTimestamp(),                        // 👈 para ordenar
+};
 
       // Receta base
-      const recetaRef = await addDoc(collection(db, "recetas"), {
+      const recetaRef = await addDoc(collection(db, "recetas") recetaData, {
         nombrePaciente,
         edad,
         observaciones,
