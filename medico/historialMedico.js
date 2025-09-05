@@ -153,38 +153,91 @@ async function loadNextPage() {
   renderHistorial(items, { reset:false });
 }
 
-// --- Render (ajusta a tu UI)
+function groupByDay(recetas){
+  const out = new Map();
+  for (const r of recetas) {
+    const d = r.timestamp?.toDate ? r.timestamp.toDate()
+            : (typeof r.timestamp?.seconds === "number" ? new Date(r.timestamp.seconds*1000) : null);
+    const key = d ? `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}` : 'sin-fecha';
+    if (!out.has(key)) out.set(key, []);
+    out.get(key).push({ r, d });
+  }
+  return [...out.entries()].sort((a,b)=> a[0]<b[0]?1:-1); // días descendente
+}
+
+function horaMX(d){
+  return d ? d.toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'}) : '—';
+}
+
+function medsPreview(r){
+  const meds = r.medicamentos || r.meds || [];
+  if (!Array.isArray(meds) || !meds.length) return '<span class="small">Sin medicamentos</span>';
+  const first = meds.slice(0,3).map(m => m?.nombre || '—');
+  const extra = meds.length > 3 ? ` +${meds.length-3}` : '';
+  return `<span class="small">${first.join(', ')}${extra}</span>`;
+}
+
 function renderHistorial(recetas, { reset=false } = {}) {
-  const cont = $("#historialLista");
+  const cont = document.querySelector("#historialLista");
   if (!cont) return;
+
   if (reset) cont.innerHTML = "";
 
-  const html = recetas.map(r=>{
-    const ts = r.timestamp?.toDate ? r.timestamp.toDate() :
-               (typeof r.timestamp?.seconds === "number" ? new Date(r.timestamp.seconds*1000) : null);
-    const fecha = ts ? fmtMx(ts) : "—";
-    const p = r.pacienteNombre || "Paciente sin nombre";
-    const m = r.medicoNombre   || "—";
-    return `
-      <div class="item-receta borde p-3 mb-3 rounded">
-        <div class="flex justify-between">
-          <div><strong>${p}</strong> <small class="opacity-70">(${r.id})</small></div>
-          <div><small>${fecha}</small></div>
-        </div>
-        <div class="mt-1"><small>Médico: ${m}</small></div>
-        <div class="mt-2">
-          <a class="btn btn-sm" href="/public/ver-receta.html?id=${r.id}">Ver</a>
-        </div>
-      </div>`;
-  }).join("");
+  if (reset && (!recetas || recetas.length === 0)) {
+    cont.innerHTML = `<div class="small" style="padding:8px 2px;">No hay recetas para mostrar.</div>`;
+    const moreBtn = document.querySelector("#btnMas");
+    if (moreBtn) moreBtn.style.display = "none";
+    return;
+  }
+
+  const grouped = groupByDay(recetas);
+  let html = "";
+
+  for (const [dayKey, arr] of grouped) {
+    const [y,m,d] = dayKey.split("-").map(n=>parseInt(n,10));
+    const fechaLegible = (new Date(y, m-1, d)).toLocaleDateString('es-MX',{weekday:'long', year:'numeric', month:'long', day:'numeric'});
+
+    html += `<div class="mb-2" style="margin:8px 2px; font-weight:700; color:#123f91;">${fechaLegible}</div>`;
+
+    for (const {r, d:fecha} of arr) {
+      const p = r.pacienteNombre || "Paciente sin nombre";
+      const med = r.medicoNombre || "—";
+      html += `
+        <div class="acordeon" data-id="${r.id}">
+          <div class="acordeon-header">
+            <span>${horaMX(fecha)} — ${p}</span>
+          </div>
+          <div class="acordeon-body">
+            <p><strong>ID:</strong> ${r.id}</p>
+            <p><strong>Médico:</strong> ${med}</p>
+            <div class="mt-2">${medsPreview(r)}</div>
+            <div class="mt-2">
+              <a class="boton-ver" href="/public/ver-receta.html?id=${r.id}">Ver</a>
+            </div>
+          </div>
+        </div>`;
+    }
+  }
 
   cont.insertAdjacentHTML("beforeend", html);
 
-  const moreBtn = $("#btnMas");
+  // Toggle acordeón (usa tus clases)
+  if (!cont.__binded) {
+    cont.addEventListener("click", (ev)=>{
+      const h = ev.target.closest(".acordeon-header");
+      if (!h) return;
+      const item = h.closest(".acordeon");
+      item?.classList.toggle("open");
+    });
+    cont.__binded = true;
+  }
+
+  const moreBtn = document.querySelector("#btnMas");
   if (moreBtn) {
-    moreBtn.style.display = state.lastDoc ? "inline-flex" : "none";
+    moreBtn.style.display = (state.lastDoc ? "inline-flex" : "none");
   }
 }
+
 
 // --- Event listeners UI
 function setupUI() {
