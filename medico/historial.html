@@ -60,6 +60,14 @@
     .buscador-wrap{ max-width:100%; }
     .buscador-wrap #buscador{ min-width:0; }
   }
+    .btn{
+  background:#2e6fd6; color:#fff;
+  border:none; border-radius:10px;
+  padding:.65rem 1.1rem;
+  font-weight:600; cursor:pointer;
+  transition:filter .15s ease;
+}
+.btn:hover{ filter:brightness(0.95); }
 </style>
 
 </head>
@@ -69,10 +77,13 @@
 
 
 
-<input id="buscarNombre" placeholder="Buscar paciente…" />
-<input id="filtrarFecha" type="date" />
-<div id="historialLista"></div>
-<button id="btnMas" class="btn" style="display:none">Ver más</button>
+<div class="buscador-wrap">
+  <input id="buscarNombre" placeholder="Buscar paciente…" />
+  <input id="filtrarFecha" type="date" />
+  <button id="btnMas" class="btn" style="display:none">Ver más</button>
+</div>
+
+<div id="historialLista" class="contenedor"></div>
 
 
 
