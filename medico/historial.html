@@ -118,37 +118,57 @@ document.addEventListener('DOMContentLoaded', ()=>{
   }
 });
 </script>
-  <!-- BOOT DIAGNÓSTICO -->
 <script>console.log('[BOOT] inline clásico OK @', location.href);</script>
 
-<script type="module" id="boot-hist">
+<script type="module">
 console.log('[BOOT] inline module OK');
-try {
-  // 1) Carga relativa (si la página está en /medico/)
-  const mRel = await import('./historialMedico.js?v=20250905a');
-  console.log('[BOOT] import ./historialMedico.js OK', mRel);
-} catch (e1) {
-  console.error('[BOOT] FALLÓ import ./historialMedico.js', e1);
-  try {
-    // 2) Carga absoluta desde raíz
-    const mAbs = await import('/medico/historialMedico.js?v=20250905a');
-    console.log('[BOOT] import /medico/historialMedico.js OK', mAbs);
-  } catch (e2) {
-    console.error('[BOOT] FALLÓ también import /medico/historialMedico.js', e2);
-    alert('No pude cargar historialMedico.js. Revisa la consola para detalles.');
+const cand = [
+  './historialMedico.js?v=20250905b',      // relativo -> /medico/historialMedico.js
+  '/medico/historialMedico.js?v=20250905b' // absoluto
+];
+
+async function probe(url){
+  try{
+    const res = await fetch(url, { cache:'no-store' });
+    console.log(`[PROBE] ${url} -> status:`, res.status, 'ct:', res.headers.get('content-type'));
+    const text = await res.text();
+    console.log(`[PROBE] head(${url}):`, text.slice(0,180).replace(/\n/g,'⏎'));
+    return { ok: res.ok, ct: res.headers.get('content-type') || '', url };
+  }catch(e){
+    console.error(`[PROBE] ${url} -> fetch error`, e);
+    return { ok:false, ct:'', url, error:e };
   }
 }
+
+(async ()=>{
+  // 1) Fetch probes
+  for (const u of cand){
+    const r = await probe(u);
+    // MIME correcto para módulos: application/javascript (o text/javascript en algunos hosts)
+    if (r.ok && /javascript/i.test(r.ct)) {
+      try{
+        const m = await import(u);
+        console.log('[BOOT] import OK:', u, m);
+        return; // listo
+      }catch(e){
+        console.error('[BOOT] import FALLÓ:', u, e);
+        alert('Falló import de historialMedico.js (ver consola). Posible SyntaxError o import interno roto.');
+        return;
+      }
+    } else if (r.ok && /text\/html/i.test(r.ct)) {
+      console.warn('⚠️ Ese URL está devolviendo HTML (probable 404 con página HTML o rewrite). Revisa la ruta y el deploy.');
+    }
+  }
+
+  alert('No pude cargar /medico/historialMedico.js. Ver consola [PROBE] para status/MIME.');
+})();
 </script>
 
-<!-- Capturadores globales para errores silenciosos -->
 <script>
-window.addEventListener('error', e => {
-  console.error('[GLOBAL ERROR]', e.error || e.message || e);
-});
-window.addEventListener('unhandledrejection', e => {
-  console.error('[GLOBAL PROMISE REJECTION]', e.reason);
-});
+window.addEventListener('error', e => console.error('[GLOBAL ERROR]', e.error || e.message || e));
+window.addEventListener('unhandledrejection', e => console.error('[GLOBAL PROMISE REJECTION]', e.reason));
 </script>
+
 
 </body>
 </html>
