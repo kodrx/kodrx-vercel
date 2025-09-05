@@ -295,59 +295,65 @@ import { doc, getDoc, collection, getDocs }
       addLink('abrir');
     }
   }
+// --- Utilidad: obtener ?id= de la URL  const qs = new URLSearchParams(location.search);
+const RECETA_ID = (qs.get("id") || "").trim();
 
-  // --- Estado + boot ---
-  let RECETA_ACTUAL = null;
-  let QRS = null;
-
-  async function mainLoad(){
-    const id = new URLSearchParams(location.search).get('id');
-    if (!id) { console.warn('Falta ?id'); return; }
-
-    // Carga
-    let receta = await smartLoadReceta(id);
-    RECETA_ACTUAL = receta;
-    window.RECETA_ACTUAL = receta; // expón para el script no-módulo
-    console.log('[RECETA]', receta.bloque, receta.hash, receta);
-
-    // Render base + QRs + campos
-    renderReceta(receta);
-    if (typeof window.prepararReceta === 'function') {
-      QRS = await window.prepararReceta(receta);
-      window.QRS = QRS; // expón para el script no-módulo
+async function mainLoad(){
+  try{
+    if (!RECETA_ID) {
+      console.error("[ver-receta] Falta ?id= en la URL");
+      alert("Falta el ID de receta en la URL.");
+      return;
     }
 
-    // Verificación BC
+    console.log("[ver-receta] Cargando receta:", RECETA_ID);
+
+    // ✅ Documento raíz (FORMA CORRECTA EN 12.2.1)
+    const recetaRef  = doc(db, "recetas", RECETA_ID);
+    const recetaSnap = await getDoc(recetaRef);
+
+    if (!recetaSnap.exists()) {
+      console.warn("[ver-receta] Receta no encontrada:", RECETA_ID);
+      alert("No se encontró la receta.");
+      return;
+    }
+
+    // Datos base
+    const receta = { id: recetaSnap.id, ...recetaSnap.data() };
+
+    // (Opcional) Cargar subcolección medicamentos con el ref del documento
+    // Evita usar collection('recetas', ...) sin db/ref como 1er argumento
+    try {
+      const medsCol  = collection(recetaRef, "medicamentos"); // ✅
+      const medsSnap = await getDocs(medsCol);
+      const medicamentos = medsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+      receta.medicamentos = medicamentos;
+    } catch (e) {
+      // Si no existe la subcolección o hay permisos, que no truene todo el flujo
+      console.warn("[ver-receta] No se pudo leer subcolección medicamentos:", e);
+      if (!receta.medicamentos) receta.medicamentos = [];
+    }
+
+    // Exponer receta actual
+    window.RECETA_ACTUAL = receta;
+
+    // Render principal
+    renderReceta(receta);
+
+    // Preparar QR / assets (si existe tu helper)
+    if (typeof window.prepararReceta === 'function') {
+      const QRS = await window.prepararReceta(receta);
+      window.QRS = QRS; // para el script no-módulo
+    }
+
+    // Verificación en blockchain (mantén tu función tal cual)
     await verificarBlockchain(receta);
+
+  } catch (err) {
+    console.error("[ver-receta] Error en mainLoad:", err);
+    alert("Ocurrió un error al cargar la receta. Revisa la consola.");
   }
-
-  // Exponer para botones del script no-módulo (si los usas)
-  window.loadAndRender = mainLoad;
-
-  // Listeners (un solo lugar)
-  document.addEventListener('DOMContentLoaded', async ()=>{
-    document.getElementById('btnRegresar')?.addEventListener('click', ()=>{
-      if (history.length > 1) history.back(); else location.href = '/';
-    });
-
-    document.getElementById('btnDescargar')?.addEventListener('click', async (ev)=>{
-      const b = ev.currentTarget;
-      if (b.__busy) return; b.__busy = true; b.disabled = true;
-      try{
-        if (!window.RECETA_ACTUAL) await window.loadAndRender();
-        await generarPDF(window.RECETA_ACTUAL, window.QRS);
-      } finally { b.__busy=false; b.disabled=false; }
-    });
-
-    document.getElementById('btnImprimir')?.addEventListener('click', async (ev)=>{
-      const b = ev.currentTarget;
-      if (b.__busy) return; b.__busy = true; b.disabled = true;
-      try{
-        if (!window.RECETA_ACTUAL) await window.loadAndRender();
-        await generarPDF(window.RECETA_ACTUAL, window.QRS, {mode:'print'});
-      } finally { b.__busy=false; b.disabled=false; }
-    });
-
+}
     // Arranque
     await mainLoad();
   });
