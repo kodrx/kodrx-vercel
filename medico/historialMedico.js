@@ -21,6 +21,7 @@ const state = {
   mode: "default",   // 'default' | 'search' | 'date'
 };
 
+const DEBUG = true;
 // --- Utilidades
 const $ = (sel) => document.querySelector(sel);
 const fmtMx = (d) => d.toLocaleString('es-MX',{year:'numeric',month:'long',day:'numeric',hour:'2-digit',minute:'2-digit'});
@@ -116,30 +117,77 @@ async function loadFirstPage({ realtime=true } = {}) {
   state.lastDoc = null;
 
   const q = buildQuery(true);
-
-  // Para "default", usamos tiempo real; para search/fecha, usamos getDocs
   const useRealtime = (state.mode === "default") && realtime;
 
-  // Limpia listener anterior si existía
   if (state.unsub) { state.unsub(); state.unsub = null; }
 
+  if (DEBUG) {
+    console.log("[historial] user.uid:", state.user?.uid);
+    console.log("[historial] mode:", state.mode);
+  }
+
   if (useRealtime) {
-    state.unsub = onSnapshot(q, (snap)=>{
+    state.unsub = onSnapshot(q, async (snap)=>{
       const items = snap.docs.map(d => ({ id:d.id, ...d.data() }));
       state.lastDoc = snap.docs.length ? snap.docs[snap.docs.length-1] : null;
-      renderHistorial(items, { reset:true });
+      await postProcessAndRender(items, /*firstPage=*/true);
     }, (err)=>{
+      console.error("[historial] onSnapshot error:", err);
       if (err.code === "failed-precondition") {
-        console.warn("Falta índice compuesto para (medicoUid + timestamp). Crea el índice desde el link de la consola y recarga.");
-      } else {
-        console.error("[historial] onSnapshot error:", err);
+        alert("Falta un índice compuesto. Revisa la consola: aparece el link para crearlo.");
       }
     });
   } else {
     const snap = await getDocs(q);
     const items = snap.docs.map(d => ({ id:d.id, ...d.data() }));
     state.lastDoc = snap.docs.length ? snap.docs[snap.docs.length-1] : null;
-    renderHistorial(items, { reset:true });
+    await postProcessAndRender(items, /*firstPage=*/true);
+  }
+}
+async function postProcessAndRender(items, firstPage){
+  if (DEBUG) console.log("[historial] items:", items.length, items);
+  renderHistorial(items, { reset:firstPage });
+
+  // Si no hay resultados en modo 'default', hacemos probes para diagnosticar
+  if (firstPage && state.mode === "default" && items.length === 0) {
+    try {
+      // Probe A: ¿existen recetas en la colección?
+      const snapAny = await getDocs(query(collection(db,"recetas"), limit(5)));
+      console.log("[probe] muestras en 'recetas':", snapAny.size);
+
+      // Probe B: ¿guardaste el campo como 'medicoId' en lugar de 'medicoUid'?
+      try {
+        const qAlt = query(
+          collection(db,"recetas"),
+          where("medicoId","==", state.user.uid),
+          orderBy("timestamp","desc"),
+          limit(PAGE_SIZE)
+        );
+        const sAlt = await getDocs(qAlt);
+        console.log("[probe] usando medicoId, items:", sAlt.size);
+        if (sAlt.size > 0) {
+          const itemsAlt = sAlt.docs.map(d=>({id:d.id, ...d.data()}));
+          // Render de muestra para que veas algo en pantalla:
+          const box = document.querySelector("#historialLista");
+          if (box) {
+            box.insertAdjacentHTML("afterbegin",
+              `<div style="padding:8px;margin-bottom:8px;background:#fff3cd;border:1px solid #ffeeba;border-radius:8px;">
+                 <strong>Atención:</strong> tus recetas parecen usar el campo <code>medicoId</code> en lugar de <code>medicoUid</code>.
+                 Te recomendamos unificar a <code>medicoUid</code>. Mostrando resultados alternos (solo visual).
+               </div>`);
+          }
+          renderHistorial(itemsAlt, { reset:true });
+        }
+      } catch(e){ /* si pide otro índice, lo dirá en consola */ }
+
+      // Probe C (opcional): muestra 5 recetas sin filtro para confirmar estructura
+      if (snapAny.size > 0) {
+        const muestras = snapAny.docs.map(d=>({ id:d.id, ...d.data() }));
+        console.log("[probe] ejemplo de una receta:", muestras[0]);
+      }
+    } catch(e) {
+      console.warn("[probe] error en probes:", e);
+    }
   }
 }
 
