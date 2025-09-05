@@ -1,5 +1,6 @@
 // historialMedico.js PRO
-import { db, auth, onAuthStateChanged } from "/firebase-init.js";
+import { db, auth } from "/firebase-init.js";
+import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js";
 import {
   collection,
   query,
