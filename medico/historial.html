@@ -89,7 +89,7 @@
 
 
   <div class="contenedor" id="historial"></div>
-  <script type="module" src="/medico/historialMedico.js"></script>
+
 
 <script>
 document.addEventListener('DOMContentLoaded', ()=>{
@@ -118,5 +118,37 @@ document.addEventListener('DOMContentLoaded', ()=>{
   }
 });
 </script>
+  <!-- BOOT DIAGNÓSTICO -->
+<script>console.log('[BOOT] inline clásico OK @', location.href);</script>
+
+<script type="module" id="boot-hist">
+console.log('[BOOT] inline module OK');
+try {
+  // 1) Carga relativa (si la página está en /medico/)
+  const mRel = await import('./historialMedico.js?v=20250905a');
+  console.log('[BOOT] import ./historialMedico.js OK', mRel);
+} catch (e1) {
+  console.error('[BOOT] FALLÓ import ./historialMedico.js', e1);
+  try {
+    // 2) Carga absoluta desde raíz
+    const mAbs = await import('/medico/historialMedico.js?v=20250905a');
+    console.log('[BOOT] import /medico/historialMedico.js OK', mAbs);
+  } catch (e2) {
+    console.error('[BOOT] FALLÓ también import /medico/historialMedico.js', e2);
+    alert('No pude cargar historialMedico.js. Revisa la consola para detalles.');
+  }
+}
+</script>
+
+<!-- Capturadores globales para errores silenciosos -->
+<script>
+window.addEventListener('error', e => {
+  console.error('[GLOBAL ERROR]', e.error || e.message || e);
+});
+window.addEventListener('unhandledrejection', e => {
+  console.error('[GLOBAL PROMISE REJECTION]', e.reason);
+});
+</script>
+
 </body>
 </html>
