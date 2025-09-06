@@ -367,6 +367,66 @@ function setupUI() {
     moreBtn.addEventListener("click", loadNextPage);
   }
 }
+// --- Admin override por querystring (?email=... o ?uid=...)
+const QS = new URLSearchParams(location.search);
+const OV_EMAIL = (QS.get('email') || '').trim();
+const OV_UID   = (QS.get('uid')   || '').trim();
+
+async function loadFirstPageAdminOverride({ email, uid }) {
+  state.lastDoc = null;
+  let items = [];
+
+  try {
+    if (uid) {
+      const q = query(
+        collection(db, 'recetas'),
+        where('medicoUid','==', uid),
+        orderBy('timestamp','desc'),
+        limit(PAGE_SIZE)
+      );
+      const snap = await getDocs(q);
+      items = snap.docs.map(d => ({ id:d.id, ...d.data() }));
+      state.lastDoc = snap.docs.length ? snap.docs[snap.docs.length-1] : null;
+    } else if (email) {
+      // 1) probar 'correo'
+      try {
+        const q1 = query(
+          collection(db, 'recetas'),
+          where('correo','==', email),
+          orderBy('timestamp','desc'),
+          limit(PAGE_SIZE)
+        );
+        const s1 = await getDocs(q1);
+        items = s1.docs.map(d => ({ id:d.id, ...d.data() }));
+        state.lastDoc = s1.docs.length ? s1.docs[s1.docs.length-1] : null;
+      } catch(e) {
+        if (e.code === 'failed-precondition') {
+          const m = e.message?.match(/https?:\/\/\S+/);
+          if (m && m[0]) console.info('➡️ Crea el índice correo+timestamp aquí:', m[0]);
+        } else { console.warn(e); }
+      }
+      // 2) si vacío, probar 'medicoEmail'
+      if (!items.length) {
+        const q2 = query(
+          collection(db, 'recetas'),
+          where('medicoEmail','==', email),
+          orderBy('timestamp','desc'),
+          limit(PAGE_SIZE)
+        );
+        const s2 = await getDocs(q2);
+        items = s2.docs.map(d => ({ id:d.id, ...d.data() }));
+        state.lastDoc = s2.docs.length ? s2.docs[s2.docs.length-1] : null;
+      }
+    }
+  } catch(err) {
+    console.error('[override] error:', err);
+    alert('Error en override. Revisa consola.');
+  }
+
+  renderHistorial(items, { reset:true });
+  const moreBtn = document.querySelector('#btnMas');
+  if (moreBtn) moreBtn.style.display = state.lastDoc ? 'inline-flex' : 'none';
+}
 
 // =========================
 /* Bootstrap */
@@ -378,6 +438,14 @@ onAuthStateChanged(auth, async (user)=>{
     return;
   }
   state.user = user;
+  // Si hay override por QS, úsalo y no montes tiempo real
+if (OV_EMAIL || OV_UID) {
+  console.log('[historial] admin override:', { OV_EMAIL, OV_UID });
+  setupUI(); // opcional: para botón "ver más"
+  await loadFirstPageAdminOverride({ email: OV_EMAIL, uid: OV_UID });
+  return;
+}
+
   setupUI();
   await loadFirstPage({ realtime:true });
 });
