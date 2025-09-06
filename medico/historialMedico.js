@@ -14,7 +14,7 @@ import {
 // =========================
 const DEBUG = true;
 const PAGE_SIZE = 50;
-const FALLBACK_FIELDS = ["medicoId", "uidMedico", "medicoEmail"]; // por si recetas viejas no tienen medicoUid
+const FALLBACK_FIELDS = ["correo", "medicoEmail", "medicoId", "uidMedico"];// por si recetas viejas no tienen medicoUid
 
 const state = {
   user: null,
