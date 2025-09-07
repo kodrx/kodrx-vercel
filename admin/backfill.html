@@ -23,6 +23,7 @@
     @media (max-width:880px){ .grid { grid-template-columns: 1fr; } }
     select.field { min-width:260px; }
     code { background:#f1f5f9; padding:2px 6px; border-radius:6px; }
+    .hint { font-size:12px; color:#475569; }
   </style>
 </head>
 <body>
@@ -65,7 +66,7 @@
 
     <div class="card" style="margin-top:14px;">
       <h3 style="margin:0 0 8px;">🔎 Detector de campos & Campo personalizado</h3>
-      <div class="muted">Explora recetas para encontrar rutas de campos (incluye anidados) que coincidan con tu <code>uid</code> o tu <code>email</code>. Luego puedes ejecutar scan/backfill con esa ruta.</div>
+      <div class="muted">Explora recetas para encontrar rutas de campos (incluye anidados) que coincidan con tu <code>uid</code> o <code>email</code>. Luego ejecuta scan/backfill con esa ruta.</div>
 
       <div class="row" style="margin-top:10px;">
         <button class="btn alt" id="detectFields">🔍 Detectar rutas con coincidencias</button>
@@ -81,7 +82,7 @@
         <label><input type="radio" name="matchType" value="email" /> Comparar con email</label>
       </div>
 
-      <!-- ⬇️ overrides manuales -->
+      <!-- overrides manuales -->
       <div class="row" style="margin-top:10px;">
         <input id="overrideValue" class="field" placeholder="Valor a comparar (email o uid) — opcional" />
         <input id="overrideTargetUid" class="field" placeholder="medicoUid a escribir (uid del médico) — opcional" />
@@ -94,6 +95,34 @@
       </div>
 
       <div id="detectorOut" class="muted" style="margin-top:8px;"></div>
+    </div>
+
+    <!-- NUEVO: MODO FLEX -->
+    <div class="card" style="margin-top:14px;">
+      <h3 style="margin:0 0 8px;">🧭 Modo FLEX — sin conocer el campo</h3>
+      <div class="muted">Escanea toda la colección y encuentra docs donde <em>cualquier string</em> del documento coincida con tu valor (exacto o por subcadena), con opción de filtrar por patrón de clave.</div>
+
+      <div class="row" style="margin-top:10px;">
+        <input id="flexValue" class="field" placeholder="Valor a buscar (email o uid del médico)" />
+        <input id="flexTargetUid" class="field" placeholder="medicoUid a escribir (uid del médico)" />
+      </div>
+
+      <div class="row">
+        <select id="flexMode" class="field">
+          <option value="exact">== exacto (sensible a mayúsculas)</option>
+          <option value="iexact">== exacto (ignorar mayúsculas/espacios)</option>
+          <option value="contains">contiene (sensible a mayúsculas)</option>
+          <option value="icontains" selected>contiene (ignorar mayúsculas/espacios)</option>
+        </select>
+        <input id="flexKeyRegex" class="field" placeholder="Filtrar por patrón de clave (regex). Ej: medic|correo|email|doctor|autor|createdBy|uid" />
+      </div>
+      <div class="hint">Consejo: si sabes el correo del médico (p.ej. <code>doctor@ejemplo.com</code>), úsalo en <b>Valor a buscar</b> y su <b>UID</b> en <b>medicoUid a escribir</b>.</div>
+
+      <div class="row" style="margin-top:10px;">
+        <button class="btn alt" id="scanFlex">📊 Scan FLEX</button>
+        <span id="scanFlexCount" class="badge">—</span>
+        <button class="btn" id="runFlex" disabled>▶️ Backfill FLEX</button>
+      </div>
     </div>
 
     <div class="card" style="margin-top:14px;">
@@ -115,9 +144,9 @@
     } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
     import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js";
 
-    const PAGE = 250;       // docs por página de lectura
-    const BATCH_MAX = 500;  // docs por batch de escritura
-    const DETECT_MAX = 200; // máximo docs a escanear para detector
+    const PAGE = 250;       // lectura por página
+    const BATCH_MAX = 500;  // escrituras por commit
+    const DETECT_MAX = 200; // docs para detector
 
     const $ = (s)=>document.querySelector(s);
     const logEl = $('#log');
@@ -131,7 +160,28 @@
     };
     const setBusy = (el, busy=true)=>{ if(el){ el.disabled=!!busy; el.__busy=!!busy; } };
 
-    // Scan: contar candidatos por where(field == value) con paginación por documentId()
+    // ---------- helpers comunes ----------
+    function* walk(obj, base='') {
+      if (obj === null || obj === undefined) return;
+      const isTS = obj && typeof obj==='object' && 'seconds' in obj && typeof obj.seconds==='number';
+      if (isTS) return;
+      if (Array.isArray(obj)) {
+        for (let i=0;i<obj.length;i++) yield* walk(obj[i], `${base}[${i}]`);
+        return;
+      }
+      if (typeof obj === 'object') {
+        for (const [k,v] of Object.entries(obj)) {
+          const path = base ? `${base}.${k}` : k;
+          if (v && typeof v === 'object') yield* walk(v, path);
+          else yield [path, v];
+        }
+        return;
+      }
+      yield [base, obj];
+    }
+    const norm = s => String(s || '').toLowerCase().trim();
+
+    // ---------- escaneo por where(field==value) ----------
     const scan = async ({ field, value })=>{
       let last = null, total = 0;
       for (;;) {
@@ -156,18 +206,16 @@
       return total;
     };
 
-    // Backfill: set medicoUid=targetUid (merge), filtrando por field==value
+    // ---------- backfill por where(field==value) ----------
     const backfill = async ({ field, value, targetUid, onlyMissing=true, dryRun=false })=>{
       log(`Comenzando backfill por ${field} = ${value} (onlyMissing=${onlyMissing}, dryRun=${dryRun})`, 'ok');
-
       let last = null, totalRead = 0, totalUpd = 0, batch = writeBatch(db), batchCount = 0;
       const flush = async ()=>{
         if (batchCount === 0) return;
-        if (dryRun) { log(`DRY-RUN: omito commit de ${batchCount} docs`, 'warn'); }
+        if (dryRun) log(`DRY-RUN: omito commit de ${batchCount} docs`, 'warn');
         else { await batch.commit(); log(`Commit de ${batchCount} docs ✅`, 'ok'); }
         batch = writeBatch(db); batchCount = 0;
       };
-
       try {
         for (;;) {
           let q = query(
@@ -186,7 +234,6 @@
 
           const snap = await getDocs(q);
           if (snap.empty) break;
-
           totalRead += snap.size;
 
           for (const d of snap.docs) {
@@ -196,49 +243,28 @@
               (onlyMissing && (!current || typeof current !== 'string' || !current.trim())) ||
               (!onlyMissing && current !== targetUid);
             if (needs) {
-              if (!dryRun) {
-                batch.set(doc(db, 'recetas', d.id), { medicoUid: targetUid }, { merge: true });
-              }
+              if (!dryRun) { batch.set(doc(db, 'recetas', d.id), { medicoUid: targetUid }, { merge: true }); }
               batchCount++; totalUpd++;
-              if (batchCount >= BATCH_MAX) { await flush(); }
+              if (batchCount >= BATCH_MAX) await flush();
             }
           }
 
           last = snap.docs[snap.docs.length-1];
-          log(`Página procesada: leídos ${totalRead}, marcados para actualizar ${totalUpd}`, '');
+          log(`Página procesada: leídos ${totalRead}, marcados ${totalUpd}`, '');
           if (snap.size < PAGE) break;
         }
-
         await flush();
         log(`Backfill terminado. Leídos: ${totalRead}, actualizados: ${totalUpd}`, 'ok');
       } catch (e) {
         console.error(e);
         log(`ERROR: ${e.code || ''} ${e.message || e}`, 'err');
-        if (e.code === 'permission-denied') {
-          log('Las reglas bloquearon la escritura. Ejecuta como admin (Admin SDK) o ajusta reglas temporalmente.', 'err');
-        }
+        if (e.code === 'permission-denied') log('Las reglas bloquearon la escritura. Ejecuta como admin (Admin SDK) o ajusta reglas temporalmente.', 'err');
         throw e;
       }
       return { totalRead, totalUpd };
     };
 
-    // Detector: escanea docs y sugiere paths que igualen uid/email (incluye anidados)
-    function* walk(obj, base='') {
-      if (obj === null || obj === undefined) return;
-      const isTimestamp = obj && typeof obj==='object' && 'seconds' in obj && typeof obj.seconds==='number';
-      if (isTimestamp) return;
-      if (Array.isArray(obj)) return;
-      if (typeof obj === 'object') {
-        for (const [k,v] of Object.entries(obj)) {
-          const path = base ? `${base}.${k}` : k;
-          if (v && typeof v === 'object') { yield* walk(v, path); }
-          else yield [path, v];
-        }
-        return;
-      }
-      yield [base, obj];
-    }
-
+    // ---------- DETECTOR (sugerencias de paths) ----------
     const detectCandidates = async (user, limitDocs=DETECT_MAX)=>{
       const res = { uidMatches: new Map(), emailMatches: new Map(), sampled:0 };
       let last=null, scanned=0;
@@ -265,17 +291,120 @@
       return res;
     };
 
-    // --- Estado & refs UI
+    // ---------- MODO FLEX (sin campo) ----------
+    const matchers = {
+      exact: (a,b)=> a === b,
+      iexact: (a,b)=> norm(a) === norm(b),
+      contains: (a,b)=> String(a).includes(String(b)),
+      icontains: (a,b)=> norm(a).includes(norm(b)),
+    };
+
+    const scanFlex = async ({ value, mode='icontains', keyRegex=null })=>{
+      if (!value) return 0;
+      const match = matchers[mode] || matchers.icontains;
+      const re = keyRegex ? new RegExp(keyRegex, 'i') : null;
+
+      let last=null, total=0, scanned=0;
+      for (;;) {
+        let q = query(collection(db,'recetas'), orderBy(documentId()), limit(PAGE));
+        if (last) q = query(collection(db,'recetas'), orderBy(documentId()), startAfter(last), limit(PAGE));
+        const snap = await getDocs(q);
+        if (snap.empty) break;
+
+        for (const d of snap.docs) {
+          const data = d.data();
+          let hit = false;
+          for (const [path,val] of walk(data)) {
+            if (typeof val !== 'string') continue;
+            if (re && !re.test(path)) continue;
+            if (match(val, value)) { hit = true; break; }
+          }
+          if (hit) total++;
+        }
+
+        scanned += snap.size;
+        last = snap.docs[snap.docs.length-1];
+        if (snap.size < PAGE) break;
+      }
+      return total;
+    };
+
+    const backfillFlex = async ({ value, targetUid, mode='icontains', keyRegex=null, onlyMissing=true, dryRun=false })=>{
+      const match = matchers[mode] || matchers.icontains;
+      const re = keyRegex ? new RegExp(keyRegex, 'i') : null;
+
+      log(`Comenzando FLEX (value=${value}, targetUid=${targetUid}, mode=${mode}, keyRegex=${keyRegex||'—'}, onlyMissing=${onlyMissing}, dryRun=${dryRun})`, 'ok');
+
+      let last = null, totalRead = 0, totalUpd = 0, batch = writeBatch(db), batchCount = 0;
+
+      const flush = async ()=>{
+        if (batchCount === 0) return;
+        if (dryRun) log(`DRY-RUN: omito commit de ${batchCount} docs`, 'warn');
+        else { await batch.commit(); log(`Commit de ${batchCount} docs ✅`, 'ok'); }
+        batch = writeBatch(db); batchCount = 0;
+      };
+
+      try{
+        for (;;) {
+          let q = query(collection(db,'recetas'), orderBy(documentId()), limit(PAGE));
+          if (last) q = query(collection(db,'recetas'), orderBy(documentId()), startAfter(last), limit(PAGE));
+          const snap = await getDocs(q);
+          if (snap.empty) break;
+
+          for (const d of snap.docs) {
+            const data = d.data();
+            let hit = false;
+            for (const [path,val] of walk(data)) {
+              if (typeof val !== 'string') continue;
+              if (re && !re.test(path)) continue;
+              if (match(val, value)) { hit = true; break; }
+            }
+            if (!hit) continue;
+
+            totalRead++;
+            const current = data.medicoUid;
+            const needs =
+              (onlyMissing && (!current || typeof current !== 'string' || !current.trim())) ||
+              (!onlyMissing && current !== targetUid);
+
+            if (needs) {
+              if (!dryRun) batch.set(doc(db,'recetas', d.id), { medicoUid: targetUid }, { merge:true });
+              batchCount++; totalUpd++;
+              if (batchCount >= BATCH_MAX) await flush();
+            }
+          }
+
+          last = snap.docs[snap.docs.length-1];
+          if (snap.size < PAGE) break;
+        }
+
+        await flush();
+        log(`FLEX terminado. Coincidencias: ${totalRead}, actualizados: ${totalUpd}`, 'ok');
+      } catch(e){
+        console.error(e);
+        log(`FLEX ERROR: ${e.code||''} ${e.message||e}`, 'err');
+        if (e.code === 'permission-denied') log('Reglas bloquearon la escritura. Ejecuta como admin o ajusta reglas temporalmente.', 'err');
+        throw e;
+      }
+      return { totalRead, totalUpd };
+    };
+
+    // ---------- UI refs ----------
     let currentUser = null;
+
     const scanEmailBtn = $('#scanEmail'), scanEmailCount = $('#scanEmailCount'), runEmailBtn = $('#runEmail');
     const scanUidBtn = $('#scanUid'), scanUidCount = $('#scanUidCount'), runUidBtn = $('#runUid');
     const onlyMissingEl = $('#onlyMissing'), dryRunEl = $('#dryRun');
 
     const detectBtn = $('#detectFields'), candidateSelect = $('#candidateSelect'), detectedInfo = $('#detectedInfo');
     const customField = $('#customField'), scanCustomBtn = $('#scanCustom'), scanCustomCount = $('#scanCustomCount'), runCustomBtn = $('#runCustom');
-    const overrideValueEl = document.querySelector('#overrideValue');
-    const overrideTargetUidEl = document.querySelector('#overrideTargetUid');
+    const overrideValueEl = $('#overrideValue'), overrideTargetUidEl = $('#overrideTargetUid');
     const detectorOut = $('#detectorOut');
+
+    // FLEX refs
+    const flexValueEl = $('#flexValue'), flexTargetUidEl = $('#flexTargetUid');
+    const flexModeEl = $('#flexMode'), flexKeyRegexEl = $('#flexKeyRegex');
+    const scanFlexBtn = $('#scanFlex'), scanFlexCount = $('#scanFlexCount'), runFlexBtn = $('#runFlex');
 
     onAuthStateChanged(auth, async (user)=>{
       if (!user) {
@@ -288,7 +417,7 @@
       log(`Autenticado como ${user.email} (${user.uid})`, 'ok');
     });
 
-    // Acciones por correo
+    // ----- Acciones por correo/uid (como tenías) -----
     scanEmailBtn?.addEventListener('click', async ()=>{
       if (!currentUser?.email) { log('Tu usuario no tiene email. No se puede usar estrategia por correo.', 'err'); return; }
       setBusy(scanEmailBtn, true); scanEmailCount.textContent = '…';
@@ -314,7 +443,6 @@
       } finally { setBusy(runEmailBtn, false); }
     });
 
-    // Acciones por uid (medicoId / uidMedico)
     scanUidBtn?.addEventListener('click', async ()=>{
       if (!currentUser?.uid) return;
       setBusy(scanUidBtn, true); scanUidCount.textContent = '…';
@@ -337,7 +465,7 @@
       } finally { setBusy(runUidBtn, false); }
     });
 
-    // Detector y campo personalizado
+    // ----- Detector / personalizado -----
     detectBtn?.addEventListener('click', async ()=>{
       if (!currentUser) return;
       setBusy(detectBtn, true);
@@ -414,12 +542,46 @@
       try{
         await backfill({
           field,
-          value,                 // correo/medicoEmail/medico.uid/etc.
-          targetUid,             // uid del médico dueño de esas recetas
+          value,
+          targetUid,
           onlyMissing: !!onlyMissingEl.checked,
           dryRun: !!dryRunEl.checked
         });
       } finally { setBusy(runCustomBtn, false); }
+    });
+
+    // ----- FLEX -----
+    scanFlexBtn?.addEventListener('click', async ()=>{
+      const value = (flexValueEl.value || '').trim();
+      if (!value) { alert('Ingresa el valor a buscar (email o uid).'); return; }
+      setBusy(scanFlexBtn, true); scanFlexCount.textContent = '…';
+      try{
+        const c = await scanFlex({
+          value,
+          mode: flexModeEl.value,
+          keyRegex: (flexKeyRegexEl.value || '').trim() || null
+        });
+        scanFlexCount.textContent = String(c);
+        runFlexBtn.disabled = c === 0;
+        log(`FLEX scan → coincidencias: ${c}`, c ? 'ok' : 'warn');
+      } finally { setBusy(scanFlexBtn, false); }
+    });
+
+    runFlexBtn?.addEventListener('click', async ()=>{
+      const value = (flexValueEl.value || '').trim();
+      const targetUid = (flexTargetUidEl.value || '').trim();
+      if (!value || !targetUid) { alert('Ingresa valor a buscar y medicoUid a escribir.'); return; }
+      setBusy(runFlexBtn, true);
+      try{
+        await backfillFlex({
+          value,
+          targetUid,
+          mode: flexModeEl.value,
+          keyRegex: (flexKeyRegexEl.value || '').trim() || null,
+          onlyMissing: !!onlyMissingEl.checked,
+          dryRun: !!dryRunEl.checked
+        });
+      } finally { setBusy(runFlexBtn, false); }
     });
 
     // Captura global de errores
