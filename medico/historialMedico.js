@@ -14,33 +14,38 @@ import {
 // =========================
 const DEBUG = true;
 const PAGE_SIZE = 50;
-const FALLBACK_FIELDS = ["correo", "medicoEmail", "medicoId", "uidMedico"];// por si recetas viejas no tienen medicoUid
+// Fallbacks: primero 'correo' (legado), luego variantes antiguas
+const FALLBACK_FIELDS = ["correo", "medicoEmail", "medicoId", "uidMedico"];
 
 const state = {
   user: null,
-  term: "",          // búsqueda por nombre (prefijo)
-  dateISO: "",       // filtro yyyy-mm-dd
-  lastDoc: null,     // cursor de paginación
-  unsub: null,       // para onSnapshot (modo default)
-  mode: "default",   // 'default' | 'search' | 'date'
-  fallbackField: null, // si se usa campo alterno para recetas viejas
+  term: "",
+  dateISO: "",
+  lastDoc: null,
+  unsub: null,
+  mode: "default",
+  fallbackField: null,
 };
 
+// --- Admin override por QS (?email=... o ?uid=...)
+const QS = new URLSearchParams(location.search);
+const OV_EMAIL = (QS.get('email') || '').trim();
+const OV_UID   = (QS.get('uid')   || '').trim();
+
 // =========================
-/* Utils UI */
+// Utils UI
 // =========================
 const $ = (sel) => document.querySelector(sel);
 function debounce(fn, ms=300){ let t; return (...args)=>{ clearTimeout(t); t=setTimeout(()=>fn(...args), ms); }; }
 const fmtMx = (d) => d.toLocaleString('es-MX',{year:'numeric',month:'long',day:'numeric',hour:'2-digit',minute:'2-digit'});
 
 // =========================
-/* Builder de consultas */
+// Builder de consultas
 // =========================
 function buildQuery(firstPage=true) {
   const recetasCol = collection(db, "recetas");
   const uid = state.user.uid;
 
-  // 1) Búsqueda por nombre (prefijo), SIEMPRE filtrando por médico
   if (state.term) {
     state.mode = "search";
     const term = state.term;
@@ -66,7 +71,6 @@ function buildQuery(firstPage=true) {
     return q;
   }
 
-  // 2) Filtro por fecha (rango del día), SIEMPRE por médico
   if (state.dateISO) {
     state.mode = "date";
     const [y,m,d] = state.dateISO.split("-").map(n=>parseInt(n,10));
@@ -95,7 +99,6 @@ function buildQuery(firstPage=true) {
     return q;
   }
 
-  // 3) Default: últimas recetas del médico (tiempo real si es la primera carga)
   state.mode = "default";
   let q = query(
     recetasCol,
@@ -116,16 +119,74 @@ function buildQuery(firstPage=true) {
 }
 
 // =========================
+// Admin override loaders
+// =========================
+async function loadFirstPageAdminOverride({ email, uid }) {
+  state.lastDoc = null;
+  let items = [];
+
+  try {
+    if (uid) {
+      const q = query(
+        collection(db, 'recetas'),
+        where('medicoUid','==', uid),
+        orderBy('timestamp','desc'),
+        limit(PAGE_SIZE)
+      );
+      const snap = await getDocs(q);
+      items = snap.docs.map(d => ({ id:d.id, ...d.data() }));
+      state.lastDoc = snap.docs.length ? snap.docs[snap.docs.length-1] : null;
+    } else if (email) {
+      // 1) probar 'correo'
+      try {
+        const q1 = query(
+          collection(db, 'recetas'),
+          where('correo','==', email),
+          orderBy('timestamp','desc'),
+          limit(PAGE_SIZE)
+        );
+        const s1 = await getDocs(q1);
+        items = s1.docs.map(d => ({ id:d.id, ...d.data() }));
+        state.lastDoc = s1.docs.length ? s1.docs[s1.docs.length-1] : null;
+      } catch(e) {
+        if (e.code === 'failed-precondition') {
+          const m = e.message?.match(/https?:\/\/\S+/);
+          if (m && m[0]) console.info('➡️ Crea el índice correo+timestamp aquí:', m[0]);
+        } else { console.warn(e); }
+      }
+      // 2) si vacío, probar 'medicoEmail'
+      if (!items.length) {
+        const q2 = query(
+          collection(db, 'recetas'),
+          where('medicoEmail','==', email),
+          orderBy('timestamp','desc'),
+          limit(PAGE_SIZE)
+        );
+        const s2 = await getDocs(q2);
+        items = s2.docs.map(d => ({ id:d.id, ...d.data() }));
+        state.lastDoc = s2.docs.length ? s2.docs[s2.docs.length-1] : null;
+      }
+    }
+  } catch(err) {
+    console.error('[override] error:', err);
+    alert('Error en override. Revisa consola.');
+  }
+
+  renderHistorial(items, { reset:true });
+  const moreBtn = document.querySelector('#btnMas');
+  if (moreBtn) moreBtn.style.display = state.lastDoc ? 'inline-flex' : 'none';
+}
+
+// =========================
 /* Carga inicial y paginación */
 // =========================
 async function loadFirstPage({ realtime=true } = {}) {
   state.lastDoc = null;
-  state.fallbackField = null; // reset
+  state.fallbackField = null;
 
   const q = buildQuery(true);
   const useRealtime = (state.mode === "default") && realtime;
 
-  // Limpia listener anterior si existía
   if (state.unsub) { state.unsub(); state.unsub = null; }
 
   if (DEBUG) {
@@ -190,10 +251,8 @@ async function postProcessAndRender(items, firstPage){
   if (DEBUG) console.log("[historial] items:", items.length, items);
   renderHistorial(items, { reset:firstPage });
 
-  // Si no hay resultados en modo 'default', probamos campos alternos
   if (firstPage && state.mode === "default" && items.length === 0) {
     try {
-      // Probe A: ¿existen recetas en la colección?
       const snapAny = await getDocs(query(collection(db,"recetas"), limit(5)));
       console.log("[probe] muestras en 'recetas':", snapAny.size);
       if (snapAny.size > 0) {
@@ -204,7 +263,7 @@ async function postProcessAndRender(items, firstPage){
 
     for (const field of FALLBACK_FIELDS) {
       try {
-        const value = field.includes("Email") ? (state.user.email || "") : state.user.uid;
+        const value = field.includes("Email") ? (state.user.email || "") : (field === "correo" ? (state.user.email || "") : state.user.uid);
         if (!value) continue;
 
         const qAlt = query(
@@ -216,24 +275,21 @@ async function postProcessAndRender(items, firstPage){
         const sAlt = await getDocs(qAlt);
         console.log(`[probe] usando ${field}, items:`, sAlt.size);
         if (sAlt.size > 0) {
-          state.fallbackField = field; // marcamos qué campo estamos usando
+          state.fallbackField = field;
           const itemsAlt = sAlt.docs.map(d=>({id:d.id, ...d.data()}));
 
-          // Aviso visual
           const box = document.querySelector("#historialLista");
           if (box) {
             box.insertAdjacentHTML("afterbegin",
               `<div style="padding:8px;margin-bottom:8px;background:#fff3cd;border:1px solid #ffeeba;border-radius:8px;">
                  <strong>Nota:</strong> estas recetas usan <code>${field}</code> en vez de <code>medicoUid</code>.
-                 Te sugiero unificar (backfill) para habilitar tiempo real y búsqueda completa.
+                 Te sugiero hacer backfill para habilitar tiempo real y búsqueda completa.
                </div>`);
           }
 
-          // Render alterno y cursor
           renderHistorial(itemsAlt, { reset:true });
           state.lastDoc = sAlt.docs.length ? sAlt.docs[sAlt.docs.length-1] : null;
 
-          // Botón de más
           const moreBtn = document.querySelector("#btnMas");
           if (moreBtn) moreBtn.style.display = state.lastDoc ? "inline-flex" : "none";
           return;
@@ -243,7 +299,6 @@ async function postProcessAndRender(items, firstPage){
       }
     }
 
-    // Si no hubo coincidencia con ningún fallback
     const cont = document.querySelector("#historialLista");
     if (cont && !cont.innerHTML.trim()) {
       cont.innerHTML = `<div class="small" style="padding:8px 2px;">No hay recetas asociadas a tu usuario aún.</div>`;
@@ -263,7 +318,7 @@ function groupByDay(recetas){
     if (!out.has(key)) out.set(key, []);
     out.get(key).push({ r, d });
   }
-  return [...out.entries()].sort((a,b)=> a[0]<b[0]?1:-1); // días desc
+  return [...out.entries()].sort((a,b)=> a[0]<b[0]?1:-1);
 }
 
 function horaMX(d){
@@ -322,7 +377,6 @@ function renderHistorial(recetas, { reset=false } = {}) {
 
   cont.insertAdjacentHTML("beforeend", html);
 
-  // Toggle acordeón (usa tus clases)
   if (!cont.__binded) {
     cont.addEventListener("click", (ev)=>{
       const h = ev.target.closest(".acordeon-header");
@@ -334,16 +388,13 @@ function renderHistorial(recetas, { reset=false } = {}) {
   }
 
   const moreBtn = document.querySelector("#btnMas");
-  if (moreBtn) {
-    moreBtn.style.display = (state.lastDoc ? "inline-flex" : "none");
-  }
+  if (moreBtn) moreBtn.style.display = (state.lastDoc ? "inline-flex" : "none");
 }
 
 // =========================
 /* UI: Listeners */
 // =========================
 function setupUI() {
-  // Buscar por nombre (prefijo)
   const input = $("#buscarNombre");
   if (input) {
     input.addEventListener("input", debounce(async ()=>{
@@ -352,7 +403,6 @@ function setupUI() {
     }, 300));
   }
 
-  // Filtro por fecha (yyyy-mm-dd)
   const date = $("#filtrarFecha");
   if (date) {
     date.addEventListener("change", async ()=>{
@@ -361,71 +411,8 @@ function setupUI() {
     });
   }
 
-  // Botón "ver más"
   const moreBtn = $("#btnMas");
-  if (moreBtn) {
-    moreBtn.addEventListener("click", loadNextPage);
-  }
-}
-// --- Admin override por querystring (?email=... o ?uid=...)
-const QS = new URLSearchParams(location.search);
-const OV_EMAIL = (QS.get('email') || '').trim();
-const OV_UID   = (QS.get('uid')   || '').trim();
-
-async function loadFirstPageAdminOverride({ email, uid }) {
-  state.lastDoc = null;
-  let items = [];
-
-  try {
-    if (uid) {
-      const q = query(
-        collection(db, 'recetas'),
-        where('medicoUid','==', uid),
-        orderBy('timestamp','desc'),
-        limit(PAGE_SIZE)
-      );
-      const snap = await getDocs(q);
-      items = snap.docs.map(d => ({ id:d.id, ...d.data() }));
-      state.lastDoc = snap.docs.length ? snap.docs[snap.docs.length-1] : null;
-    } else if (email) {
-      // 1) probar 'correo'
-      try {
-        const q1 = query(
-          collection(db, 'recetas'),
-          where('correo','==', email),
-          orderBy('timestamp','desc'),
-          limit(PAGE_SIZE)
-        );
-        const s1 = await getDocs(q1);
-        items = s1.docs.map(d => ({ id:d.id, ...d.data() }));
-        state.lastDoc = s1.docs.length ? s1.docs[s1.docs.length-1] : null;
-      } catch(e) {
-        if (e.code === 'failed-precondition') {
-          const m = e.message?.match(/https?:\/\/\S+/);
-          if (m && m[0]) console.info('➡️ Crea el índice correo+timestamp aquí:', m[0]);
-        } else { console.warn(e); }
-      }
-      // 2) si vacío, probar 'medicoEmail'
-      if (!items.length) {
-        const q2 = query(
-          collection(db, 'recetas'),
-          where('medicoEmail','==', email),
-          orderBy('timestamp','desc'),
-          limit(PAGE_SIZE)
-        );
-        const s2 = await getDocs(q2);
-        items = s2.docs.map(d => ({ id:d.id, ...d.data() }));
-        state.lastDoc = s2.docs.length ? s2.docs[s2.docs.length-1] : null;
-      }
-    }
-  } catch(err) {
-    console.error('[override] error:', err);
-    alert('Error en override. Revisa consola.');
-  }
-
-  renderHistorial(items, { reset:true });
-  const moreBtn = document.querySelector('#btnMas');
-  if (moreBtn) moreBtn.style.display = state.lastDoc ? 'inline-flex' : 'none';
+  if (moreBtn) moreBtn.addEventListener("click", loadNextPage);
 }
 
 // =========================
@@ -438,13 +425,14 @@ onAuthStateChanged(auth, async (user)=>{
     return;
   }
   state.user = user;
-  // Si hay override por QS, úsalo y no montes tiempo real
-if (OV_EMAIL || OV_UID) {
-  console.log('[historial] admin override:', { OV_EMAIL, OV_UID });
-  setupUI(); // opcional: para botón "ver más"
-  await loadFirstPageAdminOverride({ email: OV_EMAIL, uid: OV_UID });
-  return;
-}
+
+  // Admin override (ver historial de otro médico por ?email= / ?uid=)
+  if (OV_EMAIL || OV_UID) {
+    console.log('[historial] admin override:', { OV_EMAIL, OV_UID });
+    setupUI();
+    await loadFirstPageAdminOverride({ email: OV_EMAIL, uid: OV_UID });
+    return;
+  }
 
   setupUI();
   await loadFirstPage({ realtime:true });
