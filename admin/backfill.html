@@ -14,7 +14,6 @@
     .btn { padding:.6rem 1rem; border:0; border-radius:12px; background:#0b5bd3; color:#fff; font-weight:600; cursor:pointer; }
     .btn:disabled { opacity:.6; cursor:not-allowed; }
     .btn.alt { background:#334155; }
-    .btn.warn { background:#b91c1c; }
     .muted { color:#64748b; font-size:13px; }
     .field { padding:.5rem .7rem; border:1px solid #cbd5e1; border-radius:10px; min-width: 220px; }
     .badge { display:inline-block; padding:2px 8px; border-radius:999px; background:#eef2ff; color:#334155; font-size:12px; }
@@ -29,6 +28,7 @@
 <body>
   <div class="wrap">
     <h1>Backfill de <code>medicoUid</code> en recetas</h1>
+
     <div class="card" style="margin-bottom:14px;">
       <div id="userBox" class="muted">Verificando sesión…</div>
       <div class="row" style="margin-top:10px;">
@@ -66,6 +66,7 @@
     <div class="card" style="margin-top:14px;">
       <h3 style="margin:0 0 8px;">🔎 Detector de campos & Campo personalizado</h3>
       <div class="muted">Explora recetas para encontrar rutas de campos (incluye anidados) que coincidan con tu <code>uid</code> o tu <code>email</code>. Luego puedes ejecutar scan/backfill con esa ruta.</div>
+
       <div class="row" style="margin-top:10px;">
         <button class="btn alt" id="detectFields">🔍 Detectar rutas con coincidencias</button>
         <select id="candidateSelect" class="field">
@@ -73,16 +74,25 @@
         </select>
         <span id="detectedInfo" class="badge">—</span>
       </div>
+
       <div class="row" style="margin-top:10px;">
-        <input id="customField" class="field" placeholder="p. ej. medico.uid o createdBy.uid" />
+        <input id="customField" class="field" placeholder="p. ej. correo · medico.uid · createdBy.uid" />
         <label><input type="radio" name="matchType" value="uid" checked /> Comparar con UID</label>
         <label><input type="radio" name="matchType" value="email" /> Comparar con email</label>
       </div>
+
+      <!-- ⬇️ overrides manuales -->
+      <div class="row" style="margin-top:10px;">
+        <input id="overrideValue" class="field" placeholder="Valor a comparar (email o uid) — opcional" />
+        <input id="overrideTargetUid" class="field" placeholder="medicoUid a escribir (uid del médico) — opcional" />
+      </div>
+
       <div class="row" style="margin-top:10px;">
         <button class="btn alt" id="scanCustom">📊 Scan personalizado</button>
         <span id="scanCustomCount" class="badge">—</span>
         <button class="btn" id="runCustom" disabled>▶️ Backfill personalizado</button>
       </div>
+
       <div id="detectorOut" class="muted" style="margin-top:8px;"></div>
     </div>
 
@@ -121,22 +131,7 @@
     };
     const setBusy = (el, busy=true)=>{ if(el){ el.disabled=!!busy; el.__busy=!!busy; } };
 
-    // --- util: paginar por documentId() (evita índices compuestos)
-    const paged = async (builder)=> {
-      let last=null, total=0, pages=0;
-      for(;;){
-        const q = builder(last);
-        const snap = await getDocs(q);
-        if (snap.empty){ break; }
-        total += snap.size; pages++;
-        yieldDocs && yieldDocs(snap);
-        last = snap.docs[snap.docs.length-1];
-        if (snap.size < PAGE) break;
-      }
-      return { total, pages };
-    };
-
-    // --- scan: contar candidatos por where(field == value)
+    // Scan: contar candidatos por where(field == value) con paginación por documentId()
     const scan = async ({ field, value })=>{
       let last = null, total = 0;
       for (;;) {
@@ -161,7 +156,7 @@
       return total;
     };
 
-    // --- backfill: set medicoUid=targetUid (merge), filtrando por field==value
+    // Backfill: set medicoUid=targetUid (merge), filtrando por field==value
     const backfill = async ({ field, value, targetUid, onlyMissing=true, dryRun=false })=>{
       log(`Comenzando backfill por ${field} = ${value} (onlyMissing=${onlyMissing}, dryRun=${dryRun})`, 'ok');
 
@@ -227,25 +222,17 @@
       return { totalRead, totalUpd };
     };
 
-    // --- detector: explora docs y sugiere paths que igualan uid/email
+    // Detector: escanea docs y sugiere paths que igualen uid/email (incluye anidados)
     function* walk(obj, base='') {
       if (obj === null || obj === undefined) return;
       const isTimestamp = obj && typeof obj==='object' && 'seconds' in obj && typeof obj.seconds==='number';
       if (isTimestamp) return;
-      if (Array.isArray(obj)) {
-        for (let i=0;i<obj.length;i++) {
-          yield* walk(obj[i], `${base}[${i}]`);
-        }
-        return;
-      }
+      if (Array.isArray(obj)) return;
       if (typeof obj === 'object') {
         for (const [k,v] of Object.entries(obj)) {
           const path = base ? `${base}.${k}` : k;
-          if (v && typeof v === 'object') {
-            yield* walk(v, path);
-          } else {
-            yield [path, v];
-          }
+          if (v && typeof v === 'object') { yield* walk(v, path); }
+          else yield [path, v];
         }
         return;
       }
@@ -265,12 +252,8 @@
           const data = d.data();
           for (const [path,val] of walk(data)) {
             if (typeof val !== 'string') continue;
-            if (val === user.uid) {
-              res.uidMatches.set(path, (res.uidMatches.get(path)||0)+1);
-            }
-            if (user.email && val === user.email) {
-              res.emailMatches.set(path, (res.emailMatches.get(path)||0)+1);
-            }
+            if (val === user.uid)   res.uidMatches.set(path, (res.uidMatches.get(path)||0)+1);
+            if (user.email && val === user.email) res.emailMatches.set(path, (res.emailMatches.get(path)||0)+1);
           }
           scanned++;
           if (scanned >= limitDocs) break;
@@ -282,26 +265,16 @@
       return res;
     };
 
-    // --- estado/refs UI
+    // --- Estado & refs UI
     let currentUser = null;
-    const scanEmailBtn = $('#scanEmail');
-    const scanEmailCount = $('#scanEmailCount');
-    const runEmailBtn = $('#runEmail');
+    const scanEmailBtn = $('#scanEmail'), scanEmailCount = $('#scanEmailCount'), runEmailBtn = $('#runEmail');
+    const scanUidBtn = $('#scanUid'), scanUidCount = $('#scanUidCount'), runUidBtn = $('#runUid');
+    const onlyMissingEl = $('#onlyMissing'), dryRunEl = $('#dryRun');
 
-    const scanUidBtn = $('#scanUid');
-    const scanUidCount = $('#scanUidCount');
-    const runUidBtn = $('#runUid');
-
-    const onlyMissingEl = $('#onlyMissing');
-    const dryRunEl = $('#dryRun');
-
-    const detectBtn = $('#detectFields');
-    const candidateSelect = $('#candidateSelect');
-    const detectedInfo = $('#detectedInfo');
-    const customField = $('#customField');
-    const scanCustomBtn = $('#scanCustom');
-    const scanCustomCount = $('#scanCustomCount');
-    const runCustomBtn = $('#runCustom');
+    const detectBtn = $('#detectFields'), candidateSelect = $('#candidateSelect'), detectedInfo = $('#detectedInfo');
+    const customField = $('#customField'), scanCustomBtn = $('#scanCustom'), scanCustomCount = $('#scanCustomCount'), runCustomBtn = $('#runCustom');
+    const overrideValueEl = document.querySelector('#overrideValue');
+    const overrideTargetUidEl = document.querySelector('#overrideTargetUid');
     const detectorOut = $('#detectorOut');
 
     onAuthStateChanged(auth, async (user)=>{
@@ -315,7 +288,7 @@
       log(`Autenticado como ${user.email} (${user.uid})`, 'ok');
     });
 
-    // --- acciones por correo
+    // Acciones por correo
     scanEmailBtn?.addEventListener('click', async ()=>{
       if (!currentUser?.email) { log('Tu usuario no tiene email. No se puede usar estrategia por correo.', 'err'); return; }
       setBusy(scanEmailBtn, true); scanEmailCount.textContent = '…';
@@ -341,7 +314,7 @@
       } finally { setBusy(runEmailBtn, false); }
     });
 
-    // --- acciones por uid (medicoId / uidMedico)
+    // Acciones por uid (medicoId / uidMedico)
     scanUidBtn?.addEventListener('click', async ()=>{
       if (!currentUser?.uid) return;
       setBusy(scanUidBtn, true); scanUidCount.textContent = '…';
@@ -364,14 +337,13 @@
       } finally { setBusy(runUidBtn, false); }
     });
 
-    // --- detector y campo personalizado
+    // Detector y campo personalizado
     detectBtn?.addEventListener('click', async ()=>{
       if (!currentUser) return;
       setBusy(detectBtn, true);
       detectorOut.textContent = 'Escaneando recetas para sugerencias…';
       try {
         const res = await detectCandidates(currentUser, DETECT_MAX);
-        // ordenar por frecuencia
         const topUID = [...res.uidMatches.entries()].sort((a,b)=>b[1]-a[1]).slice(0,10);
         const topEmail = [...res.emailMatches.entries()].sort((a,b)=>b[1]-a[1]).slice(0,10);
 
@@ -390,8 +362,6 @@
         }
 
         detectedInfo.textContent = `muestra:${res.sampled}  uidHits:${topUID.reduce((s,[_p,c])=>s+c,0)}  emailHits:${topEmail.reduce((s,[_p,c])=>s+c,0)}`;
-
-        // Salida legible
         const fmtList = (lst, label) => lst.length ? `<div><strong>${label}</strong><ul>` + lst.map(([p,c])=>`<li><code>${p}</code> <span class="badge">×${c}</span></li>`).join('') + '</ul></div>' : '';
         detectorOut.innerHTML = fmtList(topUID,'Paths por UID') + fmtList(topEmail,'Paths por EMAIL');
         log(`Detector: analizados ${res.sampled} docs`, 'ok');
@@ -415,10 +385,12 @@
     scanCustomBtn?.addEventListener('click', async ()=>{
       if (!currentUser) return;
       const field = (customField.value || '').trim();
-      if (!field){ alert('Ingresa una ruta de campo (p. ej. medico.uid)'); return; }
+      if (!field){ alert('Ingresa una ruta de campo (p. ej. correo / medico.uid)'); return; }
       const mt = (document.querySelector('input[name="matchType"]:checked')?.value)||'uid';
-      const value = (mt==='email') ? (currentUser.email||'') : currentUser.uid;
-      if (!value){ alert('Tu usuario no tiene ese valor (email/uid).'); return; }
+      const auto = (mt==='email') ? (currentUser.email||'') : currentUser.uid;
+      const value = (overrideValueEl.value || '').trim() || auto;
+      if (!value){ alert('No tengo valor para comparar (email/uid).'); return; }
+
       setBusy(scanCustomBtn, true); scanCustomCount.textContent = '…';
       try{
         const c = await scan({ field, value });
@@ -431,16 +403,19 @@
     runCustomBtn?.addEventListener('click', async ()=>{
       if (!currentUser) return;
       const field = (customField.value || '').trim();
-      if (!field){ alert('Ingresa una ruta de campo (p. ej. medico.uid)'); return; }
+      if (!field){ alert('Ingresa una ruta de campo (p. ej. correo / medico.uid)'); return; }
       const mt = (document.querySelector('input[name="matchType"]:checked')?.value)||'uid';
-      const value = (mt==='email') ? (currentUser.email||'') : currentUser.uid;
-      if (!value){ alert('Tu usuario no tiene ese valor (email/uid).'); return; }
+      const auto = (mt==='email') ? (currentUser.email||'') : currentUser.uid;
+      const value = (overrideValueEl.value || '').trim() || auto;
+      const targetUid = (overrideTargetUidEl.value || '').trim() || currentUser.uid;
+      if (!value || !targetUid){ alert('Falta valor a comparar o medicoUid de destino.'); return; }
+
       setBusy(runCustomBtn, true);
       try{
         await backfill({
           field,
-          value,
-          targetUid: currentUser.uid,                   // SIEMPRE escribimos medicoUid con tu UID
+          value,                 // correo/medicoEmail/medico.uid/etc.
+          targetUid,             // uid del médico dueño de esas recetas
           onlyMissing: !!onlyMissingEl.checked,
           dryRun: !!dryRunEl.checked
         });
@@ -453,4 +428,5 @@
   </script>
 </body>
 </html>
+
 
