@@ -195,6 +195,11 @@ try {
       if (btnGenerar) { btnGenerar.disabled = false; btnGenerar.textContent = "Generar receta"; }
     }
   });
+// cerca de donde declaras 'medicamentosContainer'
+ const medicamentosContainer =
+  document.getElementById('medicamentosContainer') ||
+  document.querySelector('[data-meds]') ||
+  (()=>{ const d=document.createElement('div'); d.id='medicamentosContainer'; document.body.appendChild(d); return d; })();
 
   function agregarMedicamento() {
     const div = document.createElement("div");
@@ -229,9 +234,11 @@ try {
     medicamentosContainer.appendChild(div);
 
     // 🧠 Esperamos un frame completo para insertar el autocompletado
-    setTimeout(() => {
-      iniciarAutocompletado(inputNombre);
-    }, 100);
+    // dentro de agregarMedicamento(), reemplaza el setTimeout por un guard:
+if (typeof window.iniciarAutocompletado === 'function') {
+  setTimeout(() => { window.iniciarAutocompletado(inputNombre); }, 100);
+}
+
   }
 
 });
