@@ -94,43 +94,7 @@
       }
     }
   </script>
-  <script type="module">
-console.log('[nueva] guard boot');
 
-// expón tus funciones para poder llamarlas desde el HTML
-window.agregarMedicamento = window.agregarMedicamento || agregarMedicamento;
-
-// dispara tu flujo de submit desde un botón "normal"
-function generarReceta() {
-  const form = document.getElementById('formReceta') || document.querySelector('form');
-  if (form?.requestSubmit) form.requestSubmit();
-  else form?.submit();
-}
-window.generarReceta = window.generarReceta || generarReceta;
-
-// cableado robusto (no depende de type="submit")
-document.addEventListener('DOMContentLoaded', () => {
-  const btnAdd = document.getElementById('btnAgregarMedicamento') || document.querySelector('[data-add-med], .add-med');
-  const btnGen = document.getElementById('btnGenerar') || document.querySelector('[data-generate], .generate');
-
-  if (btnAdd && !btnAdd.__bound) {
-    btnAdd.type = 'button';
-    btnAdd.addEventListener('click', (e)=>{ e.preventDefault(); window.agregarMedicamento(); }, {capture:true});
-    btnAdd.__bound = true;
-  }
-
-  if (btnGen && !btnGen.__bound) {
-    btnGen.type = 'button';
-    btnGen.addEventListener('click', (e)=>{ e.preventDefault(); window.generarReceta(); }, {capture:true});
-    btnGen.__bound = true;
-  }
-
-
-
-  alert('Receta creada: ' + ref.id);
-  location.href = '/public/ver-receta.html?id=' + ref.id;
-});
-</script>
 
 </body>
 </html>
