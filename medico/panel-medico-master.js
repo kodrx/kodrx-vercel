@@ -53,9 +53,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
   document.getElementById("agregarMedicamentoBtn").addEventListener("click", agregarMedicamento);
 
+  
+
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
-    const btnGenerar = document.querySelector("button[type='submit']");
+   const btnGenerar = document.getElementById('btnGenerar') || document.querySelector("button[type='submit']");
     btnGenerar.disabled = true;
     const prevTxt = btnGenerar.textContent;
     btnGenerar.textContent = "Generando…";
@@ -195,11 +197,15 @@ try {
       if (btnGenerar) { btnGenerar.disabled = false; btnGenerar.textContent = "Generar receta"; }
     }
   });
-// cerca de donde declaras 'medicamentosContainer'
- const medicamentosContainer =
-  document.getElementById('medicamentosContainer') ||
-  document.querySelector('[data-meds]') ||
-  (()=>{ const d=document.createElement('div'); d.id='medicamentosContainer'; document.body.appendChild(d); return d; })();
+
+
+  let medicamentosContainer = null;
+ document.addEventListener('DOMContentLoaded', ()=>{
+   medicamentosContainer =
+     document.getElementById('medicamentosContainer') ||
+    document.querySelector('[data-meds]') ||
+     (()=>{ const d=document.createElement('div'); d.id='medicamentosContainer'; document.body.appendChild(d); return d; })();
+ });
 
   function agregarMedicamento() {
     const div = document.createElement("div");
@@ -234,12 +240,34 @@ try {
     medicamentosContainer.appendChild(div);
 
     // 🧠 Esperamos un frame completo para insertar el autocompletado
-    // dentro de agregarMedicamento(), reemplaza el setTimeout por un guard:
-if (typeof window.iniciarAutocompletado === 'function') {
-  setTimeout(() => { window.iniciarAutocompletado(inputNombre); }, 100);
+ if (typeof window.iniciarAutocompletado === 'function') {
+   setTimeout(() => window.iniciarAutocompletado(inputNombre), 100);
+ }
 }
 
   }
+
+                          // Bind de botones (no depende de globales)
+document.addEventListener('DOMContentLoaded', ()=>{
+  const addBtn = document.getElementById('btnAgregarMedicamento') || document.querySelector('[data-add-med], .add-med');
+  const genBtn = document.getElementById('btnGenerar') || document.querySelector('[data-generate], .generate');
+
+  // evita submits fantasma
+  addBtn?.setAttribute('type','button');
+  genBtn?.setAttribute('type','button');
+
+  // click "Agregar" → tu función
+  addBtn?.addEventListener('click', (e)=>{
+    e.preventDefault();
+    agregarMedicamento();
+  }, {capture:true});
+
+  // click "Generar" → dispara el submit del formulario que ya tienes
+  genBtn?.addEventListener('click', (e)=>{
+    e.preventDefault();
+    const form = document.getElementById('formReceta') || document.querySelector('form');
+    if (form?.requestSubmit) form.requestSubmit(); else form?.submit();
+  }, {capture:true});
 
 });
 
