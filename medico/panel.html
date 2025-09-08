@@ -97,85 +97,35 @@
   <script type="module">
 console.log('[nueva] guard boot');
 
-function when(sel){
-  return new Promise(res=>{
-    const el = document.querySelector(sel);
-    if (el) return res(el);
-    const mo = new MutationObserver(()=>{
-      const el2 = document.querySelector(sel);
-      if (el2){ mo.disconnect(); res(el2); }
-    });
-    mo.observe(document, {childList:true, subtree:true});
-  });
+// expón tus funciones para poder llamarlas desde el HTML
+window.agregarMedicamento = window.agregarMedicamento || agregarMedicamento;
+
+// dispara tu flujo de submit desde un botón "normal"
+function generarReceta() {
+  const form = document.getElementById('formReceta') || document.querySelector('form');
+  if (form?.requestSubmit) form.requestSubmit();
+  else form?.submit();
 }
+window.generarReceta = window.generarReceta || generarReceta;
 
-function bindClick(sel, fn){
-  when(sel).then(el=>{
-    el.addEventListener('click', ev=>{
-      console.log('[nueva] click', sel);
-      ev.preventDefault(); ev.stopPropagation();
-      fn(ev);
-    }, {capture:true});
-    console.log('[nueva] bound', sel);
-  });
-}
+// cableado robusto (no depende de type="submit")
+document.addEventListener('DOMContentLoaded', () => {
+  const btnAdd = document.getElementById('btnAgregarMedicamento') || document.querySelector('[data-add-med], .add-med');
+  const btnGen = document.getElementById('btnGenerar') || document.querySelector('[data-generate], .generate');
 
-bindClick('#btnAgregarMedicamento', async ()=>{
-  if (typeof window.agregarMedicamento === 'function') {
-    return window.agregarMedicamento();
-  }
-  // Fallback mínimo: toma campos típicos y dibuja una lista
-  const nombre = document.querySelector('#medNombre')?.value?.trim();
-  const dosis  = document.querySelector('#medDosis')?.value?.trim();
-  const dur    = document.querySelector('#medDuracion')?.value?.trim();
-  if (!nombre){ alert('Falta nombre del medicamento'); return; }
-  const item = { nombre, dosis: dosis||'—', duracion: dur||'—' };
-  const ul = document.querySelector('#listaMeds') || (()=> {
-    const u = document.createElement('ul'); u.id='listaMeds';
-    (document.querySelector('#medsBox')||document.body).appendChild(u);
-    return u;
-  })();
-  const li = document.createElement('li');
-  li.textContent = `${item.nombre} — ${item.dosis} — ${item.duracion}`;
-  ul.appendChild(li);
-  // guarda en window para luego
-  window.__MEDS__ = window.__MEDS__ || [];
-  window.__MEDS__.push(item);
-});
-
-bindClick('#btnGenerar', async ()=>{
-  if (typeof window.generarReceta === 'function') {
-    return window.generarReceta();
+  if (btnAdd && !btnAdd.__bound) {
+    btnAdd.type = 'button';
+    btnAdd.addEventListener('click', (e)=>{ e.preventDefault(); window.agregarMedicamento(); }, {capture:true});
+    btnAdd.__bound = true;
   }
 
-  // Fallback mínimo para crear la receta y redirigir a ver-receta
-  const { auth, db } = await import('/firebase-init.js');
-  const { addDoc, collection, serverTimestamp, doc, setDoc } =
-    await import('https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js');
-
-  const u = auth.currentUser;
-  if (!u){ alert('Inicia sesión'); return; }
-
-  const receta = {
-    medicoUid: u.uid,
-    medicoEmail: u.email || '',
-    pacienteNombre: document.querySelector('#pacienteNombre')?.value?.trim() || 'Sin nombre',
-    diagnostico: document.querySelector('#diagnostico')?.value?.trim() || '',
-    presion: document.querySelector('#presion')?.value?.trim() || '',
-    temperatura: document.querySelector('#temperatura')?.value?.trim() || '',
-    observaciones: document.querySelector('#observaciones')?.value?.trim() || '',
-    timestamp: serverTimestamp()
-  };
-
-  const ref = await addDoc(collection(db,'recetas'), receta);
-
-  // subcolección medicamentos (si capturaste con el fallback)
-  const meds = Array.isArray(window.__MEDS__) ? window.__MEDS__ : [];
-  for (const m of meds) {
-    await setDoc(doc(collection(db, 'recetas', ref.id, 'medicamentos')), {
-      nombre: m.nombre, dosis: m.dosis, duracion: m.duracion
-    });
+  if (btnGen && !btnGen.__bound) {
+    btnGen.type = 'button';
+    btnGen.addEventListener('click', (e)=>{ e.preventDefault(); window.generarReceta(); }, {capture:true});
+    btnGen.__bound = true;
   }
+
+
 
   alert('Receta creada: ' + ref.id);
   location.href = '/public/ver-receta.html?id=' + ref.id;
