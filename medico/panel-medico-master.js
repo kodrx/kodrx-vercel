@@ -113,27 +113,40 @@ const recetaData = {
 };
 
       // Receta base
-      const recetaRef = await addDoc(collection(db, "recetas") recetaData, {
-        nombrePaciente,
-        edad,
-        observaciones,
-        diagnostico,
-        peso,
-        talla,
-        imc,
-        presion,
-        temperatura,
-        sexo,
-        medicamentos, // ahora incluye {ini}
-        medicoNombre: medico.nombre,
-        medicoCedula: medico.cedula,
-        medicoEspecialidad: medico.especialidad || "General",
-        medicoTelefono: medico.telefono || "",
-        medicoDomicilio: `${medico.calle || ""} ${medico.numero || ""}, ${medico.colonia || ""}, ${medico.municipio || ""}, ${medico.estado || ""}, CP ${medico.cp || ""}`,
-        correo: user.email,
-        timestamp: Timestamp.now()
-      });
+      const recetaRef = await addDoc(collection(db, "recetas"), data);
+ 
+     const data = {
+  // si tenías un objeto base:
+  ...(recetaData || {}),
 
+  nombrePaciente,
+  edad,
+  observaciones,
+  diagnostico,
+  peso,
+  talla,
+  imc,
+  presion,
+  temperatura,
+  sexo,
+
+  // si quieres guardarlos como arreglo en el doc:
+  medicamentos, // ok; si además escribes subcolección, también está bien
+
+  // datos del médico (fallbacks por si faltan)
+  medicoNombre: medico?.nombre || '',
+  medicoCedula: medico?.cedula || '',
+  medicoEspecialidad: medico?.especialidad || 'General',
+  medicoTelefono: medico?.telefono || '',
+  medicoDomicilio: `${medico?.calle || ''} ${medico?.numero || ''}, ${medico?.colonia || ''}, ${medico?.municipio || ''}, ${medico?.estado || ''}, CP ${medico?.cp || ''}`.replace(/\s+/g,' ').trim(),
+
+  // campos que exigen tus rules / compat legado
+  medicoUid: u.uid,
+  medicoEmail: u.email || '',
+  correo: u.email || '',
+
+  timestamp: serverTimestamp()
+};
       console.log(" Receta guardada con ID:", recetaRef.id);
 
 
