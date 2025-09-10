@@ -5,6 +5,27 @@ import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/
 let currentUser = null;
 onAuthStateChanged(auth, (u) => { currentUser = u || null; });
 
+// UNA sola declaración global
+let medicamentosContainer;
+
+/** Devuelve el contenedor de medicamentos, creándolo si no existe */
+function ensureMedsContainer() {
+  if (medicamentosContainer && document.contains(medicamentosContainer)) {
+    return medicamentosContainer;
+  }
+  medicamentosContainer =
+    document.getElementById('medicamentosContainer') ||
+    document.querySelector('[data-meds]');
+
+  if (!medicamentosContainer) {
+    const d = document.createElement('div');
+    d.id = 'medicamentosContainer';
+    document.body.appendChild(d);
+    medicamentosContainer = d;
+  }
+  return medicamentosContainer;
+}
+
 // =========================
 // Utils
 // =========================
@@ -212,18 +233,12 @@ try {
       alert("No se pudo generar la receta. Revisa los campos e intenta de nuevo.");
       // reactivar botón
     const btnGenerar = document.getElementById('btnGenerar') || document.querySelector("button[type='submit']");
-      if (btnGenerar) { btnGenerar.disabled = false; btnGenerar.textContent = "Generar receta"; }
+     if (btnGenerar) { btnGenerar.disabled = true; btnGenerar.textContent = 'Guardando…'; }
     }
   });
 
 
-  let medicamentosContainer = null;
- document.addEventListener('DOMContentLoaded', ()=>{
-   medicamentosContainer =
-     document.getElementById('medicamentosContainer') ||
-    document.querySelector('[data-meds]') ||
-     (()=>{ const d=document.createElement('div'); d.id='medicamentosContainer'; document.body.appendChild(d); return d; })();
- });
+ const cont = ensureMedsContainer();
 
   function agregarMedicamento() {
     const div = document.createElement("div");
