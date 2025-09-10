@@ -78,7 +78,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const sexo          = document.getElementById("sexo")?.value.trim() || "";
 
       // Datos del médico
-      const u = user || auth.currentUser;  // usa 'u' local o 'user' global
+      const u = ensureUser();  // usa 'u' local o 'user' global
       const uid  = user.uid;
       const medicoDoc = doc(db, "medicos", uid);
       const medicoSnap = await getDoc(medicoDoc);
@@ -98,7 +98,11 @@ document.querySelectorAll(".medicamento").forEach(med => {
   medicamentos.push({ nombre, dosis, duracion, ini });
 });
 
-const u = user || auth.currentUser;  // usa 'u' local o 'user' global
+let currentUser = null;
+onAuthStateChanged(auth, (x) => { currentUser = x; });
+
+// helper opcional:
+const ensureUser = () => currentUser || auth.currentUser
 
 const recetaData = {
   // ...lo que ya guardas...
