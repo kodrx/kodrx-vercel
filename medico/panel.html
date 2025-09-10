@@ -95,6 +95,174 @@
     }
   </script>
 
+<script type="module">
+/* ==== KODRX emergency inject (no depende de tu módulo) ==== */
+if (!window.__KODRX_INJECT__) {
+  window.__KODRX_INJECT__ = true;
+  console.log('[inject] boot');
+
+  import { auth, db } from '/firebase-init.js';
+  import {
+    addDoc, setDoc, collection, doc, serverTimestamp
+  } from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js';
+  import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js';
+
+  let currentUser = auth.currentUser;
+  onAuthStateChanged(auth, u => { currentUser = u; });
+
+  const $  = (s,r=document)=>r.querySelector(s);
+  const $$ = (s,r=document)=>[...r.querySelectorAll(s)];
+  const val= (sel)=>($(sel)?.value ?? '').toString().trim();
+
+  // ---- contenedor de medicamentos (una sola vez) ----
+  let medsContainer = null;
+  function ensureMedsContainer(){
+    if (medsContainer && document.contains(medsContainer)) return medsContainer;
+    medsContainer = document.getElementById('medicamentosContainer') || document.querySelector('[data-meds]');
+    if (!medsContainer){
+      const d = document.createElement('div'); d.id='medicamentosContainer';
+      document.body.appendChild(d); medsContainer = d;
+    }
+    return medsContainer;
+  }
+
+  // ---- agrega una fila de medicamento (con clases .nombre/.dosis/.duracion) ----
+  function agregarMedicamento(){
+    const cont = ensureMedsContainer();
+    const row  = document.createElement('div');
+    row.className = 'medicamento';
+    row.style.display = 'grid';
+    row.style.gridTemplateColumns = '1fr 1fr 1fr auto';
+    row.style.gap = '8px';
+    row.style.margin = '6px 0';
+
+    const n = document.createElement('input'); n.placeholder='Nombre';   n.className='nombre';
+    const d = document.createElement('input'); d.placeholder='Dosis';    d.className='dosis';
+    const u = document.createElement('input'); u.placeholder='Duración'; u.className='duracion';
+    const x = document.createElement('button'); x.type='button'; x.textContent='🗑️'; x.style.padding='6px 10px';
+    x.addEventListener('click', ()=> row.remove());
+
+    row.append(n,d,u,x);
+    cont.appendChild(row);
+
+    // Si tienes autocompletado, lo inicializo
+    if (typeof window.iniciarAutocompletado === 'function') {
+      setTimeout(()=>window.iniciarAutocompletado(n), 60);
+    }
+  }
+
+  // ---- recolecta medicamentos desde la UI ----
+  function collectMeds(){
+    const items = [];
+    $$('#medicamentosContainer .medicamento, [data-meds] .medicamento').forEach(r=>{
+      const nombre = (r.querySelector('.nombre')?.value ?? '').trim();
+      const dosis  = (r.querySelector('.dosis')?.value  ?? '').trim();
+      const dur    = (r.querySelector('.duracion')?.value ?? '').trim();
+      if (nombre) items.push({ nombre, dosis: dosis || '—', duracion: dur || '—' });
+    });
+    return items;
+  }
+
+  // ---- submit receta (usa tus IDs reales del form y campos) ----
+  async function onSubmitReceta(ev){
+    ev?.preventDefault?.();
+
+    const btn = document.getElementById('btnGenerar') || document.querySelector('button[type="submit"]');
+    if (btn){ btn.disabled = true; btn.textContent = 'Guardando…'; }
+
+    try{
+      const u = currentUser || auth.currentUser;
+      if (!u) throw new Error('Inicia sesión');
+
+      // (opcional) datos del médico desde /medicos/{uid}
+      let medico = {};
+      try {
+        const { getDoc } = await import('https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js');
+        const snap = await getDoc(doc(db,'medicos', u.uid));
+        medico = snap.exists() ? (snap.data()||{}) : {};
+      } catch {}
+
+      const data = {
+        // campos de tu formulario (ajusta IDs si cambian)
+        nombrePaciente: val('#nombrePaciente'),
+        edad: Number(val('#edad')) || null,
+        sexo: val('#sexo'),
+        talla: Number(val('#talla')) || null,
+        peso: Number(val('#peso')) || null,
+        imc: val('#imc'),
+        temperatura: val('#temperatura'),
+        presion: val('#presion'),
+        observaciones: val('#observaciones'),
+        diagnostico: val('#diagnostico'),
+
+        // REGLAS
+        medicoUid: u.uid,
+        medicoEmail: u.email || '',
+        correo: u.email || '',
+
+        // extras médico (opcionales)
+        medicoNombre: medico?.nombre || '',
+        medicoCedula: medico?.cedula || '',
+        medicoEspecialidad: medico?.especialidad || 'General',
+        medicoTelefono: medico?.telefono || '',
+        medicoDomicilio: `${medico?.calle||''} ${medico?.numero||''}, ${medico?.colonia||''}, ${medico?.municipio||''}, ${medico?.estado||''}, CP ${medico?.cp||''}`.replace(/\s+/g,' ').trim(),
+
+        timestamp: serverTimestamp()
+      };
+
+      if (!data.nombrePaciente) throw new Error('Falta nombre del paciente');
+      if (!data.edad) throw new Error('Falta edad');
+
+      // crea receta
+      const recetaRef = await addDoc(collection(db,'recetas'), data);
+
+      // subcolección medicamentos
+      const meds = collectMeds();
+      for (const m of meds) {
+        await addDoc(collection(db,'recetas', recetaRef.id, 'medicamentos'), m);
+      }
+
+      // listo → ver-receta
+      const url = `/public/ver-receta.html?id=${encodeURIComponent(recetaRef.id)}`;
+      if (btn){ btn.disabled=false; btn.textContent='Generar receta'; }
+      window.location.href = url;
+
+    } catch (e){
+      console.error('[inject] guardar receta error:', e);
+      alert(e?.message || 'No se pudo generar la receta.');
+      if (btn){ btn.disabled=false; btn.textContent='Generar receta'; }
+    }
+  }
+
+  // ---- binder robusto (engancha botones y form) ----
+  function bindUI(){
+    const form  = document.getElementById('generarRecetaForm') || document.querySelector('form');
+    const addBtn= document.getElementById('btnAgregarMedicamento') || document.querySelector('[data-add-med], .add-med');
+    const genBtn= document.getElementById('btnGenerar') || document.querySelector('[data-generate], .generate');
+
+    console.log('[inject] bindUI', {form:!!form, add:!!addBtn, gen:!!genBtn});
+
+    addBtn?.setAttribute('type','button');
+    genBtn?.setAttribute('type','button');
+
+    if (addBtn && !addBtn.__bound){ addBtn.addEventListener('click', (e)=>{ e.preventDefault(); agregarMedicamento(); }, {capture:true}); addBtn.__bound=true; }
+    if (genBtn && !genBtn.__bound){ genBtn.addEventListener('click', (e)=>{ e.preventDefault(); form?.requestSubmit ? form.requestSubmit() : form?.submit(); }, {capture:true}); genBtn.__bound=true; }
+    if (form  && !form.__bound ){ form.addEventListener('submit', onSubmitReceta); form.__bound=true; }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', bindUI, {once:true});
+  } else {
+    bindUI();
+  }
+
+  // Exponer para consola
+  window.kodrxBindUI = bindUI;
+  window.agregarMedicamento = agregarMedicamento;
+  window.collectMeds = collectMeds;
+  console.log('[inject] ready');
+}
+</script>
 
 </body>
 </html>
