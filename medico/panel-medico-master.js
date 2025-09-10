@@ -211,7 +211,7 @@ try {
       console.error(" Error al guardar la receta:", error);
       alert("No se pudo generar la receta. Revisa los campos e intenta de nuevo.");
       // reactivar botón
-      const btnGenerar = document.querySelector("button[type='submit']");
+    const btnGenerar = document.getElementById('btnGenerar') || document.querySelector("button[type='submit']");
       if (btnGenerar) { btnGenerar.disabled = false; btnGenerar.textContent = "Generar receta"; }
     }
   });
