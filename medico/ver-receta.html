@@ -161,80 +161,116 @@ button{appearance:none;border:0;border-radius:12px;padding:10px 14px;font-weight
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
 <script>
-/* ==== KODRX ver-receta inline (QR + barcode + BC status) ==== */
-(async ()=>{
-  console.log('[ver-inline] boot');
+/* ==== KODRX ver-receta FIX (estado BC + QRs + oculta "mock") ==== */
+(()=> {
+  console.log('[ver-fix] boot');
 
-  // Cargar JsBarcode si falta
-  if (!window.JsBarcode) {
-    await new Promise((res,rej)=>{
-      const s=document.createElement('script');
-      s.src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js";
-      s.onload=res; s.onerror=rej; document.head.appendChild(s);
-    });
+  const sleep = (ms)=>new Promise(r=>setTimeout(r,ms));
+
+  async function waitReceta(maxMs=4000){
+    const t0=Date.now();
+    while(Date.now()-t0<maxMs){
+      if (window.RECETA_ACTUAL) return window.RECETA_ACTUAL;
+      await sleep(80);
+    }
+    return null;
   }
 
-  function makeQRDataURL(text,size=260){
-    return new Promise((resolve)=>{
+  function statusFrom(receta){
+    const bc = receta?.blockchain || {};
+    if (bc.status === 'ok') return {txt:'Sellado en blockchain', cls:'ok'};
+    if (bc.status === 'simulado' || receta?.hash) return {txt:'Sellado simulado', cls:'simulado'};
+    return {txt:'Pendiente de sellado', cls:'pendiente'};
+  }
+
+  function hideMockBadges(){
+    document.querySelectorAll('.mock, .badge-mock, #mock, [data-mock]')
+      .forEach(el=> el.style.display='none');
+  }
+
+  function ensureBcStatusElement(){
+    return document.getElementById('bcStatus') ||
+           document.querySelector('.bc-status') ||
+           (()=>{ const p=document.createElement('p'); p.id='bcStatus';
+                  p.style.margin='8px 0'; p.style.fontWeight='600';
+                  (document.querySelector('#header')||document.body).prepend(p); return p; })();
+  }
+
+  async function makeQR(text,size=260){
+    return new Promise(async (resolve)=>{
       if (typeof QRCode==='undefined'){ resolve(''); return; }
       const div=document.createElement('div');
-      new QRCode(div,{text,width:size,height:size,correctLevel:QRCode.CorrectLevel.M});
+      try { new QRCode(div,{text,width:size,height:size,correctLevel:QRCode.CorrectLevel.M}); } catch { resolve(''); return; }
       setTimeout(()=>{
-        const img=div.querySelector('img'); if(img&&img.src) return resolve(img.src);
+        const img=div.querySelector('img'); if (img?.src) return resolve(img.src);
         const c=div.querySelector('canvas'); resolve(c?c.toDataURL('image/png'):'');
       },0);
     });
   }
 
-  // QR/Barcode fallback si no existe prepararReceta
-  window.prepararReceta = window.prepararReceta || (async (receta)=>{
-    const ts = (()=> {
-      try{
-        if (receta?.timestamp?.seconds) return new Date(receta.timestamp.seconds*1000);
-        if (receta?.timestamp?.toDate) return receta.timestamp.toDate();
-      }catch{}
-      return new Date();
-    })();
-
-    const verURL = location.origin + '/public/ver-receta.html?id=' + encodeURIComponent(receta.id);
-    const linea  = [
-      receta.nombrePaciente || receta.pacienteNombre || '—',
-      ts.toLocaleString('es-MX'),
-      receta.medicoNombre || '—',
-      receta.medsSig || ''
-    ].join(' | ');
-
-    const qrMain = await makeQRDataURL(verURL, 280);
-    const qrAlt  = await makeQRDataURL(linea,   200);
-
-    let barcode = '';
+  async function ensureBarcode(id){
     try{
-      const c = document.createElement('canvas');
-      JsBarcode(c, receta.id, {format:'CODE128', displayValue:false, margin:0, width:2, height:60});
-      barcode = c.toDataURL('image/png');
-    }catch(e){ console.warn('[ver-inline] barcode warn', e); }
-
-    return { qrMain, qrAlt, barcode, verURL, linea };
-  });
-
-  // Verificación simple de blockchain si no está definida
-  window.verificarBlockchain = window.verificarBlockchain || (async (receta)=>{
-    try{
-      const bc = receta?.blockchain || {};
-      const status = bc.status || (receta?.hash ? 'simulado' : 'pendiente');
-      const el = document.getElementById('bcStatus') || document.querySelector('.bc-status');
-      if (el) {
-        el.textContent = (status==='ok') ? 'Sellado en blockchain' :
-                         (status==='simulado') ? 'Sellado simulado' : 'Pendiente de sellado';
-        el.className = 'bc-status ' + status;
+      if (!window.JsBarcode){
+        await new Promise((res,rej)=>{
+          const s=document.createElement('script');
+          s.src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js";
+          s.onload=res; s.onerror=rej; document.head.appendChild(s);
+        });
       }
-      console.log('[ver-inline] BC:', { status, hash: receta?.hash, block: bc.block });
-    }catch(e){
-      console.warn('[ver-inline] verificarBlockchain noop', e);
-    }
-  });
+      const c=document.createElement('canvas');
+      JsBarcode(c, id, {format:'CODE128', displayValue:false, margin:0, width:2, height:60});
+      return c.toDataURL('image/png');
+    }catch(e){ console.warn('[ver-fix] barcode warn', e); return ''; }
+  }
 
-  console.log('[ver-inline] ready');
+  async function run(){
+    const receta = await waitReceta();
+    if (!receta){ console.warn('[ver-fix] no hay RECETA_ACTUAL'); return; }
+
+    // 1) Oculta cualquier placeholder "mock"
+    hideMockBadges();
+
+    // 2) Estado blockchain visible
+    const st = statusFrom(receta);
+    const bcEl = ensureBcStatusElement();
+    bcEl.textContent = st.txt;
+    bcEl.className = 'bc-status '+st.cls;
+
+    // 3) QRs + barcode si no están listos
+    if (!window.QRS){
+      const verURL = location.origin + '/public/ver-receta.html?id=' + encodeURIComponent(receta.id);
+      const ts = (()=> {
+        try{
+          if (receta?.timestamp?.seconds) return new Date(receta.timestamp.seconds*1000);
+          if (receta?.timestamp?.toDate) return receta.timestamp.toDate();
+        }catch{}
+        return new Date();
+      })();
+      const linea = [
+        receta.nombrePaciente || receta.pacienteNombre || '—',
+        ts.toLocaleString('es-MX'),
+        receta.medicoNombre || '—',
+        receta.medsSig || ''
+      ].join(' | ');
+
+      const [qrMain, qrAlt] = await Promise.all([ makeQR(verURL,280), makeQR(linea,200) ]);
+      const barcode = await ensureBarcode(receta.id);
+
+      window.QRS = { qrMain, qrAlt, barcode, verURL: verURL, linea: linea };
+
+      // Inyecta en el DOM si tienes placeholders con estos IDs
+      const img1 = document.getElementById('qrMain');   if (img1) img1.src = qrMain || '';
+      const img2 = document.getElementById('qrAlt');    if (img2) img2.src = qrAlt || '';
+      const img3 = document.getElementById('barcode');  if (img3) img3.src = barcode || '';
+    }
+
+    console.log('[ver-fix] listo', {estado: st, QRS: !!window.QRS});
+  }
+
+  if (document.readyState==='loading') document.addEventListener('DOMContentLoaded', run, {once:true});
+  else run();
+
+  console.log('[ver-fix] ready');
 })();
 </script>
 
