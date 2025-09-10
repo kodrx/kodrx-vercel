@@ -95,38 +95,52 @@
     }
   </script>
 
-<script type="module">
-/* ==== KODRX emergency inject (no depende de tu módulo) ==== */
-if (!window.__KODRX_INJECT__) {
+<script>
+/* ==== KODRX emergency inline (sin type="module") ==== */
+(() => {
+  if (window.__KODRX_INJECT__) return;
   window.__KODRX_INJECT__ = true;
-  console.log('[inject] boot');
 
-  import { auth, db } from '/firebase-init.js';
-  import {
-    addDoc, setDoc, collection, doc, serverTimestamp
-  } from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js';
-  import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js';
+  console.log('[inject-inline] boot');
 
-  let currentUser = auth.currentUser;
-  onAuthStateChanged(auth, u => { currentUser = u; });
+  const $ = (s, r=document) => r.querySelector(s);
+  const $$ = (s, r=document) => [...r.querySelectorAll(s)];
+  const val = (sel) => ($(sel)?.value ?? '').toString().trim();
 
-  const $  = (s,r=document)=>r.querySelector(s);
-  const $$ = (s,r=document)=>[...r.querySelectorAll(s)];
-  const val= (sel)=>($(sel)?.value ?? '').toString().trim();
+  let auth, db, currentUser = null;
 
-  // ---- contenedor de medicamentos (una sola vez) ----
+  async function ensureImports(){
+    if (auth && db) return;
+    const core   = await import('/firebase-init.js');
+    const fs     = await import('https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js');
+    const authmod= await import('https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js');
+    auth = core.auth; db = core.db;
+    const { onAuthStateChanged } = authmod;
+    onAuthStateChanged(auth, u => { currentUser = u || null; });
+    // Exponer firestore funcs que usaremos
+    window.__fs = {
+      addDoc: fs.addDoc,
+      collection: fs.collection,
+      doc: fs.doc,
+      getDoc: fs.getDoc,
+      serverTimestamp: fs.serverTimestamp
+    };
+  }
+
+  // Contenedor de medicamentos (una sola vez)
   let medsContainer = null;
   function ensureMedsContainer(){
     if (medsContainer && document.contains(medsContainer)) return medsContainer;
     medsContainer = document.getElementById('medicamentosContainer') || document.querySelector('[data-meds]');
     if (!medsContainer){
-      const d = document.createElement('div'); d.id='medicamentosContainer';
-      document.body.appendChild(d); medsContainer = d;
+      const d = document.createElement('div');
+      d.id = 'medicamentosContainer';
+      document.body.appendChild(d);
+      medsContainer = d;
     }
     return medsContainer;
   }
 
-  // ---- agrega una fila de medicamento (con clases .nombre/.dosis/.duracion) ----
   function agregarMedicamento(){
     const cont = ensureMedsContainer();
     const row  = document.createElement('div');
@@ -141,17 +155,14 @@ if (!window.__KODRX_INJECT__) {
     const u = document.createElement('input'); u.placeholder='Duración'; u.className='duracion';
     const x = document.createElement('button'); x.type='button'; x.textContent='🗑️'; x.style.padding='6px 10px';
     x.addEventListener('click', ()=> row.remove());
-
     row.append(n,d,u,x);
     cont.appendChild(row);
 
-    // Si tienes autocompletado, lo inicializo
     if (typeof window.iniciarAutocompletado === 'function') {
       setTimeout(()=>window.iniciarAutocompletado(n), 60);
     }
   }
 
-  // ---- recolecta medicamentos desde la UI ----
   function collectMeds(){
     const items = [];
     $$('#medicamentosContainer .medicamento, [data-meds] .medicamento').forEach(r=>{
@@ -163,27 +174,26 @@ if (!window.__KODRX_INJECT__) {
     return items;
   }
 
-  // ---- submit receta (usa tus IDs reales del form y campos) ----
   async function onSubmitReceta(ev){
     ev?.preventDefault?.();
-
-    const btn = document.getElementById('btnGenerar') || document.querySelector('button[type="submit"]');
-    if (btn){ btn.disabled = true; btn.textContent = 'Guardando…'; }
-
     try{
+      await ensureImports();
+      const { addDoc, collection, doc, getDoc, serverTimestamp } = window.__fs;
+
+      const btn = document.getElementById('btnGenerar') || document.querySelector('button[type="submit"]');
+      if (btn){ btn.disabled = true; btn.textContent = 'Guardando…'; }
+
       const u = currentUser || auth.currentUser;
       if (!u) throw new Error('Inicia sesión');
 
-      // (opcional) datos del médico desde /medicos/{uid}
+      // (opcional) datos del médico
       let medico = {};
       try {
-        const { getDoc } = await import('https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js');
         const snap = await getDoc(doc(db,'medicos', u.uid));
         medico = snap.exists() ? (snap.data()||{}) : {};
       } catch {}
 
       const data = {
-        // campos de tu formulario (ajusta IDs si cambian)
         nombrePaciente: val('#nombrePaciente'),
         edad: Number(val('#edad')) || null,
         sexo: val('#sexo'),
@@ -195,12 +205,9 @@ if (!window.__KODRX_INJECT__) {
         observaciones: val('#observaciones'),
         diagnostico: val('#diagnostico'),
 
-        // REGLAS
         medicoUid: u.uid,
         medicoEmail: u.email || '',
         correo: u.email || '',
-
-        // extras médico (opcionales)
         medicoNombre: medico?.nombre || '',
         medicoCedula: medico?.cedula || '',
         medicoEspecialidad: medico?.especialidad || 'General',
@@ -222,25 +229,23 @@ if (!window.__KODRX_INJECT__) {
         await addDoc(collection(db,'recetas', recetaRef.id, 'medicamentos'), m);
       }
 
-      // listo → ver-receta
-      const url = `/public/ver-receta.html?id=${encodeURIComponent(recetaRef.id)}`;
       if (btn){ btn.disabled=false; btn.textContent='Generar receta'; }
-      window.location.href = url;
+      window.location.href = '/public/ver-receta.html?id=' + encodeURIComponent(recetaRef.id);
 
-    } catch (e){
-      console.error('[inject] guardar receta error:', e);
+    } catch(e){
+      console.error('[inject-inline] guardar receta error:', e);
       alert(e?.message || 'No se pudo generar la receta.');
+      const btn = document.getElementById('btnGenerar') || document.querySelector('button[type="submit"]');
       if (btn){ btn.disabled=false; btn.textContent='Generar receta'; }
     }
   }
 
-  // ---- binder robusto (engancha botones y form) ----
   function bindUI(){
     const form  = document.getElementById('generarRecetaForm') || document.querySelector('form');
     const addBtn= document.getElementById('btnAgregarMedicamento') || document.querySelector('[data-add-med], .add-med');
     const genBtn= document.getElementById('btnGenerar') || document.querySelector('[data-generate], .generate');
 
-    console.log('[inject] bindUI', {form:!!form, add:!!addBtn, gen:!!genBtn});
+    console.log('[inject-inline] bindUI', {form:!!form, add:!!addBtn, gen:!!genBtn});
 
     addBtn?.setAttribute('type','button');
     genBtn?.setAttribute('type','button');
@@ -251,7 +256,7 @@ if (!window.__KODRX_INJECT__) {
   }
 
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', bindUI, {once:true});
+    document.addEventListener('DOMContentLoaded', bindUI, { once:true });
   } else {
     bindUI();
   }
@@ -260,9 +265,11 @@ if (!window.__KODRX_INJECT__) {
   window.kodrxBindUI = bindUI;
   window.agregarMedicamento = agregarMedicamento;
   window.collectMeds = collectMeds;
-  console.log('[inject] ready');
-}
+
+  console.log('[inject-inline] ready');
+})();
 </script>
+
 
 </body>
 </html>
