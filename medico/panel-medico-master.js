@@ -277,18 +277,54 @@ try {
   }
 
                           // Bind de botones (no depende de globales)
-document.addEventListener('DOMContentLoaded', () => {
-  const form  = $('#generarRecetaForm') || $('form');
-  const btnAdd = $('#btnAgregarMedicamento');
-  const btnGen = $('#btnGenerar');
+// ====== BINDER ROBUSTO (pegar al final del módulo) ======
+function bindUI() {
+  const form  = document.getElementById('generarRecetaForm') || document.querySelector('form');
+  const addBtn = document.getElementById('btnAgregarMedicamento') || document.querySelector('[data-add-med], .add-med');
+  const genBtn = document.getElementById('btnGenerar') || document.querySelector('[data-generate], .generate');
 
-  btnAdd?.setAttribute('type','button');
-  btnGen?.setAttribute('type','button');
+  console.log('[bindUI] found:', { form: !!form, addBtn: !!addBtn, genBtn: !!genBtn });
 
-  btnAdd?.addEventListener('click', (e)=>{ e.preventDefault(); agregarMedicamento(); }, {capture:true});
-  btnGen?.addEventListener('click', (e)=>{ e.preventDefault(); form?.requestSubmit ? form.requestSubmit() : form?.submit(); }, {capture:true});
-  form?.addEventListener('submit', onSubmitReceta);
+  // evita submits fantasma
+  addBtn?.setAttribute('type','button');
+  genBtn?.setAttribute('type','button');
 
-});
+  if (addBtn && !addBtn.__bound) {
+    addBtn.addEventListener('click', (e)=>{
+      e.preventDefault();
+      try { agregarMedicamento(); } catch (err) { console.error('[bindUI] agregarMedicamento error:', err); }
+    }, { capture: true });
+    addBtn.__bound = true;
+    console.log('[bindUI] add bound');
+  }
+
+  if (genBtn && !genBtn.__bound) {
+    genBtn.addEventListener('click', (e)=>{
+      e.preventDefault();
+      if (form?.requestSubmit) form.requestSubmit(); else form?.submit();
+    }, { capture: true });
+    genBtn.__bound = true;
+    console.log('[bindUI] gen bound');
+  }
+
+  if (form && !form.__bound) {
+    form.addEventListener('submit', onSubmitReceta);
+    form.__bound = true;
+    console.log('[bindUI] form submit bound');
+  }
+}
+
+// Ejecuta el binder en cualquier estado del DOM
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', bindUI, { once: true });
+} else {
+  bindUI();
+}
+
+// ====== EXPOSE PARA CONSOLA (debug) ======
+try { window.agregarMedicamento = agregarMedicamento; } catch {}
+try { window.ensureMedsContainer = ensureMedsContainer; } catch {}
+window.kodrxBindUI = bindUI;
+console.log('[bindUI] ready');
 
 
