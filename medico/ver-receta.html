@@ -405,6 +405,43 @@ function computeStatus(receta){
 })();
 </script>
 
+<script>
+/* ==== KODRX generarPDF fallback (usa window.jspdf) ==== */
+(async ()=>{
+  if (window.generarPDF) return; // ya existe tu versión
+  // espera jsPDF
+  for(let i=0;i<100;i++){ if(window.jspdf?.jsPDF) break; await new Promise(r=>setTimeout(r,100)); }
+  if (!window.jspdf?.jsPDF) { console.warn('[pdf] jsPDF no está cargado'); return; }
+
+  window.generarPDF = async function(receta, QRS, {mode}={}){
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit:'pt', format:'letter' }); // 612x792 pt
+
+    // Cabecera sencilla
+    doc.setFont('helvetica','bold'); doc.setFontSize(16);
+    doc.text('Receta Médica', 54, 54);
+    doc.setFont('helvetica','normal'); doc.setFontSize(11);
+    doc.text(`Paciente: ${receta.nombrePaciente||'—'}`, 54, 80);
+    doc.text(`Médico: ${receta.medicoNombre||'—'}`, 54, 96);
+    doc.text(`Fecha: ${new Date().toLocaleString('es-MX')}`, 54, 112);
+
+    // QRs/Barcode si existen
+    if (QRS?.qrMain) doc.addImage(QRS.qrMain, 'PNG', 420, 54, 140, 140);
+    if (QRS?.qrAlt)  doc.addImage(QRS.qrAlt,  'PNG', 420, 206, 120, 120);
+    if (QRS?.barcode)doc.addImage(QRS.barcode,'PNG', 54, 730, 260, 30);
+
+    // Observaciones/diagnóstico (muy simple)
+    let y=150; doc.setFontSize(12); doc.setFont('helvetica','bold'); doc.text('Diagnóstico', 54, y);
+    doc.setFont('helvetica','normal'); doc.setFontSize(11);
+    doc.text((receta.diagnostico||'—'), 54, (y+=18), {maxWidth: 320});
+    doc.setFont('helvetica','bold'); doc.text('Observaciones', 54, (y+=48));
+    doc.setFont('helvetica','normal'); doc.text((receta.observaciones||'—'), 54, (y+=18), {maxWidth: 320});
+
+    if (mode==='print'){ doc.autoPrint?.(); window.open(doc.output('bloburl'), '_blank'); }
+    else { doc.save(`Receta_${receta.id||''}.pdf`); }
+  };
+})();
+</script>
 
 
 </body>
