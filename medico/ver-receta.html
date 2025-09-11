@@ -161,6 +161,11 @@ button{appearance:none;border:0;border-radius:12px;padding:10px 14px;font-weight
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
 <script>
+
+  // (solo para probar visual)
+window.RECETA_ACTUAL.blockchain = {status:'simulado'};
+document.getElementById('badgeOrigen').textContent = 'MOCK'; // el fix lo corregirá a "SELLADO SIMULADO"
+
 /* === KODRX anti-MOCK badge fixer === */
 (() => {
   const sleep = (ms)=>new Promise(r=>setTimeout(r,ms));
