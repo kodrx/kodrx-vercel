@@ -65,11 +65,11 @@ button{appearance:none;border:0;border-radius:12px;padding:10px 14px;font-weight
 <body>
 
 <div class="receta-wrap">
-  <div class="actions">
-    <button class="ghost" id="btnRegresar">Regresar</button>
-    <button class="primary" id="btnDescargar">Descargar PDF</button>
-    <button class="ghost" id="btnImprimir">Imprimir</button>
-  </div>
+<section class="card" style="text-align:center; gap:8px; padding:12px">
+  <button id="btnDescargar" type="button" class="btn">Descargar PDF</button>
+  <button id="btnImprimir"  type="button" class="btn">Imprimir</button>
+</section>
+
 
   <div class="receta">
     <!-- Header -->
@@ -440,6 +440,63 @@ function computeStatus(receta){
     if (mode==='print'){ doc.autoPrint?.(); window.open(doc.output('bloburl'), '_blank'); }
     else { doc.save(`Receta_${receta.id||''}.pdf`); }
   };
+})();
+</script>
+<script>
+(() => {
+  const sleep = (ms)=>new Promise(r=>setTimeout(r,ms));
+  async function waitFor(fn, max=8000, step=100){
+    const t0=Date.now();
+    while(Date.now()-t0<max){ const v=fn(); if(v) return v; await sleep(step); }
+    return null;
+  }
+  async function ensureReceta(){
+    const r = await waitFor(()=>window.RECETA_ACTUAL, 8000, 120);
+    if (!r && typeof window.loadAndRender==='function') {
+      try { await window.loadAndRender(); } catch {}
+      return await waitFor(()=>window.RECETA_ACTUAL, 3000, 120);
+    }
+    return r;
+  }
+  async function ensureQRS(){
+    const q = await waitFor(()=>window.QRS, 4000, 120);
+    return q || null;
+  }
+
+  function bind(){
+    const btnD = document.getElementById('btnDescargar');
+    const btnP = document.getElementById('btnImprimir');
+    if (!btnD && !btnP) { console.warn('[ver] No encontré botones'); return; }
+
+    const onClick = (mode)=>async (ev)=>{
+      ev.preventDefault();
+      const b = ev.currentTarget;
+      if (b.__busy) return; b.__busy = true; b.disabled = true;
+      try{
+        if (typeof window.generarPDF !== 'function') {
+          alert('Falta generarPDF (jsPDF). Pega el snippet del generador de PDF.');
+          return;
+        }
+        const receta = await ensureReceta();
+        if (!receta) { alert('No se pudo cargar la receta'); return; }
+        const qrs = await ensureQRS(); // si no hay, igual generará tu PDF sin QRs
+        await window.generarPDF(receta, qrs || {}, mode ? {mode} : {});
+      } catch(e){
+        console.error('[ver] PDF error:', e);
+        alert('No se pudo generar el PDF.');
+      } finally {
+        b.__busy = false; b.disabled = false;
+      }
+    };
+
+    if (btnD && !btnD.__bound){ btnD.addEventListener('click', onClick(null), {capture:true}); btnD.__bound=true; }
+    if (btnP && !btnP.__bound){ btnP.addEventListener('click', onClick('print'), {capture:true}); btnP.__bound=true; }
+
+    console.log('[ver] binder OK', { descargar: !!btnD, imprimir: !!btnP });
+  }
+
+  if (document.readyState==='loading') document.addEventListener('DOMContentLoaded', bind, {once:true});
+  else bind();
 })();
 </script>
 
