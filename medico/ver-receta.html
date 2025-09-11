@@ -298,7 +298,7 @@ button{appearance:none;border:0;border-radius:12px;padding:10px 14px;font-weight
     const label      = document.getElementById('barcodeLabel');
 
     if (qrMainDiv && !qrMainDiv.querySelector('canvas, img')) {
-      const verURL = location.origin + 'verificar.html?id=' + encodeURIComponent(r.id);
+      const verURL = location.origin + '/verificar.html?id=' + encodeURIComponent(r.id);
       new QRCode(qrMainDiv, { text: verURL, width: 260, height: 260, correctLevel: QRCode.CorrectLevel.M });
     }
     if (qrChainDiv && !qrChainDiv.querySelector('canvas, img')) {
