@@ -160,10 +160,10 @@ button{appearance:none;border:0;border-radius:12px;padding:10px 14px;font-weight
 <!-- QRCode.js -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script>
-/* ==== KODRX ver-receta: render UNA SOLA VEZ con IDs nuevos (completo) ==== */
+/* ==== KODRX ver-receta V5: datos + badge + QRs + barcode + botones ==== */
 (() => {
-  if (window.__KODRX_VER_INLINE_V4__) return;
-  window.__KODRX_VER_INLINE_V4__ = true;
+  if (window.__KODRX_VER_INLINE_V5__) return;
+  window.__KODRX_VER_INLINE_V5__ = true;
 
   const sleep = (ms)=>new Promise(r=>setTimeout(r,ms));
   const setText = (sel, val)=>{
@@ -172,7 +172,9 @@ button{appearance:none;border:0;border-radius:12px;padding:10px 14px;font-weight
     const txt = (val ?? '—').toString();
     if (el.textContent !== txt) el.textContent = txt;
   };
+  const setClass = (el, cls)=>{ if (el && el.className !== cls) el.className = cls; };
 
+  // ---------- Normalizador ----------
   function normalize(raw0){
     const raw = raw0 || {};
     const bc  = raw.blockchain || {};
@@ -190,12 +192,12 @@ button{appearance:none;border:0;border-radius:12px;padding:10px 14px;font-weight
     };
   }
 
+  // ---------- Helpers ----------
   function prefixMed(nombre, genero){
     if (!nombre) return '—';
-    const g = (genero||'').toLowerCase();
-    return (g.startsWith('f') ? 'Dra. ' : 'Dr. ') + nombre;
+    const g=(genero||'').toLowerCase();
+    return (g.startsWith('f')?'Dra. ':'Dr. ')+nombre;
   }
-
   async function ensureLibs(){
     if (!window.QRCode){
       await new Promise((res,rej)=>{ const s=document.createElement('script'); s.src='https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js'; s.onload=res; s.onerror=rej; document.head.appendChild(s); });
@@ -204,7 +206,11 @@ button{appearance:none;border:0;border-radius:12px;padding:10px 14px;font-weight
       await new Promise((res,rej)=>{ const s=document.createElement('script'); s.src='https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js'; s.onload=res; s.onerror=rej; document.head.appendChild(s); });
     }
   }
-
+  function qrDivToDataURL(div){
+    if (!div) return '';
+    const img=div.querySelector('img'); if (img?.src) return img.src;
+    const c  =div.querySelector('canvas'); return c ? c.toDataURL('image/png') : '';
+  }
   async function hydrateIfNeeded(){
     if (window.RECETA_ACTUAL && (window.RECETA_ACTUAL.blockchain || window.RECETA_ACTUAL.hash || window.RECETA_ACTUAL.bloque)) return;
     try{
@@ -213,51 +219,49 @@ button{appearance:none;border:0;border-radius:12px;padding:10px 14px;font-weight
       const core = await import('/firebase-init.js');
       const fs   = await import('https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js');
       const snap = await fs.getDoc(fs.doc(core.db,'recetas',id));
-      if (snap.exists()){
-        window.RECETA_ACTUAL = { id:snap.id, ...(window.RECETA_ACTUAL||{}), ...(snap.data()||{}) };
-      }
+      if (snap.exists()) window.RECETA_ACTUAL = { id:snap.id, ...(window.RECETA_ACTUAL||{}), ...(snap.data()||{}) };
     }catch(e){ console.warn('[ver] hydrate warn', e); }
   }
 
-  async function loadMedsIfMissing(r){
-    if (Array.isArray(r.medicamentos) && r.medicamentos.length) return r.medicamentos;
-    try{
-      const core = await import('/firebase-init.js');
-      const fs   = await import('https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js');
-      const recetaRef = fs.doc(core.db,'recetas', r.id);
-      const medsSnap = await fs.getDocs(fs.collection(recetaRef,'medicamentos'));
-      r.medicamentos = medsSnap.docs.map(d=>d.data());
-    }catch(e){ console.warn('[ver] meds subcol warn', e); }
-    return r.medicamentos || [];
+  // ---------- Badge ----------
+  function computeBadge(r){
+    const bc = r.blockchain || {};
+    const hasBlock = Number.isFinite(r.bloque) || typeof r.bloque==='string' ||
+                     Number.isFinite(bc.block) || typeof bc.block==='string' || typeof bc.tx==='string';
+    if (bc.status==='ok' || hasBlock) return {text:'SELLADO EN BLOCKCHAIN', cls:'badge ok', bg:'#16a34a', fg:'#fff'};
+    if (bc.status==='simulado' || r.hash) return {text:'SELLADO SIMULADO', cls:'badge warn', bg:'#f59e0b', fg:'#111'};
+    return {text:'PENDIENTE', cls:'badge warn', bg:'#9ca3af', fg:'#111'};
+  }
+  function paintBadge(r){
+    const el = document.getElementById('badgeOrigen');
+    if (!el) return;
+    const st = computeBadge(r);
+    setText(el, st.text);
+    setClass(el, st.cls);
+    el.style.background = st.bg; el.style.color = st.fg;
   }
 
-  function qrDivToDataURL(div){
-    if (!div) return '';
-    const img=div.querySelector('img'); if (img?.src) return img.src;
-    const c  =div.querySelector('canvas'); return c ? c.toDataURL('image/png') : '';
-  }
-
+  // ---------- Render principal (una vez) ----------
   async function renderOnce(){
-    // espera receta
     for (let i=0;i<100;i++){ if (window.RECETA_ACTUAL) break; await sleep(80); }
     await hydrateIfNeeded();
     const r0 = window.RECETA_ACTUAL; if (!r0) return;
     const r  = window.RECETA_ACTUAL = normalize(r0);
 
-    // --------- FECHA / ID ----------
-    const ts = r?.timestamp?.seconds ? new Date(r.timestamp.seconds*1000) :
-               (r?.timestamp?.toDate ? r.timestamp.toDate() : new Date());
+    // Fecha / ID
+    const ts = r?.timestamp?.seconds ? new Date(r.timestamp.seconds*1000)
+             : (r?.timestamp?.toDate ? r.timestamp.toDate() : new Date());
     setText('#fechaEmision', ts.toLocaleString('es-MX'));
-    setText('#recetaId', 'ID: ' + (r.id || '—'));
+    setText('#recetaId',    'ID: ' + (r.id || '—'));
 
-    // --------- MÉDICO ----------
-    setText('#doctorNombre',  prefixMed(r.medicoNombre, r.medicoGenero||r.genero));
-    setText('#doctorCedula',  r.medicoCedula || '—');
-    setText('#doctorEsp',     r.medicoEspecialidad || 'General');
-    setText('#doctorTel',     r.medicoTelefono || '—');
-    setText('#doctorDir',     r.medicoDomicilio || '—');
+    // Médico
+    setText('#doctorNombre', prefixMed(r.medicoNombre, r.medicoGenero||r.genero));
+    setText('#doctorCedula', r.medicoCedula || '—');
+    setText('#doctorEsp',    r.medicoEspecialidad || 'General');
+    setText('#doctorTel',    r.medicoTelefono || '—');
+    setText('#doctorDir',    r.medicoDomicilio || '—');
 
-    // --------- PACIENTE ----------
+    // Paciente
     setText('#pacienteNombre', r.nombrePaciente);
     setText('#pacEdad',        r.edad ?? '—');
     setText('#pacSexo',        r.sexo || '—');
@@ -267,82 +271,124 @@ button{appearance:none;border:0;border-radius:12px;padding:10px 14px;font-weight
     setText('#pacPresion',     r.presion ?? '—');
     setText('#pacIMC',         r.imc ?? '—');
 
-    // --------- DIAG / OBS ----------
+    // Diag / Obs
     setText('#obsTexto',  r.observaciones || r.nota || '—');
     setText('#diagTexto', r.diagnostico  || r.diagnosis || '—');
 
-    // --------- HASH / BLOQUE ----------
+    // Hash / Bloque
     const bloqueTxt = (Number.isFinite(r.bloque)||typeof r.bloque==='string') ? ('#'+r.bloque)
                    : ((r.blockchain?.status==='simulado' || r.hash) ? 'Simulado' : '—');
-    setText('#blockNum',   bloqueTxt);
+    setText('#blockNum',  bloqueTxt);
     setText('#hashTexto', 'hash: ' + (r.hash || r.blockchain?.hash || '—'));
 
-    // --------- MEDICAMENTOS ----------
-    const meds = await loadMedsIfMissing(r);
+    // Badge
+    paintBadge(r);
+
+    // Medicamentos (subcolección si falta)
+    if (!Array.isArray(r.medicamentos) || !r.medicamentos.length){
+      try{
+        const core = await import('/firebase-init.js');
+        const fs   = await import('https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js');
+        const medsSnap = await fs.getDocs(fs.collection(fs.doc(core.db,'recetas', r.id),'medicamentos'));
+        r.medicamentos = medsSnap.docs.map(d=>d.data());
+      }catch(e){ console.warn('[ver] meds subcol warn', e); }
+    }
     const pre = document.getElementById('listaMedsDerecha');
     if (pre){
-      if (!meds.length) setText(pre, '—');
+      if (!r.medicamentos?.length) setText(pre, '—');
       else {
-        const lines = meds.map((m,i)=>
-          `${i+1}. ${m?.nombre||'—'}\n   Dosis: ${m?.dosis||'—'}   Duración: ${m?.duracion||'—'}`
-        ).join('\n\n');
+        const lines = r.medicamentos.map((m,i)=>`${i+1}. ${m?.nombre||'—'}\n   Dosis: ${m?.dosis||'—'}   Duración: ${m?.duracion||'—'}`).join('\n\n');
         setText(pre, lines);
       }
     }
 
-    // --------- QRs / BARCODE ----------
+    // QRs / Barcode
     await ensureLibs();
     const qrMainDiv  = document.getElementById('qrMain');
     const qrChainDiv = document.getElementById('qrChain');
     const canvas     = document.getElementById('barcodeCanvas');
     const label      = document.getElementById('barcodeLabel');
 
+    // QR principal: URL verificación
     if (qrMainDiv && !qrMainDiv.querySelector('canvas, img')) {
-      const verURL = location.origin + '/verificar.html?id=' + encodeURIComponent(r.id);
+      const verURL = location.origin + '/public/ver-receta.html?id=' + encodeURIComponent(r.id);
       new QRCode(qrMainDiv, { text: verURL, width: 260, height: 260, correctLevel: QRCode.CorrectLevel.M });
     }
+
+    // QR blockchain: solo si hay datos útiles
+    const hasChain = !!(r.blockchain?.hash || r.hash || r.blockchain?.block || r.bloque || r.medsSig);
     if (qrChainDiv && !qrChainDiv.querySelector('canvas, img')) {
-      const bc=r.blockchain||{}, blk=bc.block ?? r.bloque ?? '—', h=bc.hash ?? r.hash ?? '—', ms=r.medsSig||'';
-      const payload = `kodrx:${r.id}|ms:${ms}|blk:${blk}|hash:${h}`;
-      new QRCode(qrChainDiv, { text: payload, width: 220, height: 220, correctLevel: QRCode.CorrectLevel.M });
+      if (hasChain) {
+        const bc=r.blockchain||{}, blk=bc.block ?? r.bloque ?? '', h=bc.hash ?? r.hash ?? '', ms=r.medsSig||'';
+        const payload = `kodrx:${r.id}|ms:${ms}|blk:${blk}|hash:${h}`;
+        new QRCode(qrChainDiv, { text: payload, width: 220, height: 220, correctLevel: QRCode.CorrectLevel.M });
+      } else {
+        qrChainDiv.innerHTML = '<div style="opacity:.6;font:12px system-ui">sin datos</div>';
+      }
     }
+
+    // Barcode
     if (canvas && canvas.getContext && !canvas.__done){
       try{ JsBarcode(canvas, r.id, {format:'CODE128', displayValue:false, margin:0, width:2, height:70}); canvas.__done=true; }catch(e){}
     }
     if (label) setText(label, r.id || '—');
 
-    // export para PDF
+    // Export QRS para PDF
     const qrMainData  = qrDivToDataURL(qrMainDiv);
     const qrChainData = qrDivToDataURL(qrChainDiv);
     const barcodeData = (()=>{
       try{ return canvas ? canvas.toDataURL('image/png') : ''; }catch{ return ''; }
     })();
-    const linea = [
-      r.nombrePaciente || '—',
-      ts.toLocaleString('es-MX'),
-      r.medicoNombre || '—',
-      r.medsSig || ''
-    ].join(' | ');
+    const linea = [ r.nombrePaciente||'—', ts.toLocaleString('es-MX'), r.medicoNombre||'—', r.medsSig||'' ].join(' | ');
+    window.QRS = { qrMain: qrMainData, qrAlt: qrChainData, qrChain: qrChainData, barcode: barcodeData, verURL: location.href, linea };
 
-    window.QRS = {
-      qrMain: qrMainData,
-      qrAlt:  qrChainData,
-      qrChain: qrChainData,
-      barcode: barcodeData,
-      verURL: location.origin + '/verificar.html?id=' + encodeURIComponent(r.id),
-      linea
-    };
+    // Esconde spinner "verificando blockchain" si existiera
+    const verif = document.getElementById('badgeVerificando');
+    if (verif) verif.style.display = 'none';
 
     console.log('[ver] render ok');
   }
 
-  if (document.readyState==='loading') {
-    document.addEventListener('DOMContentLoaded', ()=>{ renderOnce().catch(console.warn); }, {once:true});
+  // ---------- Botones (Descargar / Imprimir / Regresar) ----------
+  function bindButtons(){
+    const btnD = document.getElementById('btnDescargar');
+    const btnP = document.getElementById('btnImprimir');
+    const btnB = document.getElementById('btnVolver');
+
+    const onPDF = (mode)=>async (ev)=>{
+      ev.preventDefault();
+      const b = ev.currentTarget; if (b.__busy) return; b.__busy=true; b.disabled=true;
+      try{
+        if (typeof window.generarPDF !== 'function'){
+          alert('Falta generarPDF (jsPDF).');
+          return;
+        }
+        if (!window.RECETA_ACTUAL) await renderOnce();
+        await window.generarPDF(window.RECETA_ACTUAL, window.QRS||{}, mode?{mode}:{});
+      }catch(e){ console.error('[ver] PDF error', e); alert('No se pudo generar el PDF.'); }
+      finally{ b.__busy=false; b.disabled=false; }
+    };
+
+    if (btnD && !btnD.__b){ btnD.type='button'; btnD.addEventListener('click', onPDF(null), {capture:true}); btnD.__b=true; }
+    if (btnP && !btnP.__b){ btnP.type='button'; btnP.addEventListener('click', onPDF('print'), {capture:true}); btnP.__b=true; }
+    if (btnB && !btnB.__b){
+      btnB.type='button';
+      btnB.addEventListener('click', (e)=>{
+        e.preventDefault();
+        if (history.length>1) history.back(); else location.href='/medico/panel.html';
+      }, {capture:true});
+      btnB.__b=true;
+    }
+  }
+
+  if (document.readyState==='loading'){
+    document.addEventListener('DOMContentLoaded', ()=>{ renderOnce().catch(console.warn); bindButtons(); }, {once:true});
   } else {
-    renderOnce().catch(console.warn);
+    renderOnce().catch(console.warn); bindButtons();
   }
 })();
 </script>
+
 
 
 </body>
