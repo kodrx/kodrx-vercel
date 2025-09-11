@@ -247,36 +247,80 @@ button{appearance:none;border:0;border-radius:12px;padding:10px 14px;font-weight
 </script>
 
 <script>
-(function(){
+/* === KODRX anti-MOCK badge fixer (sticky, observa todo el DOM) === */
+(() => {
   const sleep = (ms)=>new Promise(r=>setTimeout(r,ms));
-  async function waitReceta(max=8000){
+
+  async function waitReceta(max=10000, step=120){
     const t0=Date.now();
     while(Date.now()-t0<max){
       if (window.RECETA_ACTUAL) return window.RECETA_ACTUAL;
-      await sleep(80);
+      await sleep(step);
     }
-    return null;
+    return {};
   }
-  function computeStatus(r){
-    const bc = r?.blockchain || {};
-    if (bc.status === 'ok') return { txt:'SELLADO EN BLOCKCHAIN', cls:'badge ok',   bg:'#16a34a', fg:'#fff' };
-    if (bc.status === 'simulado' || r?.hash) return { txt:'SELLADO SIMULADO',  cls:'badge warn', bg:'#f59e0b', fg:'#111' };
-    return { txt:'PENDIENTE', cls:'badge warn', bg:'#9ca3af', fg:'#111' };
+
+  function computeStatus(receta){
+    const bc = receta?.blockchain || {};
+    if (bc.status === 'ok') return { text:'SELLADO EN BLOCKCHAIN', cls:'badge ok',   bg:'#16a34a', fg:'#fff' };
+    if (bc.status === 'simulado' || receta?.hash) return { text:'SELLADO SIMULADO',  cls:'badge warn', bg:'#f59e0b', fg:'#111' };
+    return { text:'PENDIENTE',                  cls:'badge warn', bg:'#9ca3af', fg:'#111' };
   }
-  async function run(){
-    const r = await waitReceta();
-    if (!r) return;
-    const el = document.getElementById('badgeOrigen');
-    if (!el) return;
-    const st = computeStatus(r);
-    el.textContent = st.txt;
-    el.className   = st.cls;
-    el.style.background = st.bg; el.style.color = st.fg;
+
+  function applyBadge(el, receta){
+    const st = computeStatus(receta);
+    // solo reescribe si está MOCK o si nunca aplicamos
+    if (!el.__kodrxApplied || (el.textContent||'').toUpperCase().includes('MOCK')) {
+      el.textContent = st.text;
+      el.className   = st.cls;
+      el.style.background = st.bg; // fallback si no hay CSS
+      el.style.color      = st.fg;
+      el.__kodrxApplied = true;
+    }
   }
-  if (document.readyState==='loading') document.addEventListener('DOMContentLoaded', run, {once:true});
-  else run();
+
+  async function start(){
+    const receta0 = await waitReceta();
+
+    const update = ()=>{
+      const receta = window.RECETA_ACTUAL || receta0 || {};
+      const el = document.getElementById('badgeOrigen');
+      if (!el) return;
+      applyBadge(el, receta);
+    };
+
+    // 1) Primera aplicación
+    update();
+
+    // 2) Observa TODO el documento por si reemplazan el badge
+    const mo = new MutationObserver(() => update());
+    mo.observe(document.body, { childList:true, subtree:true, characterData:true });
+
+    // 3) Reaplica periódicamente un rato (por si hay renders tardíos)
+    let ticks = 0;
+    const t = setInterval(() => { update(); if (++ticks > 120) clearInterval(t); }, 500);
+
+    // 4) Hooks a tus funciones (si existen)
+    const oldRender = window.renderReceta;
+    window.renderReceta = function(){
+      const res = typeof oldRender==='function' ? oldRender.apply(this, arguments) : undefined;
+      update(); return res;
+    };
+    const oldVerify = window.verificarBlockchain;
+    window.verificarBlockchain = async function(){
+      try { return typeof oldVerify==='function' ? await oldVerify.apply(this, arguments) : undefined; }
+      finally { update(); }
+    };
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', start, { once:true });
+  } else {
+    start();
+  }
 })();
 </script>
+
 
 
 
