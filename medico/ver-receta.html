@@ -161,12 +161,10 @@ button{appearance:none;border:0;border-radius:12px;padding:10px 14px;font-weight
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
 <script>
-
-  // (solo para probar visual)
-
-
-/* === KODRX anti-MOCK badge fixer === */
+/* === KODRX anti-MOCK badge fixer (clean) === */
 (() => {
+  console.log('[badge-fix] boot');
+
   const sleep = (ms)=>new Promise(r=>setTimeout(r,ms));
 
   async function waitFor(fn, max=8000, step=100){
@@ -188,8 +186,8 @@ button{appearance:none;border:0;border-radius:12px;padding:10px 14px;font-weight
 
   function applyBadge(el, receta){
     const st = computeStatus(receta);
-    el.textContent = st.text;
-    el.className   = st.cls;
+    el.textContent   = st.text;
+    el.className     = st.cls;
     // fallback por si tu CSS no define .ok/.warn
     el.style.background = st.bg;
     el.style.color      = st.fg;
@@ -203,12 +201,14 @@ button{appearance:none;border:0;border-radius:12px;padding:10px 14px;font-weight
 
     // Aplica una vez
     applyBadge(badge, receta || {});
+    console.log('[badge-fix] applied once');
 
     // 1) Observa reescrituras del badge (si alguien vuelve a poner MOCK)
     const mo = new MutationObserver(()=>{
       if (!badge.isConnected){ mo.disconnect(); return; }
       if ((badge.textContent||'').toUpperCase().includes('MOCK')){
         applyBadge(badge, window.RECETA_ACTUAL || {});
+        console.log('[badge-fix] re-applied after MOCK rewrite');
       }
     });
     mo.observe(badge, { childList:true, characterData:true, subtree:true });
@@ -230,25 +230,22 @@ button{appearance:none;border:0;border-radius:12px;padding:10px 14px;font-weight
       };
     }
 
-    // 3) Por si la receta se actualiza asíncrono (p. ej. después del sellado)
-    let lastHash = (window.RECETA_ACTUAL && window.RECETA_ACTUAL.hash) || null;
+    // 3) Reaplica si cambia el hash (p.ej. tras sellado)
+    let lastHash = window.RECETA_ACTUAL?.hash ?? null;
     setInterval(()=>{
-      const h = (window.RECETA_ACTUAL && window.RECETA_ACTUAL.hash) || null;
+      const h = window.RECETA_ACTUAL?.hash ?? null;
       if (h !== lastHash){ lastHash = h; applyBadge(badge, window.RECETA_ACTUAL || {}); }
     }, 800);
   }
-ADO SIMULADO"
-  
+
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init, { once:true });
   } else {
     init();
   }
-
-
-
 })();
 </script>
+
 <script>
 (function(){
   const sleep = (ms)=>new Promise(r=>setTimeout(r,ms));
