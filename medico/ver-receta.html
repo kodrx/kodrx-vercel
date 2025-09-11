@@ -499,6 +499,156 @@ function computeStatus(receta){
   else bind();
 })();
 </script>
+<script>
+/* ==== KODRX ver-receta: datos médico/paciente/diag/obs/meds (robusto) ==== */
+(() => {
+  const sleep = (ms)=>new Promise(r=>setTimeout(r,ms));
+  async function waitReceta(max=10000, step=120){
+    const t0=Date.now();
+    while(Date.now()-t0<max){
+      if (window.RECETA_ACTUAL) return window.RECETA_ACTUAL;
+      await sleep(step);
+    }
+    return null;
+  }
+
+  // Normaliza receta para soportar legacy/new
+  function normalizeReceta(raw){
+    const bc   = raw?.blockchain || {};
+    const blk  = (Number.isFinite(raw?.bloque) && raw.bloque>0) ? raw.bloque : (bc.block ?? null);
+    const hash = bc.hash ?? raw?.hash ?? null;
+    const status = bc.status ? bc.status : (blk ? 'ok' : (hash ? 'simulado' : 'pendiente'));
+    // nombre paciente (variantes)
+    const pacNombre = raw?.nombrePaciente ?? raw?.pacienteNombre ?? raw?.paciente ?? '—';
+    // array resumen de medicamentos si existe
+    const medsArr = Array.isArray(raw?.medicamentos) ? raw.medicamentos : (raw?.meds || []);
+    return {
+      ...raw,
+      nombrePaciente: pacNombre,
+      bloque: blk,
+      hash,
+      medsSig: bc.medsSig ?? raw.medsSig ?? '',
+      medicamentos: medsArr,
+      blockchain: { ...bc, status, block: bc.block ?? blk, hash }
+    };
+  }
+
+  // Mapea texto a uno de varios selectores (toma el primero que exista)
+  function setText(targets, text){
+    const arr = Array.isArray(targets) ? targets : [targets];
+    for (const sel of arr){
+      const el = document.querySelector(sel);
+      if (el){ el.textContent = (text ?? '—').toString(); return true; }
+    }
+    return false;
+  }
+
+  // Crea panel si no existe
+  function ensurePanel(id, title){
+    let sec = document.getElementById(id);
+    if (!sec){
+      sec = document.createElement('section');
+      sec.className = 'card';
+      sec.id = id;
+      sec.innerHTML = `<div class="title">${title}</div><div class="body"></div>`;
+      (document.querySelector('#contenido') || document.body).appendChild(sec);
+    }
+    return sec.querySelector('.body') || sec;
+  }
+
+  async function loadMedsIfMissing(r){
+    if (Array.isArray(r.medicamentos) && r.medicamentos.length) return r.medicamentos;
+    // intenta subcolección
+    try{
+      const core = await import('/firebase-init.js');
+      const fs   = await import('https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js');
+      const medsSnap = await fs.getDocs(fs.collection(fs.doc(core.db,'recetas', r.id),'medicamentos'));
+      r.medicamentos = medsSnap.docs.map(d=>d.data());
+    }catch(e){ console.warn('[ver] no pude leer subcolección medicamentos', e); }
+    return r.medicamentos || [];
+  }
+
+  async function run(){
+    const rec = await waitReceta(); if(!rec) return;
+    const r = window.RECETA_ACTUAL = normalizeReceta(rec);
+
+    // ---------- Panel MÉDICO ----------
+    const m = ensurePanel('panelMedico', 'DATOS DEL MÉDICO');
+    m.innerHTML = `
+      <p><strong>Nombre:</strong> <span id="medicoNombre"></span></p>
+      <p><strong>Especialidad:</strong> <span id="medicoEspecialidad"></span></p>
+      <p><strong>Cédula:</strong> <span id="medicoCedula"></span></p>
+      <p><strong>Domicilio:</strong> <span id="medicoDomicilio"></span></p>
+      <p><strong>Teléfono:</strong> <span id="medicoTelefono"></span></p>`;
+    setText('#medicoNombre',       r.medicoNombre || r.medico || '—');
+    setText('#medicoEspecialidad', r.medicoEspecialidad || r.medicoEspecialidad || r.especialidad || 'General');
+    setText('#medicoCedula',       r.medicoCedula || r.cedula || '—');
+    setText('#medicoDomicilio',    r.medicoDomicilio || r.domicilio || '—');
+    setText('#medicoTelefono',     r.medicoTelefono || r.telefono || '—');
+
+    // ---------- Panel PACIENTE ----------
+    const p = ensurePanel('panelPaciente', 'DATOS DEL PACIENTE');
+    const ts = r?.timestamp?.seconds ? new Date(r.timestamp.seconds*1000)
+             : (r?.timestamp?.toDate ? r.timestamp.toDate() : new Date());
+    p.innerHTML = `
+      <p><strong>Nombre:</strong> <span id="pacienteNombre"></span></p>
+      <p><strong>Edad:</strong> <span id="pacienteEdad"></span></p>
+      <p><strong>Sexo:</strong> <span id="pacienteSexo"></span></p>
+      <p><strong>Fecha/Hora:</strong> <span id="fechaEmision"></span></p>
+      <p><strong>Signos:</strong> <span id="signosVitales"></span></p>`;
+    setText('#pacienteNombre', r.nombrePaciente || '—');
+    setText('#pacienteEdad',   r.edad ?? '—');
+    setText('#pacienteSexo',   r.sexo || '—');
+    setText('#fechaEmision',   ts.toLocaleString('es-MX'));
+    // signos: IMC, peso, talla, temperatura, presión (si existen)
+    const signos = [];
+    if (r.imc) signos.push(`IMC ${r.imc}`);
+    if (r.peso) signos.push(`${r.peso} kg`);
+    if (r.talla) signos.push(`${r.talla} cm`);
+    if (r.temperatura) signos.push(`${r.temperatura}°C`);
+    if (r.presion) signos.push(`PA ${r.presion}`);
+    setText('#signosVitales', signos.join(' · ') || '—');
+
+    // ---------- Panel DIAGNÓSTICO / OBS ----------
+    const d = ensurePanel('panelDiag', 'DIAGNÓSTICO Y OBSERVACIONES');
+    d.innerHTML = `
+      <p style="margin:0 0 8px 0"><strong>Diagnóstico:</strong></p>
+      <p id="diagnosticoText" style="white-space:pre-wrap; margin:0 0 16px 0"></p>
+      <p style="margin:0 0 8px 0"><strong>Observaciones:</strong></p>
+      <p id="observacionesText" style="white-space:pre-wrap; margin:0"></p>`;
+    setText('#diagnosticoText',   r.diagnostico || r.diagnosis || '—');
+    setText('#observacionesText', r.observaciones || r.nota || '—');
+
+    // ---------- Panel MEDICAMENTOS ----------
+    const medsPanel = ensurePanel('panelMeds', 'MEDICAMENTOS');
+    const meds = await loadMedsIfMissing(r);
+    if (!meds.length){
+      medsPanel.innerHTML = '<p>—</p>';
+    } else {
+      medsPanel.innerHTML = '<ol id="listaMeds" style="padding-left:18px;margin:0"></ol>';
+      const ol = document.getElementById('listaMeds');
+      meds.forEach((m,i)=>{
+        const li=document.createElement('li');
+        li.textContent = `${m.nombre||'—'} — Dosis: ${m.dosis||'—'} — Duración: ${m.duracion||'—'}`;
+        ol.appendChild(li);
+      });
+    }
+
+    // ---------- Hash / Bloque (si tienes placeholders) ----------
+    setText(['#hashText', '#hash', '[data-hash]'], r.hash || '—');
+    if (document.getElementById('blockNum')){
+      const bn = (Number.isFinite(r.bloque) || typeof r.bloque==='string') ? ('#'+r.bloque)
+               : ((r.blockchain?.status==='simulado'||r.hash)?'Simulado':'—');
+      setText('#blockNum', bn);
+    }
+
+    console.log('[ver] datos pintados');
+  }
+
+  if (document.readyState==='loading') document.addEventListener('DOMContentLoaded', run, {once:true});
+  else run();
+})();
+</script>
 
 
 </body>
