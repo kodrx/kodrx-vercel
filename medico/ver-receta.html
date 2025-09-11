@@ -161,12 +161,9 @@ button{appearance:none;border:0;border-radius:12px;padding:10px 14px;font-weight
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
 <script>
-/* ==== KODRX ver-receta FIX (estado BC + QRs + oculta "mock") ==== */
+/* ==== KODRX ver-receta badge+QR fix ==== */
 (()=> {
-  console.log('[ver-fix] boot');
-
   const sleep = (ms)=>new Promise(r=>setTimeout(r,ms));
-
   async function waitReceta(maxMs=4000){
     const t0=Date.now();
     while(Date.now()-t0<maxMs){
@@ -175,29 +172,32 @@ button{appearance:none;border:0;border-radius:12px;padding:10px 14px;font-weight
     }
     return null;
   }
-
   function statusFrom(receta){
     const bc = receta?.blockchain || {};
-    if (bc.status === 'ok') return {txt:'Sellado en blockchain', cls:'ok'};
-    if (bc.status === 'simulado' || receta?.hash) return {txt:'Sellado simulado', cls:'simulado'};
-    return {txt:'Pendiente de sellado', cls:'pendiente'};
+    if (bc.status === 'ok') return 'ok';
+    if (bc.status === 'simulado' || receta?.hash) return 'simulado';
+    return 'pendiente';
   }
-
-  function hideMockBadges(){
-    document.querySelectorAll('.mock, .badge-mock, #mock, [data-mock]')
-      .forEach(el=> el.style.display='none');
-  }
-
-  function ensureBcStatusElement(){
-    return document.getElementById('bcStatus') ||
-           document.querySelector('.bc-status') ||
-           (()=>{ const p=document.createElement('p'); p.id='bcStatus';
-                  p.style.margin='8px 0'; p.style.fontWeight='600';
-                  (document.querySelector('#header')||document.body).prepend(p); return p; })();
+  function updateBadgeOrigen(receta){
+    const el = document.getElementById('badgeOrigen');
+    if (!el) return;
+    const st = statusFrom(receta);
+    const map = {
+      ok:        { text: 'SELLADO EN BLOCKCHAIN', cls: 'badge ok',   bg:'#16a34a', fg:'#fff'  },
+      simulado:  { text: 'SELLADO SIMULADO',      cls: 'badge warn', bg:'#f59e0b', fg:'#111'  },
+      pendiente: { text: 'PENDIENTE',             cls: 'badge warn', bg:'#9ca3af', fg:'#111'  }
+    };
+    const m = map[st];
+    el.textContent = m.text;
+    el.className   = m.cls;
+    // fallback visual por si no hay CSS para .ok/.warn
+    el.style.background = m.bg; el.style.color = m.fg;
+    // por si traía texto “MOCK”
+    el.removeAttribute('data-mock');
   }
 
   async function makeQR(text,size=260){
-    return new Promise(async (resolve)=>{
+    return new Promise((resolve)=>{
       if (typeof QRCode==='undefined'){ resolve(''); return; }
       const div=document.createElement('div');
       try { new QRCode(div,{text,width:size,height:size,correctLevel:QRCode.CorrectLevel.M}); } catch { resolve(''); return; }
@@ -207,7 +207,6 @@ button{appearance:none;border:0;border-radius:12px;padding:10px 14px;font-weight
       },0);
     });
   }
-
   async function ensureBarcode(id){
     try{
       if (!window.JsBarcode){
@@ -220,29 +219,23 @@ button{appearance:none;border:0;border-radius:12px;padding:10px 14px;font-weight
       const c=document.createElement('canvas');
       JsBarcode(c, id, {format:'CODE128', displayValue:false, margin:0, width:2, height:60});
       return c.toDataURL('image/png');
-    }catch(e){ console.warn('[ver-fix] barcode warn', e); return ''; }
+    }catch{ return ''; }
   }
 
   async function run(){
     const receta = await waitReceta();
-    if (!receta){ console.warn('[ver-fix] no hay RECETA_ACTUAL'); return; }
+    if (!receta) return;
 
-    // 1) Oculta cualquier placeholder "mock"
-    hideMockBadges();
+    // Actualiza el badge MOCK → estado real
+    updateBadgeOrigen(receta);
 
-    // 2) Estado blockchain visible
-    const st = statusFrom(receta);
-    const bcEl = ensureBcStatusElement();
-    bcEl.textContent = st.txt;
-    bcEl.className = 'bc-status '+st.cls;
-
-    // 3) QRs + barcode si no están listos
+    // Genera QRs/barcode si no existen aún
     if (!window.QRS){
       const verURL = location.origin + '/public/ver-receta.html?id=' + encodeURIComponent(receta.id);
       const ts = (()=> {
         try{
           if (receta?.timestamp?.seconds) return new Date(receta.timestamp.seconds*1000);
-          if (receta?.timestamp?.toDate) return receta.timestamp.toDate();
+          if (receta?.timestamp?.toDate)  return receta.timestamp.toDate();
         }catch{}
         return new Date();
       })();
@@ -255,22 +248,17 @@ button{appearance:none;border:0;border-radius:12px;padding:10px 14px;font-weight
 
       const [qrMain, qrAlt] = await Promise.all([ makeQR(verURL,280), makeQR(linea,200) ]);
       const barcode = await ensureBarcode(receta.id);
+      window.QRS = { qrMain, qrAlt, barcode, verURL, linea };
 
-      window.QRS = { qrMain, qrAlt, barcode, verURL: verURL, linea: linea };
-
-      // Inyecta en el DOM si tienes placeholders con estos IDs
+      // Coloca en imgs si existen
       const img1 = document.getElementById('qrMain');   if (img1) img1.src = qrMain || '';
       const img2 = document.getElementById('qrAlt');    if (img2) img2.src = qrAlt || '';
       const img3 = document.getElementById('barcode');  if (img3) img3.src = barcode || '';
     }
-
-    console.log('[ver-fix] listo', {estado: st, QRS: !!window.QRS});
   }
 
   if (document.readyState==='loading') document.addEventListener('DOMContentLoaded', run, {once:true});
   else run();
-
-  console.log('[ver-fix] ready');
 })();
 </script>
 
