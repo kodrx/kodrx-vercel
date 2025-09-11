@@ -237,14 +237,19 @@ button{appearance:none;border:0;border-radius:12px;padding:10px 14px;font-weight
       if (h !== lastHash){ lastHash = h; applyBadge(badge, window.RECETA_ACTUAL || {}); }
     }, 800);
   }
-window.RECETA_ACTUAL.blockchain = {status:'simulado'};
-document.getElementById('badgeOrigen').textContent = 'MOCK'; // el fix lo corregirá a "SELLADO SIMULADO"
+ADO SIMULADO"
   
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init, { once:true });
   } else {
     init();
   }
+
+  // ✅ Asegura el objeto antes de asignar
+if (!window.RECETA_ACTUAL) window.RECETA_ACTUAL = {};
+if (!window.RECETA_ACTUAL.blockchain) window.RECETA_ACTUAL.blockchain = {};
+window.RECETA_ACTUAL.blockchain.status = window.RECETA_ACTUAL.blockchain.status || (window.RECETA_ACTUAL.hash ? 'simulado' : 'pendiente');
+
 })();
 </script>
 
