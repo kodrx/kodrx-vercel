@@ -649,6 +649,95 @@ function computeStatus(receta){
   else run();
 })();
 </script>
+<script>
+/* === KODRX: pintado robusto de datos en ver-receta === */
+(() => {
+  const sleep = (ms)=>new Promise(r=>setTimeout(r,ms));
+  async function waitReceta(max=10000, step=100){
+    const t0=Date.now();
+    while(Date.now()-t0<max){ if (window.RECETA_ACTUAL) return window.RECETA_ACTUAL; await sleep(step); }
+    return null;
+  }
+  // Normaliza legacy/new
+  function normalize(r0){
+    const r = r0 || {};
+    const bc = r.blockchain || {};
+    const blk = (Number.isFinite(r.bloque) && r.bloque>0) ? r.bloque : (bc.block ?? null);
+    const hash = bc.hash ?? r.hash ?? null;
+    const status = bc.status || (blk ? 'ok' : (hash ? 'simulado' : 'pendiente'));
+    const nombrePaciente = r.nombrePaciente ?? r.pacienteNombre ?? r.paciente ?? '—';
+    return {
+      ...r,
+      nombrePaciente,
+      bloque: blk,
+      hash,
+      medicoNombre: r.medicoNombre ?? r.medico ?? '',
+      medicoCedula: r.medicoCedula ?? r.cedula ?? '',
+      medicoEspecialidad: r.medicoEspecialidad ?? r.especialidad ?? 'General',
+      medicoTelefono: r.medicoTelefono ?? r.telefono ?? '',
+      medicoDomicilio: r.medicoDomicilio ?? r.domicilio ?? '',
+      blockchain: { ...bc, status, block: bc.block ?? blk, hash }
+    };
+  }
+  const setText = (sels, val)=>{
+    const arr = Array.isArray(sels)? sels : [sels];
+    for (const sel of arr){
+      const el = document.querySelector(sel);
+      if (el){ el.textContent = (val ?? '—').toString(); return true; }
+    }
+    return false;
+  };
+  const prefixMed = (nombre, genero)=>{
+    if (!nombre) return '—';
+    const g = (genero||'').toLowerCase();
+    return (g.startsWith('f') ? 'Dra. ' : 'Dr. ') + nombre;
+  };
+
+  function paint(){
+    const r = normalize(window.RECETA_ACTUAL||{});
+    // MÉDICO
+    setText(['#medicoNombre','[data-bind="medicoNombre"]'], prefixMed(r.medicoNombre, r.medicoGenero||r.genero));
+    setText(['#medicoCedula','[data-bind="medicoCedula"]'], r.medicoCedula);
+    setText(['#medicoEspecialidad','[data-bind="medicoEspecialidad"]'], r.medicoEspecialidad||'General');
+    setText(['#medicoTelefono','[data-bind="medicoTelefono"]'], r.medicoTelefono);
+    setText(['#medicoDomicilio','[data-bind="medicoDomicilio"]'], r.medicoDomicilio);
+    // PACIENTE
+    setText(['#nombrePaciente','[data-bind="nombrePaciente"]'], r.nombrePaciente);
+    setText(['#edad','#pacienteEdad','[data-bind="edad"]'], r.edad ?? '—');
+    setText(['#sexo','[data-bind="sexo"]'], r.sexo || '—');
+    setText(['#peso','[data-bind="peso"]'], r.peso ?? '—');
+    setText(['#talla','[data-bind="talla"]'], r.talla ?? '—');
+    setText(['#imc','[data-bind="imc"]'], r.imc ?? '—');
+    setText(['#presion','#pa','[data-bind="presion"]'], r.presion ?? '—');
+    setText(['#temperatura','[data-bind="temperatura"]'], r.temperatura ?? '—');
+    // DIAG / OBS
+    setText(['#observaciones','#observacionesText','[data-bind="observaciones"]'], r.observaciones || r.nota || '—');
+    setText(['#diagnostico','#diagnosticoText','[data-bind="diagnostico"]'], r.diagnostico || r.diagnosis || '—');
+    // BLOQUE / HASH
+    const bloqueTxt = (Number.isFinite(r.bloque)||typeof r.bloque==='string') ? '#'+r.bloque
+                     : ((r.blockchain?.status==='simulado' || r.hash) ? 'Simulado' : '—');
+    setText(['#bloque','#blockNum','[data-bind="bloque"]'], bloqueTxt);
+    setText(['#hash','#hashText','[data-bind="hash"]'], r.hash || r.blockchain?.hash || '—');
+  }
+
+  async function run(){
+    const r = await waitReceta();
+    if (!r) return;
+    paint();
+    // Si el render vuelve a escribir el DOM, repinta
+    const mo = new MutationObserver(()=>paint());
+    mo.observe(document.body, { childList:true, subtree:true, characterData:true });
+    // Hook si existen tus funciones
+    const oldRender = window.renderReceta;
+    if (typeof oldRender==='function'){
+      window.renderReceta = function(){ const res = oldRender.apply(this, arguments); setTimeout(paint,0); return res; };
+    }
+    window.kodrxPaint = paint; // debug
+  }
+
+  (document.readyState==='loading') ? document.addEventListener('DOMContentLoaded', run, {once:true}) : run();
+})();
+</script>
 
 
 </body>
