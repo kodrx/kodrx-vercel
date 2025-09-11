@@ -160,7 +160,7 @@ button{appearance:none;border:0;border-radius:12px;padding:10px 14px;font-weight
 <!-- QRCode.js -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script>
-/* ==== KODRX ver-receta: render UNA SOLA VEZ con IDs nuevos ==== */
+/* ==== KODRX ver-receta: render UNA SOLA VEZ con IDs nuevos (completo) ==== */
 (() => {
   if (window.__KODRX_VER_INLINE_V4__) return;
   window.__KODRX_VER_INLINE_V4__ = true;
@@ -224,8 +224,9 @@ button{appearance:none;border:0;border-radius:12px;padding:10px 14px;font-weight
     try{
       const core = await import('/firebase-init.js');
       const fs   = await import('https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js');
-      const snap = await fs.getDocs(fs.collection(fs.doc(core.db,'recetas', r.id),'medicamentos'));
-      r.medicamentos = snap.docs.map(d=>d.data());
+      const recetaRef = fs.doc(core.db,'recetas', r.id);
+      const medsSnap = await fs.getDocs(fs.collection(recetaRef,'medicamentos'));
+      r.medicamentos = medsSnap.docs.map(d=>d.data());
     }catch(e){ console.warn('[ver] meds subcol warn', e); }
     return r.medicamentos || [];
   }
@@ -273,7 +274,7 @@ button{appearance:none;border:0;border-radius:12px;padding:10px 14px;font-weight
     // --------- HASH / BLOQUE ----------
     const bloqueTxt = (Number.isFinite(r.bloque)||typeof r.bloque==='string') ? ('#'+r.bloque)
                    : ((r.blockchain?.status==='simulado' || r.hash) ? 'Simulado' : '—');
-    setText('#blockNum', bloqueTxt);
+    setText('#blockNum',   bloqueTxt);
     setText('#hashTexto', 'hash: ' + (r.hash || r.blockchain?.hash || '—'));
 
     // --------- MEDICAMENTOS ----------
@@ -309,23 +310,37 @@ button{appearance:none;border:0;border-radius:12px;padding:10px 14px;font-weight
       try{ JsBarcode(canvas, r.id, {format:'CODE128', displayValue:false, margin:0, width:2, height:70}); canvas.__done=true; }catch(e){}
     }
     if (label) setText(label, r.id || '—');
-    
-    // export QRS para PDF
+
+    // export para PDF
     const qrMainData  = qrDivToDataURL(qrMainDiv);
     const qrChainData = qrDivToDataURL(qrChainDiv);
     const barcodeData = (()=>{
       try{ return canvas ? canvas.toDataURL('image/png') : ''; }catch{ return ''; }
     })();
-    const ts = r?.timestamp?.seconds ? new Date(r.timestamp.seconds*1000)
-             : (r?.timestamp?.toDate ? r.timestamp.toDate() : new Date());
-    const linea = [ r.nombrePaciente||'—', ts.toLocaleString('es-MX'), r.medicoNombre||'—', r.medsSig||'' ].join(' | ');
-    window.QRS = { qrMain: qrMainData, qrAlt: qrChainData, qrChain: qrChainData, barcode: barcodeData, verURL: location.href, linea };
+    const linea = [
+      r.nombrePaciente || '—',
+      ts.toLocaleString('es-MX'),
+      r.medicoNombre || '—',
+      r.medsSig || ''
+    ].join(' | ');
 
-    console.log('[ver-safe] render ok');
+    window.QRS = {
+      qrMain: qrMainData,
+      qrAlt:  qrChainData,
+      qrChain: qrChainData,
+      barcode: barcodeData,
+      verURL: location.origin + '/public/ver-receta.html?id=' + encodeURIComponent(r.id),
+      linea
+    };
+
+    console.log('[ver] render ok');
   }
 
-  if (document.readyState==='loading') document.addEventListener('DOMContentLoaded', ()=>{ renderOnce().catch(console.warn); }, {once:true});
-  else renderOnce().catch(console.warn);
+  if (document.readyState==='loading') {
+    document.addEventListener('DOMContentLoaded', ()=>{ renderOnce().catch(console.warn); }, {once:true});
+  } else {
+    renderOnce().catch(console.warn);
+  }
 })();
 </script>
 
