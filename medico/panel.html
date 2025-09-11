@@ -96,227 +96,166 @@
   </script>
 
 <script>
-/* ==== KODRX inline v2 (generar receta + meds + blockchain) ==== */
+/* ==== KODRX inline GEN v3 (meds ini + medsSig + blockchain) ==== */
 (() => {
-  if (window.__KODRX_INLINE_V2__) return;
-  window.__KODRX_INLINE_V2__ = true;
-  console.log('[inline-v2] boot');
+  if (window.__KODRX_INLINE_GEN_V3__) return; window.__KODRX_INLINE_GEN_V3__=true;
 
-  // ---------- Helpers DOM ----------
+  // 👉 Si ya tienes endpoint real, ponlo aquí:
+  // window.BC_ISSUE_URL = 'https://tu-backend/issue';
+
   const $  = (s, r=document)=>r.querySelector(s);
   const $$ = (s, r=document)=>[...r.querySelectorAll(s)];
   const val= (sel)=>($(sel)?.value ?? '').toString().trim();
 
-  // ---------- Firebase (imports dinámicos) ----------
-  let auth, db, currentUser=null, fs=null, onAuthStateChanged=null;
+  // Firebase lazy
+  let auth, db, fs, onAuthStateChanged, currentUser=null;
   async function ensureImports(){
-    if (auth && db && fs && onAuthStateChanged) return;
-    const core   = await import('/firebase-init.js'); // debe exponer {auth, db}
+    if (auth && db && fs) return;
+    const core   = await import('/firebase-init.js');
     const _fs    = await import('https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js');
     const _auth  = await import('https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js');
     auth = core.auth; db = core.db; fs = _fs; onAuthStateChanged = _auth.onAuthStateChanged;
     onAuthStateChanged(auth, u => { currentUser = u || null; });
   }
-  const ensureUser = () => currentUser || (auth?.currentUser ?? null);
+  const ensureUser = ()=> currentUser || auth?.currentUser || null;
 
-  // ---------- Contenedor de medicamentos ----------
+  // Contenedor/filas de medicamentos
   let medsContainer;
   function ensureMedsContainer(){
     if (medsContainer && document.contains(medsContainer)) return medsContainer;
     medsContainer = document.getElementById('medicamentosContainer') || document.querySelector('[data-meds]');
-    if (!medsContainer){
-      const d=document.createElement('div'); d.id='medicamentosContainer'; document.body.appendChild(d);
-      medsContainer = d;
-    }
+    if (!medsContainer){ const d=document.createElement('div'); d.id='medicamentosContainer'; document.body.appendChild(d); medsContainer=d; }
     return medsContainer;
   }
-
-  // ---------- Iniciales/BC helpers ----------
-  const STOP_ES = new Set(['DE','DEL','LA','EL','LOS','LAS','Y','CON','PARA','POR','A','EN','UN','UNA','UNO','AL','LO']);
-  function asciiUp(s){ return (s||'').normalize('NFD').replace(/\p{Diacritic}/gu,'').toUpperCase(); }
-  function medInitials(nombre){
-    const t = asciiUp(nombre).replace(/[^A-Z0-9\s]/g,' ').trim().split(/\s+/);
-    const letters = [];
-    for(const w of t){ if (!w || STOP_ES.has(w)) continue; letters.push(w[0]); if (letters.length>=4) break; }
-    return letters.join('') || asciiUp(nombre).slice(0,3) || 'X';
-  }
-  function buildMedsSignature(meds){
-    try{
-      const sig = (meds||[]).map(m => (m.ini || medInitials(m.nombre||'')).slice(0,4)).filter(Boolean).join('.');
-      return sig.slice(0,120);
-    }catch{ return ''; }
-  }
-  async function sha256Hex(str){
-    const buf = new TextEncoder().encode(str);
-    const dig = await crypto.subtle.digest('SHA-256', buf);
-    return [...new Uint8Array(dig)].map(b=>b.toString(16).padStart(2,'0')).join('');
-  }
-  async function issueOnChain({recetaId, recetaData, medsSig}){
-    const payload = {
-      id: recetaId, ts: Date.now(),
-      medicoUid: recetaData.medicoUid,
-      paciente: recetaData.nombrePaciente || recetaData.pacienteNombre || '',
-      medsSig: medsSig || ''
-    };
-    const URL_BC = window.BC_ISSUE_URL || '/api/bc/issue'; // <- pon tu endpoint real cuando esté listo
-    try{
-      const r = await fetch(URL_BC, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
-      if (!r.ok) throw new Error('HTTP '+r.status);
-      const j = await r.json();
-      if (!j?.hash) throw new Error('Respuesta BC inválida');
-      return { status:'ok', ...j }; // esperamos { network, tx, block, hash }
-    }catch(e){
-      const hash = (await sha256Hex(JSON.stringify(payload))).slice(0,40);
-      return { status:'simulado', network:'sim', tx:null, block:null, hash };
-    }
-  }
-
-  // ---------- UI: agregar & recolectar medicamentos ----------
   function agregarMedicamento(){
     const cont = ensureMedsContainer();
-    const row  = document.createElement('div');
-    row.className = 'medicamento';
-    row.style.display='grid'; row.style.gridTemplateColumns='1fr 1fr 1fr auto';
-    row.style.gap='8px'; row.style.margin='6px 0';
-
+    const row = document.createElement('div');
+    row.className='medicamento'; row.style.cssText='display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:8px;margin:6px 0';
     const n = Object.assign(document.createElement('input'), { placeholder:'Nombre',   className:'nombre'   });
     const d = Object.assign(document.createElement('input'), { placeholder:'Dosis',    className:'dosis'    });
     const u = Object.assign(document.createElement('input'), { placeholder:'Duración', className:'duracion' });
-    const x = document.createElement('button'); x.type='button'; x.textContent='🗑️'; x.style.padding='6px 10px';
-    x.addEventListener('click', ()=> row.remove());
-    row.append(n,d,u,x);
-    cont.appendChild(row);
-
-    if (typeof window.iniciarAutocompletado === 'function') {
-      setTimeout(()=>window.iniciarAutocompletado(n), 60);
-    }
+    const x = document.createElement('button'); x.type='button'; x.textContent='🗑️'; x.style.padding='6px 10px'; x.onclick=()=>row.remove();
+    row.append(n,d,u,x); cont.appendChild(row);
+    if (typeof window.iniciarAutocompletado==='function') setTimeout(()=>window.iniciarAutocompletado(n),60);
   }
   function collectMeds(){
-    const items=[];
-    $$('#medicamentosContainer .medicamento, [data-meds] .medicamento').forEach(r=>{
-      const nombre=(r.querySelector('.nombre')?.value ?? '').trim();
-      const dosis =(r.querySelector('.dosis') ?.value ?? '').trim();
-      const dur   =(r.querySelector('.duracion')?.value ?? '').trim();
-      if (nombre) items.push({ nombre, dosis: dosis||'—', duracion: dur||'—' });
-    });
-    return items;
+    const out=[]; $$('#medicamentosContainer .medicamento, [data-meds] .medicamento').forEach(r=>{
+      const nombre=(r.querySelector('.nombre')?.value??'').trim();
+      const dosis =(r.querySelector('.dosis') ?.value??'').trim();
+      const dur   =(r.querySelector('.duracion')?.value??'').trim();
+      if (nombre) out.push({ nombre, dosis: dosis||'—', duracion: dur||'—' });
+    }); return out;
   }
 
-  // ---------- Submit receta ----------
+  // Iniciales / firma corta
+  const STOP_ES=new Set(['DE','DEL','LA','EL','LOS','LAS','Y','CON','PARA','POR','A','EN','UN','UNA','UNO','AL','LO']);
+  const asciiUp=s=>(s||'').normalize('NFD').replace(/\p{Diacritic}/gu,'').toUpperCase();
+  const medInitials=nombre=>{
+    const t=asciiUp(nombre).replace(/[^A-Z0-9\s]/g,' ').trim().split(/\s+/); const L=[];
+    for(const w of t){ if(!w||STOP_ES.has(w)) continue; L.push(w[0]); if(L.length>=4) break; }
+    return L.join('')||asciiUp(nombre).slice(0,3)||'X';
+  };
+  const buildMedsSignature=meds=>{
+    try{ return (meds||[]).map(m=>(m.ini||medInitials(m.nombre||'')).slice(0,4)).filter(Boolean).join('.').slice(0,120); }
+    catch{ return ''; }
+  };
+  async function sha256Hex(str){
+    const dig=await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+    return [...new Uint8Array(dig)].map(b=>b.toString(16).padStart(2,'0')).join('');
+  }
+  async function issueOnChain({recetaId, recetaData, medsSig}){
+    const payload={ id:recetaId, ts:Date.now(), medicoUid:recetaData.medicoUid, paciente:recetaData.nombrePaciente||'', medsSig:medsSig||'' };
+    const URL_BC=window.BC_ISSUE_URL||'/api/bc/issue';
+    try{
+      const r=await fetch(URL_BC,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+      if(!r.ok) throw new Error('HTTP '+r.status); const j=await r.json(); if(!j?.hash) throw new Error('Respuesta BC inválida');
+      return {status:'ok', ...j};  // {network, tx, block, hash}
+    }catch{
+      return {status:'simulado', network:'sim', tx:null, block:null, hash:(await sha256Hex(JSON.stringify(payload))).slice(0,40)};
+    }
+  }
+
   async function onSubmitReceta(ev){
     ev?.preventDefault?.();
-    const btn = document.getElementById('btnGenerar') || $('button[type="submit"]');
+    const btn = document.getElementById('btnGenerar') || document.querySelector('button[type="submit"]');
     if (btn){ btn.disabled=true; btn.textContent='Guardando…'; }
-
     try{
       await ensureImports();
       const { addDoc, updateDoc, collection, doc, getDoc, serverTimestamp } = fs;
 
-      const u = ensureUser();
-      if (!u) throw new Error('Inicia sesión');
+      const u = ensureUser(); if(!u) throw new Error('Inicia sesión');
 
-      // Datos del médico (opcional)
-      let medico = {};
-      try{
-        const snap = await getDoc(doc(db,'medicos', u.uid));
-        medico = snap.exists() ? (snap.data()||{}) : {};
-      }catch{}
+      // médico (opcional)
+      let medico={}; try{ const snap=await getDoc(doc(db,'medicos',u.uid)); medico=snap.exists()?(snap.data()||{}):{}; }catch{}
 
-      // Datos de receta (ajusta IDs si cambian)
-      const data = {
+      // datos del form
+      const base = {
         nombrePaciente: val('#nombrePaciente'),
-        edad: Number(val('#edad')) || null,
+        edad: Number(val('#edad'))||null,
         sexo: val('#sexo'),
-        talla: Number(val('#talla')) || null,
-        peso: Number(val('#peso')) || null,
+        talla: Number(val('#talla'))||null,
+        peso: Number(val('#peso'))||null,
         imc: val('#imc'),
         temperatura: val('#temperatura'),
         presion: val('#presion'),
         observaciones: val('#observaciones'),
         diagnostico: val('#diagnostico'),
 
-        medicoUid: u.uid,
-        medicoEmail: u.email || '',
-        correo: u.email || '',
-
-        medicoNombre: medico?.nombre || '',
-        medicoCedula: medico?.cedula || '',
-        medicoEspecialidad: medico?.especialidad || 'General',
-        medicoTelefono: medico?.telefono || '',
+        medicoUid: u.uid, medicoEmail: u.email||'', correo: u.email||'',
+        medicoNombre: medico?.nombre||'', medicoCedula: medico?.cedula||'',
+        medicoEspecialidad: medico?.especialidad||'General', medicoTelefono: medico?.telefono||'',
         medicoDomicilio: `${medico?.calle||''} ${medico?.numero||''}, ${medico?.colonia||''}, ${medico?.municipio||''}, ${medico?.estado||''}, CP ${medico?.cp||''}`.replace(/\s+/g,' ').trim(),
-
         timestamp: serverTimestamp()
       };
+      if(!base.nombrePaciente) throw new Error('Falta nombre del paciente');
+      if(!base.edad) throw new Error('Falta edad');
 
-      if (!data.nombrePaciente) throw new Error('Falta nombre del paciente');
-      if (!data.edad) throw new Error('Falta edad');
-
-      // Meds con 'ini' + firma corta
-      const medsRaw = collectMeds();
-      const meds    = medsRaw.map(m => ({ nombre:m.nombre, dosis:m.dosis||'—', duracion:m.duracion||'—', ini: medInitials(m.nombre||'') }));
+      // meds
+      const raw = collectMeds();
+      const meds = raw.map(m=>({ nombre:m.nombre, dosis:m.dosis||'—', duracion:m.duracion||'—', ini: medInitials(m.nombre||'') }));
       const medsSig = buildMedsSignature(meds);
 
-      // Crear receta raíz con medsSig
-      const recetaRef = await addDoc(collection(db,'recetas'), { ...data, medsSig });
+      // crea receta con estado inicial
+      const recetaRef = await addDoc(collection(db,'recetas'), { ...base, medsSig, blockchain:{ status:'pendiente', medsSig } });
 
-      // Subcolección medicamentos
-      for (const m of meds) {
-        await addDoc(collection(db,'recetas', recetaRef.id, 'medicamentos'), m);
-      }
+      // subcolección
+      for(const m of meds){ await addDoc(collection(db,'recetas', recetaRef.id, 'medicamentos'), m); }
 
-      // Enviar a Blockchain (o simular)
-      const bc = await issueOnChain({ recetaId: recetaRef.id, recetaData: data, medsSig });
-
-      // Persistir resultado BC
-      await updateDoc(doc(db,'recetas', recetaRef.id), {
-        bloque: bc.block || null,
-        hash: bc.hash || null,
-        blockchain: {
-          status: bc.status,
-          network: bc.network || null,
-          tx: bc.tx || null,
-          block: bc.block || null,
-          hash: bc.hash || null,
-          medsSig,
-          at: serverTimestamp()
-        }
-      });
+      // sellar en BC (real o simulado) y persistir
+      try{
+        const bc = await issueOnChain({ recetaId: recetaRef.id, recetaData: base, medsSig });
+        await updateDoc(doc(db,'recetas', recetaRef.id), {
+          bloque: bc.block ?? null, hash: bc.hash ?? null,
+          blockchain: { status: bc.status, network: bc.network||null, tx: bc.tx||null, block: bc.block||null, hash: bc.hash||null, medsSig, at: serverTimestamp() }
+        });
+      }catch(e){ console.error('[gen] update blockchain error', e); }
 
       if (btn){ btn.disabled=false; btn.textContent='Generar receta'; }
-      window.location.href = '/public/ver-receta.html?id=' + encodeURIComponent(recetaRef.id);
+      location.href = '/public/ver-receta.html?id='+encodeURIComponent(recetaRef.id);
 
     }catch(e){
-      console.error('[inline-v2] guardar receta error:', e);
-      alert(e?.message || 'No se pudo generar la receta.');
+      console.error('[gen] error:', e);
+      alert(e?.message||'No se pudo generar la receta.');
       if (btn){ btn.disabled=false; btn.textContent='Generar receta'; }
     }
   }
 
-  // ---------- Bindeo UI ----------
   function bindUI(){
-    const form  = document.getElementById('generarRecetaForm') || document.querySelector('form');
-    const addBtn= document.getElementById('btnAgregarMedicamento') || document.querySelector('[data-add-med], .add-med');
-    const genBtn= document.getElementById('btnGenerar') || document.querySelector('[data-generate], .generate');
-
-    console.log('[inline-v2] bindUI', {form:!!form, add:!!addBtn, gen:!!genBtn});
-
-    addBtn?.setAttribute('type','button');
-    genBtn?.setAttribute('type','button');
-
-    if (addBtn && !addBtn.__bound){ addBtn.addEventListener('click', (e)=>{ e.preventDefault(); agregarMedicamento(); }, {capture:true}); addBtn.__bound=true; }
-    if (genBtn && !genBtn.__bound){ genBtn.addEventListener('click', (e)=>{ e.preventDefault(); form?.requestSubmit ? form.requestSubmit() : form?.submit(); }, {capture:true}); genBtn.__bound=true; }
-    if (form  && !form.__bound ){ form.addEventListener('submit', onSubmitReceta); form.__bound=true; }
+    const form  = $('#generarRecetaForm') || $('form');
+    const addBtn= $('#btnAgregarMedicamento') || document.querySelector('[data-add-med], .add-med');
+    const genBtn= $('#btnGenerar') || document.querySelector('[data-generate], .generate');
+    addBtn?.setAttribute('type','button'); genBtn?.setAttribute('type','button');
+    if(addBtn && !addBtn.__b){ addBtn.addEventListener('click',e=>{e.preventDefault();agregarMedicamento();},{capture:true}); addBtn.__b=true; }
+    if(genBtn && !genBtn.__b){ genBtn.addEventListener('click',e=>{e.preventDefault(); form?.requestSubmit?form.requestSubmit():form?.submit();},{capture:true}); genBtn.__b=true; }
+    if(form && !form.__b){ form.addEventListener('submit', onSubmitReceta); form.__b=true; }
   }
-  if (document.readyState==='loading') document.addEventListener('DOMContentLoaded', bindUI, {once:true});
-  else bindUI();
+  document.readyState==='loading'?document.addEventListener('DOMContentLoaded',bindUI,{once:true}):bindUI();
 
-  // Exponer para consola (debug)
-  window.kodrxBindUI = bindUI;
+  // Debug helpers
   window.agregarMedicamento = agregarMedicamento;
-
-  console.log('[inline-v2] ready');
 })();
 </script>
+
 
 
 
