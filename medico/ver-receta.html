@@ -318,11 +318,26 @@ button{appearance:none;border:0;border-radius:12px;padding:10px 14px;font-weight
 
   
   // QR blockchain: genera siempre con el payload disponible
-if (qrChainDiv && !qrChainDiv.querySelector('canvas, img')) {
-  const bc=r.blockchain||{}, blk=bc.block ?? r.bloque ?? '', h=bc.hash ?? r.hash ?? '', ms=r.medsSig||'';
-  const payload = `kodrx:${r.id}|ms:${ms}|blk:${blk}|hash:${h}`;
-  new QRCode(qrChainDiv, { text: payload, width: 220, height: 220, correctLevel: QRCode.CorrectLevel.M });
-}
+const qrChainDiv = document.getElementById('qrChain');
+  if (qrChainDiv && !qrChainDiv.querySelector('canvas, img')) {
+    const r  = window.RECETA_ACTUAL || {};
+    const bc = r.blockchain || {};
+    const blk = bc.block ?? r.bloque ?? '';
+    const h   = bc.hash  ?? r.hash  ?? '';
+    const ms  = r.medsSig || '';
+
+    const verifyURL =
+      'https://kodrx-blockchain.onrender.com/verificar.html?id=' + encodeURIComponent(r.id) +
+      (h   ? '&hash=' + encodeURIComponent(h)  : '') +
+      (blk ? '&blk='  + encodeURIComponent(blk): '') +
+      (ms  ? '&ms='   + encodeURIComponent(ms) : '');
+
+    new QRCode(qrChainDiv, {
+      text: verifyURL,
+      width: 220,
+      height: 220,
+      correctLevel: QRCode.CorrectLevel.M
+    });
     
     // Barcode
     if (canvas && canvas.getContext && !canvas.__done){
@@ -387,10 +402,11 @@ if (qrChainDiv && !qrChainDiv.querySelector('canvas, img')) {
 </script>
 
 <script>
-/* ==== KODRX: Generar PDF (carga jsPDF si falta) ==== */
+<script>
+/* ==== KODRX: Generar PDF con formato ==== */
 (() => {
-  if (window.__KODRX_PDF_INLINE__) return;
-  window.__KODRX_PDF_INLINE__ = true;
+  if (window.__KODRX_PDF_INLINE_V2__) return;
+  window.__KODRX_PDF_INLINE_V2__ = true;
 
   async function ensureJsPDF(){
     if (window.jspdf?.jsPDF) return window.jspdf.jsPDF;
@@ -402,89 +418,148 @@ if (qrChainDiv && !qrChainDiv.querySelector('canvas, img')) {
     return window.jspdf?.jsPDF;
   }
 
+  function split(doc, text, maxW){ 
+    return doc.splitTextToSize((text??'').toString(), maxW||360);
+  }
+
   window.generarPDF = async function(receta, QRS, {mode}={}){
     const jsPDF = await ensureJsPDF();
     if (!jsPDF){ alert('No se pudo cargar jsPDF'); return; }
 
-    try{
-      const doc = new jsPDF({ unit:'pt', format:'letter' }); // 612x792
-      const M = 54; let y = M;
+    const doc = new jsPDF({ unit:'pt', format:'letter' }); // 612x792
+    const W=612, H=792, M=54;
+    const blue = {r:11,g:91,b:211};
 
-      // Título
-      doc.setFont('helvetica','bold'); doc.setFontSize(18);
-      doc.text('Receta Médica', M, y); y+=28;
+    // Encabezado
+    doc.setFillColor(blue.r, blue.g, blue.b);
+    doc.rect(0,0,W,60,'F');
+    doc.setFont('helvetica','bold'); doc.setFontSize(18); doc.setTextColor(255,255,255);
+    doc.text('KodRx — Receta Médica', M, 38);
 
-      // Médico
-      doc.setFontSize(12); doc.setFont('helvetica','bold'); doc.text('Médico:', M, y);
-      doc.setFont('helvetica','normal'); doc.text((receta.medicoNombre||'—') + (receta.medicoEspecialidad?`, ${receta.medicoEspecialidad}`:''), M+70, y); y+=16;
-      doc.setFont('helvetica','bold'); doc.text('Cédula:', M, y);
-      doc.setFont('helvetica','normal'); doc.text(receta.medicoCedula||'—', M+70, y); y+=22;
+    doc.setTextColor(0,0,0);
+    doc.setFontSize(11);
 
-      // Paciente / Fecha
-      doc.setFont('helvetica','bold'); doc.text('Paciente:', M, y);
-      doc.setFont('helvetica','normal'); doc.text(receta.nombrePaciente||'—', M+70, y); y+=16;
-      doc.setFont('helvetica','bold'); doc.text('Edad:', M, y);
-      doc.setFont('helvetica','normal'); doc.text(String(receta.edad??'—'), M+70, y); y+=16;
-      const ts = receta?.timestamp?.seconds ? new Date(receta.timestamp.seconds*1000)
-               : (receta?.timestamp?.toDate ? receta.timestamp.toDate() : new Date());
-      doc.setFont('helvetica','bold'); doc.text('Fecha:', M, y);
-      doc.setFont('helvetica','normal'); doc.text(ts.toLocaleString('es-MX'), M+70, y); y+=28;
+    // Columnas
+    const colL = M;              // izquierda
+    const colR = 362;            // derecha (para QRs / código de barras)
+    let y = 88;
 
-      // Diagnóstico y observaciones
-      doc.setFont('helvetica','bold'); doc.text('Diagnóstico:', M, y); y+=16;
-      doc.setFont('helvetica','normal'); doc.text((receta.diagnostico||'—'), M, y, {maxWidth: 360}); y+= Math.max(24, (doc.getTextDimensions(receta.diagnostico||'').h||0)+12);
-      doc.setFont('helvetica','bold'); doc.text('Observaciones:', M, y); y+=16;
-      doc.setFont('helvetica','normal'); doc.text((receta.observaciones||'—'), M, y, {maxWidth: 360}); y+=40;
+    const ts = receta?.timestamp?.seconds ? new Date(receta.timestamp.seconds*1000)
+             : (receta?.timestamp?.toDate ? receta.timestamp.toDate() : new Date());
+    const fechaStr = ts.toLocaleString('es-MX');
 
-      // Medicamentos
-      if (receta.medicamentos?.length){
-        doc.setFont('helvetica','bold'); doc.text('Medicamentos:', M, y); y+=18;
-        doc.setFont('helvetica','normal');
-        receta.medicamentos.forEach((m,i)=>{
-          const ln1 = `${i+1}. ${m.nombre||'—'}`;
-          const ln2 = `   Dosis: ${m.dosis||'—'}   Duración: ${m.duracion||'—'}`;
-          doc.text(ln1, M, y, {maxWidth: 420}); y+=14;
-          doc.text(ln2, M, y, {maxWidth: 420}); y+=18;
-        });
-        y+=8;
-      }
+    // === BLOQUE MÉDICO ===
+    doc.setFont('helvetica','bold'); doc.text('MÉDICO', colL, y); y+=12;
+    doc.setDrawColor(210); doc.line(colL, y, W-M, y); y+=14;
+    doc.setFont('helvetica','normal');
+    doc.text((receta.medicoNombre?('Dr. '+receta.medicoNombre):'—') + (receta.medicoEspecialidad?` — ${receta.medicoEspecialidad}`:''), colL, y); y+=16;
+    doc.text('Cédula: ' + (receta.medicoCedula||'—'), colL, y); y+=16;
+    if (receta.medicoTelefono) { doc.text('Tel: ' + receta.medicoTelefono, colL, y); y+=16; }
+    if (receta.medicoDomicilio){ doc.text(split(doc,'Dirección: '+receta.medicoDomicilio, 270), colL, y); y+= split(doc,'Dirección: '+receta.medicoDomicilio,270).length*12 + 4; }
 
-      // Hash (compat blockchain.hash o raíz)
-      doc.setFont('helvetica','bold'); doc.text('Hash:', M, y);
-      doc.setFont('courier','normal'); doc.setFontSize(9);
-      doc.text(receta.hash || receta.blockchain?.hash || '—', M+40, y, {maxWidth: 500}); y+=22;
+    // === BLOQUE PACIENTE ===
+    doc.setFont('helvetica','bold'); doc.text('PACIENTE', colL, y); y+=12;
+    doc.setDrawColor(210); doc.line(colL, y, W-M, y); y+=14;
+    doc.setFont('helvetica','normal');
+    doc.text('Nombre: ' + (receta.nombrePaciente||'—'), colL, y); y+=16;
+    doc.text('Edad: ' + (receta.edad??'—'), colL, y); y+=16;
+    doc.text('Sexo: ' + (receta.sexo||'—'), colL, y); y+=16;
+    const sv = [
+      receta.imc ? `IMC ${receta.imc}` : null,
+      receta.peso ? `${receta.peso} kg` : null,
+      receta.talla ? `${receta.talla} cm` : null,
+      receta.temperatura ? `${receta.temperatura}°C` : null,
+      receta.presion ? `PA ${receta.presion}` : null
+    ].filter(Boolean).join(' · ') || '—';
+    doc.text('Signos: ' + sv, colL, y); y+=16;
+    doc.text('Fecha: ' + fechaStr, colL, y); y+=16;
+    doc.text('ID: ' + (receta.id||'—'), colL, y); y+=20;
 
-      // QRs / Barcode (usa QRS si está)
-      if (QRS?.qrMain)  doc.addImage(QRS.qrMain,  'PNG', 400, M,     160, 160);
-      if (QRS?.qrChain) doc.addImage(QRS.qrChain, 'PNG', 400, M+180, 140, 140);
-      if (QRS?.barcode) doc.addImage(QRS.barcode,'PNG',  M,   730,   280,  40);
+    // === DIAGNÓSTICO ===
+    doc.setFont('helvetica','bold'); doc.text('DIAGNÓSTICO', colL, y); y+=12;
+    doc.setDrawColor(210); doc.line(colL, y, W-M, y); y+=14;
+    doc.setFont('helvetica','normal');
+    const dxt = split(doc, receta.diagnostico||'—', 270);
+    doc.text(dxt, colL, y); y+= dxt.length*14 + 8;
 
-      // Footer
-      doc.setFont('helvetica','italic'); doc.setFontSize(9);
-      doc.text('Generado con KodRx', M, 780);
+    // === OBSERVACIONES ===
+    doc.setFont('helvetica','bold'); doc.text('OBSERVACIONES', colL, y); y+=12;
+    doc.setDrawColor(210); doc.line(colL, y, W-M, y); y+=14;
+    doc.setFont('helvetica','normal');
+    const obst = split(doc, receta.observaciones||'—', 270);
+    doc.text(obst, colL, y); y+= obst.length*14 + 8;
 
-      if (mode==='print'){
-        doc.autoPrint?.(); window.open(doc.output('bloburl'), '_blank');
-      } else {
-        doc.save(`Receta_${receta.id||''}.pdf`);
-      }
-    }catch(e){
-      console.error('[pdf] error', e);
-      alert('No se pudo generar el PDF.');
+    // === MEDICAMENTOS ===
+    doc.setFont('helvetica','bold'); doc.text('MEDICAMENTOS', colL, y); y+=12;
+    doc.setDrawColor(210); doc.line(colL, y, W-M, y); y+=14;
+    doc.setFont('helvetica','normal');
+    if (receta.medicamentos?.length) {
+      receta.medicamentos.forEach((m,i)=>{
+        const l1 = `${i+1}. ${m.nombre||'—'}`;
+        const l2 = `   Dosis: ${m.dosis||'—'}   Duración: ${m.duracion||'—'}`;
+        doc.text(split(doc,l1, 270), colL, y); y += 14;
+        doc.text(split(doc,l2, 270), colL, y); y += 18;
+      });
+    } else {
+      doc.text('—', colL, y); y+=14;
+    }
+
+    // === HASH / BLOQUE ===
+    y += 6;
+    doc.setFont('helvetica','bold'); doc.text('HASH', colL, y); y+=12;
+    doc.setDrawColor(210); doc.line(colL, y, W-M, y); y+=14;
+    doc.setFont('courier','normal'); doc.setFontSize(9);
+    doc.text(split(doc, (receta.hash || receta.blockchain?.hash || '—'), 500), colL, y);
+    doc.setFont('helvetica','normal'); doc.setFontSize(11);
+
+    // === Columna derecha: QRs & Barcode ===
+    // QR principal (ver-receta)
+    if (QRS?.qrMain)  doc.addImage(QRS.qrMain,  'PNG', colR, 88,  180, 180);
+    // QR blockchain (verificador IMPI/KodRx)
+    if (QRS?.qrChain) doc.addImage(QRS.qrChain, 'PNG', colR, 288, 160, 160);
+    // Barcode
+    if (QRS?.barcode) doc.addImage(QRS.barcode,'PNG', colR, 470, 280, 40);
+
+    // Footer
+    doc.setDrawColor(220); doc.line(M, H-40, W-M, H-40);
+    doc.setFont('helvetica','italic'); doc.setFontSize(9);
+    doc.text('Generado con KodRx — Verificación en kodrx.app', M, H-22);
+
+    if (mode==='print'){
+      doc.autoPrint?.(); window.open(doc.output('bloburl'), '_blank');
+    } else {
+      doc.save(`Receta_${receta.id||''}.pdf`);
     }
   };
 })();
 </script>
+
 <script>
-/* ==== KODRX: apaga spinner de verificación si existe ==== */
 (() => {
   function hideVerify(){
-    ['#badgeVerificando','#spinnerVerificando','#panelVerificando','[data-role="verificando"]','.verificando','.spinner-verify']
-      .forEach(sel => document.querySelectorAll(sel).forEach(el => el.style.display='none'));
+    const sels = [
+      '#badgeVerificando','#spinnerVerificando','#panelVerificando',
+      '[data-role="verificando"]','.verificando','.spinner-verify',
+      '.spinner','.loading','#loading'
+    ];
+    // Oculta por selectores comunes
+    for (const sel of sels) {
+      document.querySelectorAll(sel).forEach(el=>{
+        if (/verific/i.test((el.id||'')+' '+(el.className||'')+' '+(el.textContent||''))) {
+          el.style.display='none';
+        }
+      });
+    }
+    // Además, cualquier nodo de texto suelto que contenga “verific”
+    document.querySelectorAll('body *').forEach(el=>{
+      if (el.childElementCount===0 && /verific/i.test(el.textContent||'')) {
+        el.style.display='none';
+      }
+    });
   }
   if (document.readyState==='loading') document.addEventListener('DOMContentLoaded', hideVerify, {once:true});
   else hideVerify();
-  window.kodrxHideVerify = hideVerify; // por si quieres llamarlo manual
+  window.kodrxHideVerify = hideVerify; // por si lo quieres invocar manual
 })();
 </script>
 
