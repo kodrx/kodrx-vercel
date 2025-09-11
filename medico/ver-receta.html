@@ -161,106 +161,87 @@ button{appearance:none;border:0;border-radius:12px;padding:10px 14px;font-weight
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
 <script>
-/* ==== KODRX ver-receta badge+QR fix ==== */
-(()=> {
+/* === KODRX anti-MOCK badge fixer === */
+(() => {
   const sleep = (ms)=>new Promise(r=>setTimeout(r,ms));
-  async function waitReceta(maxMs=4000){
+
+  async function waitFor(fn, max=8000, step=100){
     const t0=Date.now();
-    while(Date.now()-t0<maxMs){
-      if (window.RECETA_ACTUAL) return window.RECETA_ACTUAL;
-      await sleep(80);
+    while(Date.now()-t0<max){
+      const v = fn();
+      if (v) return v;
+      await sleep(step);
     }
     return null;
   }
-  function statusFrom(receta){
+
+  function computeStatus(receta){
     const bc = receta?.blockchain || {};
-    if (bc.status === 'ok') return 'ok';
-    if (bc.status === 'simulado' || receta?.hash) return 'simulado';
-    return 'pendiente';
-  }
-  function updateBadgeOrigen(receta){
-    const el = document.getElementById('badgeOrigen');
-    if (!el) return;
-    const st = statusFrom(receta);
-    const map = {
-      ok:        { text: 'SELLADO EN BLOCKCHAIN', cls: 'badge ok',   bg:'#16a34a', fg:'#fff'  },
-      simulado:  { text: 'SELLADO SIMULADO',      cls: 'badge warn', bg:'#f59e0b', fg:'#111'  },
-      pendiente: { text: 'PENDIENTE',             cls: 'badge warn', bg:'#9ca3af', fg:'#111'  }
-    };
-    const m = map[st];
-    el.textContent = m.text;
-    el.className   = m.cls;
-    // fallback visual por si no hay CSS para .ok/.warn
-    el.style.background = m.bg; el.style.color = m.fg;
-    // por si traía texto “MOCK”
-    el.removeAttribute('data-mock');
+    if (bc.status === 'ok') return { text:'SELLADO EN BLOCKCHAIN', cls:'badge ok',   bg:'#16a34a', fg:'#fff' };
+    if (bc.status === 'simulado' || receta?.hash) return { text:'SELLADO SIMULADO',  cls:'badge warn', bg:'#f59e0b', fg:'#111' };
+    return { text:'PENDIENTE',                  cls:'badge warn', bg:'#9ca3af', fg:'#111' };
   }
 
-  async function makeQR(text,size=260){
-    return new Promise((resolve)=>{
-      if (typeof QRCode==='undefined'){ resolve(''); return; }
-      const div=document.createElement('div');
-      try { new QRCode(div,{text,width:size,height:size,correctLevel:QRCode.CorrectLevel.M}); } catch { resolve(''); return; }
-      setTimeout(()=>{
-        const img=div.querySelector('img'); if (img?.src) return resolve(img.src);
-        const c=div.querySelector('canvas'); resolve(c?c.toDataURL('image/png'):'');
-      },0);
-    });
+  function applyBadge(el, receta){
+    const st = computeStatus(receta);
+    el.textContent = st.text;
+    el.className   = st.cls;
+    // fallback por si tu CSS no define .ok/.warn
+    el.style.background = st.bg;
+    el.style.color      = st.fg;
   }
-  async function ensureBarcode(id){
-    try{
-      if (!window.JsBarcode){
-        await new Promise((res,rej)=>{
-          const s=document.createElement('script');
-          s.src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js";
-          s.onload=res; s.onerror=rej; document.head.appendChild(s);
-        });
+
+  async function init(){
+    // Espera receta y badge
+    const receta = await waitFor(()=>window.RECETA_ACTUAL, 10000, 120);
+    const badge  = await waitFor(()=>document.getElementById('badgeOrigen'), 10000, 120);
+    if (!badge) return;
+
+    // Aplica una vez
+    applyBadge(badge, receta || {});
+
+    // 1) Observa reescrituras del badge (si alguien vuelve a poner MOCK)
+    const mo = new MutationObserver(()=>{
+      if (!badge.isConnected){ mo.disconnect(); return; }
+      if ((badge.textContent||'').toUpperCase().includes('MOCK')){
+        applyBadge(badge, window.RECETA_ACTUAL || {});
       }
-      const c=document.createElement('canvas');
-      JsBarcode(c, id, {format:'CODE128', displayValue:false, margin:0, width:2, height:60});
-      return c.toDataURL('image/png');
-    }catch{ return ''; }
-  }
+    });
+    mo.observe(badge, { childList:true, characterData:true, subtree:true });
 
-  async function run(){
-    const receta = await waitReceta();
-    if (!receta) return;
-
-    // Actualiza el badge MOCK → estado real
-    updateBadgeOrigen(receta);
-
-    // Genera QRs/barcode si no existen aún
-    if (!window.QRS){
-      const verURL = location.origin + '/public/ver-receta.html?id=' + encodeURIComponent(receta.id);
-      const ts = (()=> {
-        try{
-          if (receta?.timestamp?.seconds) return new Date(receta.timestamp.seconds*1000);
-          if (receta?.timestamp?.toDate)  return receta.timestamp.toDate();
-        }catch{}
-        return new Date();
-      })();
-      const linea = [
-        receta.nombrePaciente || receta.pacienteNombre || '—',
-        ts.toLocaleString('es-MX'),
-        receta.medicoNombre || '—',
-        receta.medsSig || ''
-      ].join(' | ');
-
-      const [qrMain, qrAlt] = await Promise.all([ makeQR(verURL,280), makeQR(linea,200) ]);
-      const barcode = await ensureBarcode(receta.id);
-      window.QRS = { qrMain, qrAlt, barcode, verURL, linea };
-
-      // Coloca en imgs si existen
-      const img1 = document.getElementById('qrMain');   if (img1) img1.src = qrMain || '';
-      const img2 = document.getElementById('qrAlt');    if (img2) img2.src = qrAlt || '';
-      const img3 = document.getElementById('barcode');  if (img3) img3.src = barcode || '';
+    // 2) Hook a renderReceta/verificarBlockchain para re-aplicar al final
+    const oldRender = window.renderReceta;
+    if (typeof oldRender === 'function'){
+      window.renderReceta = function(r){
+        const res = oldRender.apply(this, arguments);
+        try { applyBadge(badge, r || window.RECETA_ACTUAL || {}); } catch {}
+        return res;
+      };
     }
+    const oldVerify = window.verificarBlockchain;
+    if (typeof oldVerify === 'function'){
+      window.verificarBlockchain = async function(){
+        try { return await oldVerify.apply(this, arguments); }
+        finally { try { applyBadge(badge, window.RECETA_ACTUAL || {}); } catch {} }
+      };
+    }
+
+    // 3) Por si la receta se actualiza asíncrono (p. ej. después del sellado)
+    let lastHash = (window.RECETA_ACTUAL && window.RECETA_ACTUAL.hash) || null;
+    setInterval(()=>{
+      const h = (window.RECETA_ACTUAL && window.RECETA_ACTUAL.hash) || null;
+      if (h !== lastHash){ lastHash = h; applyBadge(badge, window.RECETA_ACTUAL || {}); }
+    }, 800);
   }
 
-  if (document.readyState==='loading') document.addEventListener('DOMContentLoaded', run, {once:true});
-  else run();
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init, { once:true });
+  } else {
+    init();
+  }
 })();
 </script>
+
 
 
 </body>
