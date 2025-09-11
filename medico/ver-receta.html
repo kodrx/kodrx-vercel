@@ -245,11 +245,39 @@ ADO SIMULADO"
     init();
   }
 
-  // ✅ Asegura el objeto antes de asignar
-if (!window.RECETA_ACTUAL) window.RECETA_ACTUAL = {};
-if (!window.RECETA_ACTUAL.blockchain) window.RECETA_ACTUAL.blockchain = {};
-window.RECETA_ACTUAL.blockchain.status = window.RECETA_ACTUAL.blockchain.status || (window.RECETA_ACTUAL.hash ? 'simulado' : 'pendiente');
 
+
+})();
+</script>
+<script>
+(function(){
+  const sleep = (ms)=>new Promise(r=>setTimeout(r,ms));
+  async function waitReceta(max=8000){
+    const t0=Date.now();
+    while(Date.now()-t0<max){
+      if (window.RECETA_ACTUAL) return window.RECETA_ACTUAL;
+      await sleep(80);
+    }
+    return null;
+  }
+  function computeStatus(r){
+    const bc = r?.blockchain || {};
+    if (bc.status === 'ok') return { txt:'SELLADO EN BLOCKCHAIN', cls:'badge ok',   bg:'#16a34a', fg:'#fff' };
+    if (bc.status === 'simulado' || r?.hash) return { txt:'SELLADO SIMULADO',  cls:'badge warn', bg:'#f59e0b', fg:'#111' };
+    return { txt:'PENDIENTE', cls:'badge warn', bg:'#9ca3af', fg:'#111' };
+  }
+  async function run(){
+    const r = await waitReceta();
+    if (!r) return;
+    const el = document.getElementById('badgeOrigen');
+    if (!el) return;
+    const st = computeStatus(r);
+    el.textContent = st.txt;
+    el.className   = st.cls;
+    el.style.background = st.bg; el.style.color = st.fg;
+  }
+  if (document.readyState==='loading') document.addEventListener('DOMContentLoaded', run, {once:true});
+  else run();
 })();
 </script>
 
