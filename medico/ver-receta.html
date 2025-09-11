@@ -163,8 +163,7 @@ button{appearance:none;border:0;border-radius:12px;padding:10px 14px;font-weight
 <script>
 
   // (solo para probar visual)
-window.RECETA_ACTUAL.blockchain = {status:'simulado'};
-document.getElementById('badgeOrigen').textContent = 'MOCK'; // el fix lo corregirá a "SELLADO SIMULADO"
+
 
 /* === KODRX anti-MOCK badge fixer === */
 (() => {
@@ -238,7 +237,9 @@ document.getElementById('badgeOrigen').textContent = 'MOCK'; // el fix lo correg
       if (h !== lastHash){ lastHash = h; applyBadge(badge, window.RECETA_ACTUAL || {}); }
     }, 800);
   }
-
+window.RECETA_ACTUAL.blockchain = {status:'simulado'};
+document.getElementById('badgeOrigen').textContent = 'MOCK'; // el fix lo corregirá a "SELLADO SIMULADO"
+  
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init, { once:true });
   } else {
