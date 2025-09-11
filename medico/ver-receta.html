@@ -261,11 +261,21 @@ button{appearance:none;border:0;border-radius:12px;padding:10px 14px;font-weight
   }
 
   function computeStatus(receta){
-    const bc = receta?.blockchain || {};
-    if (bc.status === 'ok') return { text:'SELLADO EN BLOCKCHAIN', cls:'badge ok',   bg:'#16a34a', fg:'#fff' };
-    if (bc.status === 'simulado' || receta?.hash) return { text:'SELLADO SIMULADO',  cls:'badge warn', bg:'#f59e0b', fg:'#111' };
-    return { text:'PENDIENTE',                  cls:'badge warn', bg:'#9ca3af', fg:'#111' };
+  const bc = receta?.blockchain || {};
+  const legacyBlock = Number.isFinite(receta?.bloque) && receta.bloque > 0;
+  const bcBlock     = Number.isFinite(bc?.block) || typeof bc?.block === 'string' || typeof bc?.tx === 'string';
+
+  // ✅ considera bloque legacy o block/tx en la nueva estructura como "ok"
+  if (bc.status === 'ok' || legacyBlock || bcBlock) {
+    return { text:'SELLADO EN BLOCKCHAIN', cls:'badge ok', bg:'#16a34a', fg:'#fff' };
   }
+  // 🔶 si no hay block pero sí hash (o status 'simulado'): "simulado"
+  if (bc.status === 'simulado' || receta?.hash) {
+    return { text:'SELLADO SIMULADO', cls:'badge warn', bg:'#f59e0b', fg:'#111' };
+  }
+  // ⏳ por defecto
+  return { text:'PENDIENTE', cls:'badge warn', bg:'#9ca3af', fg:'#111' };
+}
 
   function applyBadge(el, receta){
     const st = computeStatus(receta);
