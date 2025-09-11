@@ -321,6 +321,55 @@ button{appearance:none;border:0;border-radius:12px;padding:10px 14px;font-weight
 })();
 </script>
 
+<script>
+/* === KODRX ver-receta: HIDRATADOR DE RECETA (merge desde Firestore) === */
+(async () => {
+  try {
+    const qs = new URLSearchParams(location.search);
+    const id = (qs.get('id') || '').trim();
+    if (!id) return;
+
+    // imports dinámicos para no depender de módulos
+    const core = await import('/firebase-init.js');
+    const fs   = await import('https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js');
+
+    const ref  = fs.doc(core.db, 'recetas', id);
+    const snap = await fs.getDoc(ref);
+    if (!snap.exists()) return;
+
+    const data = snap.data() || {};
+    // Fusiona TODO en RECETA_ACTUAL conservando el id
+    const prev = window.RECETA_ACTUAL || {};
+    window.RECETA_ACTUAL = Object.assign({ id: snap.id }, prev, data);
+
+    // Log de diagnóstico
+    console.log('[hydrate] receta', {
+      id: snap.id,
+      hasBlockchain: !!data.blockchain,
+      blockchain: data.blockchain,
+      hash: data.hash,
+      bloque: data.bloque
+    });
+
+    // Re-aplica badge si existe
+    const el = document.getElementById('badgeOrigen');
+    if (el) {
+      const bc = window.RECETA_ACTUAL.blockchain || {};
+      let text = 'PENDIENTE', cls='badge warn', bg='#9ca3af', fg='#111';
+      if (bc.status === 'ok') { text='SELLADO EN BLOCKCHAIN'; cls='badge ok'; bg='#16a34a'; fg='#fff'; }
+      else if (bc.status === 'simulado' || window.RECETA_ACTUAL.hash) {
+        text='SELLADO SIMULADO'; cls='badge warn'; bg='#f59e0b'; fg='#111';
+      }
+      el.textContent = text;
+      el.className   = cls;
+      el.style.background = bg;
+      el.style.color      = fg;
+    }
+  } catch (e) {
+    console.warn('[hydrate] fallo al rehidratar receta', e);
+  }
+})();
+</script>
 
 
 
