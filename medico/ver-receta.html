@@ -286,20 +286,7 @@ async function ensureLibs(){
     setText('#hashTexto', 'hash: ' + (r.hash || r.blockchain?.hash || '—'));
     paintBadge(r);
 
-    // leyenda bajo #blockNum
-    {
-      const legendHolder = document.querySelector('.qr-legend .sub');
-      const text = 'Para consultar bloque visitar kodrx.app';
-      if (legendHolder) {
-        legendHolder.textContent = text;
-      } else {
-        const numEl = document.getElementById('blockNum');
-        if (numEl) numEl.insertAdjacentHTML('afterend',
-          '<br><span class="sub" id="blockHint" style="color:#6b7280;font-weight:400">'+text+'</span>'
-        );
-      }
-    }
-
+    
     // medicamentos
     if (!Array.isArray(r.medicamentos) || !r.medicamentos.length){
       try{
@@ -343,6 +330,17 @@ async function ensureLibs(){
         new QRCode(qrChainDiv, { text: verifyURL, width: 220, height: 220, correctLevel: QRCode.CorrectLevel.M });
       }
     }
+
+    // leyenda bajo #blockNum
+    {
+  const legendHolder = document.querySelector('.qr-legend .sub');
+  const text = 'Para consultar bloque visitar kodrx.app';
+  if (legendHolder) legendHolder.textContent = text;
+  else document.getElementById('blockNum')?.insertAdjacentHTML(
+    'afterend','<br><span class="sub" style="color:#6b7280;font-weight:400">'+text+'</span>'
+  );
+}
+
     // barcode
     if (canvas && canvas.getContext && !canvas.__done){
       try{ JsBarcode(canvas, r.id, {format:'CODE128', displayValue:false, margin:0, width:2, height:70}); canvas.__done=true; }catch(e){}
@@ -431,14 +429,7 @@ window.QRS = {
   /* ===== Derecha (tarjetas) ===== */
   let yR = 78;
 
-  // Receta (QR ver-receta)
-  doc.setFont('helvetica','bold'); doc.text('Receta', colR, yR);
-  cardFill(colR-8, yR+6, 196, 196);
-  const QR_MAIN_SIZE = 170;
-  if (QRS?.qrMain) doc.addImage(QRS.qrMain, 'PNG', colR + (196-QR_MAIN_SIZE)/2, yR+6 + (196-QR_MAIN_SIZE)/2, QR_MAIN_SIZE, QR_MAIN_SIZE);
-  yR += 196 + 24;
-
-  // Medicamentos (tarjeta sombreada)
+     // Medicamentos (tarjeta sombreada)
   doc.setFont('helvetica','bold'); doc.text('Medicamentos', colR, yR);
   let medsLines = ['—'];
   if (receta.medicamentos?.length){
@@ -450,6 +441,14 @@ window.QRS = {
     });
     if (medsLines[medsLines.length-1]==='') medsLines.pop();
   }
+  // Receta (QR ver-receta)
+  doc.setFont('helvetica','bold'); doc.text('Receta', colR, yR);
+  cardFill(colR-8, yR+6, 196, 196);
+  const QR_MAIN_SIZE = 170;
+  if (QRS?.qrMain) doc.addImage(QRS.qrMain, 'PNG', colR + (196-QR_MAIN_SIZE)/2, yR+6 + (196-QR_MAIN_SIZE)/2, QR_MAIN_SIZE, QR_MAIN_SIZE);
+  yR += 196 + 24;
+
+ 
   const medsH = Math.min(260, Math.max(64, medsLines.length*14 + 12));
   cardFill(colR-8, yR+6, 296, medsH);
   doc.setFont('helvetica','normal'); { let yy = yR + 20, maxY = yR+6+medsH-12;
@@ -490,7 +489,7 @@ window.QRS = {
   // Footer
   doc.setDrawColor(220); doc.line(M, H-40, W-M, H-40);
   doc.setFont('helvetica','italic'); doc.setFontSize(9);
-  doc.text('Creada con KodRx. Tecnología que verifica, salud que protege.', M, H-22);
+  doc.text('Creada con KodRx. Plataforma digital de recetas verificadas con trazabilidad tecnológica..', M, H-22);
 
   if (mode==='print'){ doc.autoPrint?.(); window.open(doc.output('bloburl'), '_blank'); }
   else { doc.save(`Receta_${receta.id||''}.pdf`); }
