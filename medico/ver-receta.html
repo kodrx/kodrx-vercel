@@ -384,6 +384,9 @@ if (qrChainDiv && !qrChainDiv.querySelector('canvas, img')) {
 
     console.log('[ver] render ok');
   }
+
+
+(() => {
 async function ensureJsPDF(){
     if (window.jspdf?.jsPDF) return window.jspdf.jsPDF;
     await new Promise((res,rej)=>{
