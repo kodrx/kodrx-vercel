@@ -324,6 +324,31 @@ button{appearance:none;border:0;border-radius:12px;padding:10px 14px;font-weight
       const verURL = location.origin + '/public/ver-receta.html?id=' + encodeURIComponent(r.id);
       new QRCode(qrMainDiv, { text: verURL, width: 260, height: 260, correctLevel: QRCode.CorrectLevel.M });
     }
+    // QR blockchain → verificador SOLO con ?id=<bloque>; si no hay bloque, intenta con hash
+if (qrChainDiv && !qrChainDiv.querySelector('canvas, img')) {
+  const bc  = r.blockchain || {};
+  const blk = String(bc.block ?? r.bloque ?? '').trim();
+  const h   = String(bc.hash  ?? r.hash  ?? '').trim();
+
+  let verifyURL = '';
+  if (blk) {
+    verifyURL = 'https://kodrx-blockchain.onrender.com/verificar.html?id=' + encodeURIComponent(blk);
+  } else if (h) {
+    verifyURL = 'https://kodrx-blockchain.onrender.com/verificar.html?id=' + encodeURIComponent(h);
+  } else {
+    qrChainDiv.innerHTML = '<div style="opacity:.6;font:12px system-ui">sin datos</div>';
+  }
+
+  if (verifyURL) {
+    new QRCode(qrChainDiv, {
+      text: verifyURL,
+      width: 220,
+      height: 220,
+      correctLevel: QRCode.CorrectLevel.M
+    });
+  }
+}
+
     // Leyenda bajo el número de bloque (vista)
 {
   const legendHolder = document.querySelector('.qr-legend .sub');
