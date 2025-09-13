@@ -45,7 +45,13 @@ button{appearance:none;border:0;border-radius:12px;padding:10px 14px;font-weight
 
 /* Hash + footer */
 .hash{background:#f3f4f6;border:1px solid #e5e7eb;border-radius:10px;padding:6px 8px;color:#374151;font-size:12px}
-.footer{grid-column:1/-1;background:#0b5bd3;color:#fff;border-radius:12px;padding:12px 16px;text-align:center;font-weight:700;margin-top:6px}
+  .footer{
+      grid-column: 1 / -1;
+      background:#0b5bd3; color:#fff;
+      border-radius:12px; padding:12px 16px;
+      text-align:center; font-weight:700;
+      margin-top:auto; display:block; width:100%; align-self:stretch;
+    }
 .qr-frame.qr-main  { width:260px; height:260px; }
   .qr-frame.qr-chain { width:220px; height:220px; }
   #barcodeCanvas     { width:300px; height:80px; display:block; }
@@ -74,89 +80,99 @@ button{appearance:none;border:0;border-radius:12px;padding:10px 14px;font-weight
 </section>
 
 
+ 
+   
   <div class="receta">
-    <!-- Header -->
+    <!-- ======= AQUÍ VA TU CABECERA / TÍTULO SI LO TIENES ======= -->
     <div class="receta-header">
       KodRx — Receta médica digital
       <span id="badgeOrigen" class="badge warn">MOCK</span>
     </div>
+    <!-- <h1>Receta</h1> -->
 
+    <!-- ======= CONTENIDO PRINCIPAL ======= -->
+    <div class="receta-wrap">
+      <!-- Columna IZQUIERDA -->
+      <div class="col-left" style="display:flex;flex-direction:column;gap:16px">
+        <section class="card">
+          <div class="title">MÉDICO</div>
+          <div class="kv" id="doctorNombre">—</div>
+          <div class="kv"><b>Cédula:</b> <span id="doctorCedula">—</span> &nbsp;&nbsp; <b>Especialidad:</b> <span id="doctorEsp">—</span></div>
+          <div class="kv"><b>Tel:</b> <span id="doctorTel">—</span></div>
+          <div class="kv"><b>Dirección:</b> <span id="doctorDir">—</span></div>
+        </section>
 
-    <!-- Columna IZQUIERDA -->
-    <div class="col-left" style="display:flex;flex-direction:column;gap:16px">
-      <section class="card">
-        <div class="title">MÉDICO</div>
-        <div class="kv" id="doctorNombre">—</div>
-        <div class="kv"><b>Cédula:</b> <span id="doctorCedula">—</span> &nbsp;&nbsp; <b>Especialidad:</b> <span id="doctorEsp">—</span></div>
-        <div class="kv"><b>Tel:</b> <span id="doctorTel">—</span></div>
-        <div class="kv"><b>Dirección:</b> <span id="doctorDir">—</span></div>
-      </section>
+        <section class="card">
+          <div class="title">PACIENTE</div>
+          <div class="kv" id="pacienteNombre">—</div>
+          <div class="kv sub" style="margin-top:6px">
+            <span id="fechaEmision">—</span> &nbsp;&nbsp; <span id="recetaId">ID: —</span>
+          </div>
+          <div class="kv" style="margin-top:8px">
+            <b>Edad:</b> <span id="pacEdad">—</span> &nbsp;&nbsp; <b>Sexo:</b> <span id="pacSexo">—</span>
+          </div>
+          <div class="kv"><b>Peso:</b> <span id="pacPeso">—</span> &nbsp;&nbsp; <b>Talla:</b> <span id="pacTalla">—</span></div>
+          <div class="kv"><b>Temp:</b> <span id="pacTemp">—</span> &nbsp;&nbsp; <b>PA:</b> <span id="pacPresion">—</span></div>
+          <div class="kv"><b>IMC:</b> <span id="pacIMC">—</span></div>
+        </section>
 
-      <section class="card">
-        <div class="title">PACIENTE</div>
-        <div class="kv" id="pacienteNombre">—</div>
-        <div class="kv sub" style="margin-top:6px">
-          <span id="fechaEmision">—</span> &nbsp;&nbsp; <span id="recetaId">ID: —</span>
-        </div>
-        <div class="kv" style="margin-top:8px">
-          <b>Edad:</b> <span id="pacEdad">—</span> &nbsp;&nbsp; <b>Sexo:</b> <span id="pacSexo">—</span>
-        </div>
-        <div class="kv"><b>Peso:</b> <span id="pacPeso">—</span> &nbsp;&nbsp; <b>Talla:</b> <span id="pacTalla">—</span></div>
-        <div class="kv"><b>Temp:</b> <span id="pacTemp">—</span> &nbsp;&nbsp; <b>PA:</b> <span id="pacPresion">—</span></div>
-        <div class="kv"><b>IMC:</b> <span id="pacIMC">—</span></div>
-      </section>
+        <section class="card">
+          <div class="title">OBSERVACIONES</div>
+          <div class="kv" id="obsTexto">—</div>
+        </section>
 
-      <section class="card">
-        <div class="title">OBSERVACIONES</div>
-        <div class="kv" id="obsTexto">—</div>
-      </section>
+        <section class="card">
+          <div class="title">DIAGNÓSTICO</div>
+          <div class="kv" id="diagTexto">—</div>
+        </section>
+      </div><!-- /.col-left -->
 
-      <section class="card">
-        <div class="title">DIAGNÓSTICO</div>
-        <div class="kv" id="diagTexto">—</div>
-      </section>
-    </div>
+      <!-- Columna DERECHA -->
+      <div class="col-right">
+        <section class="card">
+          <div class="title">MEDICAMENTOS</div>
+          <pre class="meds" id="listaMedsDerecha">—</pre>
+        </section>
 
-    <!-- Columna DERECHA -->
-    <div class="col-right">
-      <section class="card">
-        <div class="title">MEDICAMENTOS</div>
-        <pre class="meds" id="listaMedsDerecha">—</pre>
-      </section>
+        <section class="card" style="text-align:center">
+          <div class="qr-frame qr-main"><div id="qrMain"></div></div>
+          <div class="qr-legend">Receta</div>
+        </section>
 
-      <section class="card" style="text-align:center">
-        <div class="qr-frame qr-main"><div id="qrMain"></div></div>
-        <div class="qr-legend">Receta</div>
-      </section>
+        <section class="card" id="panelBarcode">
+          <div class="title">CÓDIGO DE BARRAS (ID)</div>
+          <div style="display:flex;justify-content:center">
+            <canvas id="barcodeCanvas" width="300" height="80"></canvas>
+          </div>
+          <div class="sub" style="text-align:center;margin-top:4px">
+            <span id="barcodeLabel">—</span>
+          </div>
+        </section>
 
-      <section class="card" id="panelBarcode">
-        <div class="title">CÓDIGO DE BARRAS (ID)</div>
-        <div style="display:flex;justify-content:center">
-          <canvas id="barcodeCanvas" width="300" height="80"></canvas>
-        </div>
-        <div class="sub" style="text-align:center;margin-top:4px"><span id="barcodeLabel">—</span></div>
-      </section>
+        <section class="card">
+          <div class="title">HASH</div>
+          <div class="hash" id="hashTexto">hash: —</div>
+        </section>
 
-      <section class="card">
-        <div class="title">HASH</div>
-        <div class="hash" id="hashTexto">hash: —</div>
-      </section>
+        <section class="card" style="text-align:center">
+          <div class="qr-frame qr-chain"><div id="qrChain"></div></div>
+          <div class="qr-legend">
+            Blockchain<br>
+            <span id="blockNum" style="color:#111827;font-weight:800"></span><br>
+            <span class="sub" style="color:#6b7280;font-weight:400">Para consultar bloque visitar kodrx.app</span>
+          </div>
+        </section>
+      </div><!-- /.col-right -->
+    </div><!-- /.receta-wrap -->
 
-      <section class="card" style="text-align:center">
-        <div class="qr-frame qr-chain"><div id="qrChain"></div></div>
-        <div class="qr-legend">
-          Blockchain<br>
-          <span id="blockNum" style="color:#111827;font-weight:800"></span><br>
-          <span class="sub" style="color:#6b7280;font-weight:400">Para verificar receta visitar kodrx.app</span>
-        </div>
-      </section>
-    </div>
+    <!-- Pill de estado (lo ocultamos desde JS al terminar verificación) -->
+    <p id="bcStatus" class="pill" style="display:none;">Verificando blockchain…</p>
 
     <!-- Footer -->
-    <div class="footer">Creada con KodRx. Plataforma digital de recetas verificadas con trazabilidad tecnológica.</div>
-    <p id="bcStatus" class="pill" style="display:inline-block;">Verificando blockchain…</p>
-  </div>
-</div>
+    <div class="footer">
+      Creada con KodRx. Plataforma digital de recetas verificadas con trazabilidad tecnológica.
+    </div>
+  </div><!-
 
 <!-- jsPDF (UMD) -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
