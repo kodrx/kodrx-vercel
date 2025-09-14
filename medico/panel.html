@@ -256,9 +256,22 @@ async function onSubmit(){
 
     const ref = await addDoc(collection(db, 'recetas'), recetaData);
     console.log('[panel] receta creada:', ref.id);
+// Después de addDoc(...)
+try{
+  fetch(`${BC_BASE}/api/sellar`, {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({
+      id: ref.id,
+      medsIniciales: recetaData.medsIniciales,
+      medico: recetaData.medicoNombre,
+      timestamp: Math.floor(Date.now()/1000)
+    })
+  }).catch(()=>{});
+}catch{}
 
+    
     // Redirección a ver-receta con el ID
-    const u = new URL('/ver-receta.html', location.origin);
+    const u = new URL('/medico/ver-receta.html', location.origin);
     u.searchParams.set('id', ref.id);
     // feedback mínimo antes de irnos
     alert('Receta creada: ' + ref.id);
