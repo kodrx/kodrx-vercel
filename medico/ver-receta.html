@@ -457,24 +457,33 @@ async function sellIfPending(receta){
     const canvas     = document.getElementById('barcodeCanvas');
     const label      = document.getElementById('barcodeLabel');
 
-    // QR principal (ver-receta)
-    if (qrMainDiv && !qrMainDiv.querySelector('canvas, img')) {
-      const verURL = location.origin + '/public/ver-receta.html?id=' + encodeURIComponent(r.id);
-      new QRCode(qrMainDiv, { text: verURL, width: 260, height: 260, correctLevel: QRCode.CorrectLevel.M });
-    }
-    // QR blockchain → verificador SOLO ?id=<bloque> (fallback hash)
-   const blk = r?.blockchain?.block ?? r?.bloque ?? null;
-if (blk) { await setChainQR(blk); }
-sellIfPending(r); // no await
+   /* QR principal (ver-receta) */
+{
+  const host = document.getElementById('qrMain');
+  if (host){
+    host.innerHTML = '';
+    const verURL = location.origin + '/ver-receta.html?id=' + encodeURIComponent(r.id);
+    new QRCode(host, { text: verURL, width: 260, height: 260, correctLevel: QRCode.CorrectLevel.M });
+  }
+}
 
-    // leyenda bajo #blockNum
-    {
+/* QR blockchain (solo por bloque; si no hay, sellar en background) */
+{
+  const blk = r?.blockchain?.block ?? r?.bloque ?? null;
+  if (blk) { await setChainQR(blk); }
+  sellIfPending(r); // no await: deja que llegue el sellado y repinte
+}
+
+/* Leyenda bajo el número de bloque */
+{
   const legendHolder = document.querySelector('.qr-legend .sub');
   const text = 'Para consultar bloque visitar kodrx.app';
-  if (legendHolder) legendHolder.textContent = text;
-  else document.getElementById('blockNum')?.insertAdjacentHTML(
-    'afterend','<br><span class="sub" style="color:#6b7280;font-weight:400">'+text+'</span>'
-  );
+  if (legendHolder) {
+    legendHolder.textContent = text;
+  } else {
+    document.getElementById('blockNum')
+      ?.insertAdjacentHTML('afterend','<br><span class="sub" style="color:#6b7280;font-weight:400">'+text+'</span>');
+  }
 }
 
     // barcode
