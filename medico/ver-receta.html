@@ -7,10 +7,10 @@
 
 <style>
 /* ===== Layout general ===== */
-body{margin:0;background:#ffffff;color:#0f172a;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial,"Noto Sans",sans-serif}
-.receta-wrap{max-width:940px;margin:16px auto;padding:12px}
-.receta{display:grid;grid-template-columns:1fr 340px;gap:16px;align-items:start}
-
+html, body { height:100%; }
+body { min-height:100dvh; display:flex; flex-direction:column; }
+.receta-root { flex:1 0 auto; display:flex; flex-direction:column; }
+.receta-wrap { flex:1 0 auto; }
 /* Header */
 .receta-header{grid-column:1/-1;background:#F0F5FF;color:#0b1b2b;padding:14px 16px;border-radius:12px;font-weight:700}
 .badge{display:inline-block;padding:4px 10px;border-radius:999px;font-size:12px;font-weight:700;margin-left:8px}
@@ -67,7 +67,7 @@ button{appearance:none;border:0;border-radius:12px;padding:10px 14px;font-weight
   #barcodeCanvas     { width:300px; height:80px; display:block; }
 /* Responsive */
 @media (max-width:920px){
-  .receta{grid-template-columns:1fr}
+  .receta-wrap{ grid-template-columns:1fr; }
   .qr-main img{width:200px;height:200px}
   .qr-chain img{width:100px;height:100px}
 }
@@ -88,12 +88,11 @@ button{appearance:none;border:0;border-radius:12px;padding:10px 14px;font-weight
     <div class="receta-wrap"><!-- ÚNICO grid de 2 columnas -->
 
       <!-- Acciones (ocupa ambas columnas) -->
-      <section class="card actions" style="gap:8px; padding:12px">
-        <button id="btnVolver" type="button" class="btn">Regresar</button>
-        <button id="btnDescargar" type="button" class="btn">Descargar PDF</button>
-        <button id="btnImprimir"  type="button" class="btn">Imprimir</button>
-      </section>
-
+     <section class="card actions" style="gap:8px; padding:12px">
+  <button id="btnVolver" type="button" class="btn">Regresar</button>
+  <button id="btnDescargar" type="button" class="btn">Descargar PDF</button>
+  <button id="btnImprimir"  type="button" class="btn">Imprimir</button>
+</section>
       <!-- Header (ocupa ambas columnas) -->
       <div class="receta-header">
         KodRx — Receta médica digital
@@ -183,7 +182,8 @@ button{appearance:none;border:0;border-radius:12px;padding:10px 14px;font-weight
     </div>
   </div><!-- /.receta-root -->
 
-
+</body>
+</html>
 
 
 
