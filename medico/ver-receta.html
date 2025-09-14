@@ -80,101 +80,112 @@ button{appearance:none;border:0;border-radius:12px;padding:10px 14px;font-weight
 @media print{ .actions{display:none!important} }
 </style>
 </head>
+
+
 <body>
+  <div class="receta-root"><!-- wrapper para sticky footer -->
 
-<div class="receta-wrap">
-<section class="card" style="text-align:center; gap:8px; padding:12px">
-  <button id="btnVolver" type="button" class="btn">Regresar</button>
-  <button id="btnDescargar" type="button" class="btn">Descargar PDF</button>
-  <button id="btnImprimir"  type="button" class="btn">Imprimir</button>
-</section>
+    <div class="receta-wrap"><!-- ÚNICO grid de 2 columnas -->
 
-
- 
-   
- <div class="receta">
-    <!-- Header -->
-    <div class="receta-header">
-      KodRx — Receta médica digital
-      <span id="badgeOrigen" class="badge warn">MOCK</span>
-    </div>
-
-
-    <!-- Columna IZQUIERDA -->
-    <div class="col-left" style="display:flex;flex-direction:column;gap:16px">
-      <section class="card">
-        <div class="title">MÉDICO</div>
-        <div class="kv" id="doctorNombre">—</div>
-        <div class="kv"><b>Cédula:</b> <span id="doctorCedula">—</span> &nbsp;&nbsp; <b>Especialidad:</b> <span id="doctorEsp">—</span></div>
-        <div class="kv"><b>Tel:</b> <span id="doctorTel">—</span></div>
-        <div class="kv"><b>Dirección:</b> <span id="doctorDir">—</span></div>
+      <!-- Acciones (ocupa ambas columnas) -->
+      <section class="card actions" style="gap:8px; padding:12px">
+        <button id="btnVolver" type="button" class="btn">Regresar</button>
+        <button id="btnDescargar" type="button" class="btn">Descargar PDF</button>
+        <button id="btnImprimir"  type="button" class="btn">Imprimir</button>
       </section>
 
-      <section class="card">
-        <div class="title">PACIENTE</div>
-        <div class="kv" id="pacienteNombre">—</div>
-        <div class="kv sub" style="margin-top:6px">
-          <span id="fechaEmision">—</span> &nbsp;&nbsp; <span id="recetaId">ID: —</span>
-        </div>
-        <div class="kv" style="margin-top:8px">
-          <b>Edad:</b> <span id="pacEdad">—</span> &nbsp;&nbsp; <b>Sexo:</b> <span id="pacSexo">—</span>
-        </div>
-        <div class="kv"><b>Peso:</b> <span id="pacPeso">—</span> &nbsp;&nbsp; <b>Talla:</b> <span id="pacTalla">—</span></div>
-        <div class="kv"><b>Temp:</b> <span id="pacTemp">—</span> &nbsp;&nbsp; <b>PA:</b> <span id="pacPresion">—</span></div>
-        <div class="kv"><b>IMC:</b> <span id="pacIMC">—</span></div>
-      </section>
+      <!-- Header (ocupa ambas columnas) -->
+      <div class="receta-header">
+        KodRx — Receta médica digital
+        <span id="badgeOrigen" class="badge warn">MOCK</span>
+      </div>
 
-      <section class="card">
-        <div class="title">OBSERVACIONES</div>
-        <div class="kv" id="obsTexto">—</div>
-      </section>
 
-      <section class="card">
-        <div class="title">DIAGNÓSTICO</div>
-        <div class="kv" id="diagTexto">—</div>
-      </section>
-    </div>
+      <!-- Columna IZQUIERDA -->
+      <div class="col-left" style="display:flex;flex-direction:column;gap:16px">
+        <section class="card">
+          <div class="title">MÉDICO</div>
+          <div class="kv" id="doctorNombre">—</div>
+          <div class="kv"><b>Cédula:</b> <span id="doctorCedula">—</span> &nbsp;&nbsp; <b>Especialidad:</b> <span id="doctorEsp">—</span></div>
+          <div class="kv"><b>Tel:</b> <span id="doctorTel">—</span></div>
+          <div class="kv"><b>Dirección:</b> <span id="doctorDir">—</span></div>
+        </section>
 
-    <!-- Columna DERECHA -->
-    <div class="col-right">
-      <section class="card">
-        <div class="title">MEDICAMENTOS</div>
-        <pre class="meds" id="listaMedsDerecha">—</pre>
-      </section>
+        <section class="card">
+          <div class="title">PACIENTE</div>
+          <div class="kv" id="pacienteNombre">—</div>
+          <div class="kv sub" style="margin-top:6px">
+            <span id="fechaEmision">—</span> &nbsp;&nbsp; <span id="recetaId">ID: —</span>
+          </div>
+          <div class="kv" style="margin-top:8px">
+            <b>Edad:</b> <span id="pacEdad">—</span> &nbsp;&nbsp; <b>Sexo:</b> <span id="pacSexo">—</span>
+          </div>
+          <div class="kv"><b>Peso:</b> <span id="pacPeso">—</span> &nbsp;&nbsp; <b>Talla:</b> <span id="pacTalla">—</span></div>
+          <div class="kv"><b>Temp:</b> <span id="pacTemp">—</span> &nbsp;&nbsp; <b>PA:</b> <span id="pacPresion">—</span></div>
+          <div class="kv"><b>IMC:</b> <span id="pacIMC">—</span></div>
+        </section>
 
-      <section class="card" style="text-align:center">
-        <div class="qr-frame qr-main"><div id="qrMain"></div></div>
-        <div class="qr-legend">Receta</div>
-      </section>
+        <section class="card">
+          <div class="title">OBSERVACIONES</div>
+          <div class="kv" id="obsTexto">—</div>
+        </section>
 
-      <section class="card" id="panelBarcode">
-        <div class="title">CÓDIGO DE BARRAS (ID)</div>
-        <div style="display:flex;justify-content:center">
-          <canvas id="barcodeCanvas" width="300" height="80"></canvas>
-        </div>
-        <div class="sub" style="text-align:center;margin-top:4px"><span id="barcodeLabel">—</span></div>
-      </section>
+        <section class="card">
+          <div class="title">DIAGNÓSTICO</div>
+          <div class="kv" id="diagTexto">—</div>
+        </section>
+      </div><!-- /.col-left -->
 
-      <section class="card">
-        <div class="title">HASH</div>
-        <div class="hash" id="hashTexto">hash: —</div>
-      </section>
+      <!-- Columna DERECHA -->
+      <div class="col-right">
+        <section class="card">
+          <div class="title">MEDICAMENTOS</div>
+          <pre class="meds" id="listaMedsDerecha">—</pre>
+        </section>
 
-      <section class="card" style="text-align:center">
-        <div class="qr-frame qr-chain"><div id="qrChain"></div></div>
-        <div class="qr-legend">
-          Blockchain<br>
-          <span id="blockNum" style="color:#111827;font-weight:800"></span><br>
-          <span class="sub" style="color:#6b7280;font-weight:400">Para verificar receta visitar kodrx.app</span>
-        </div>
-      </section>
-    </div>
+        <section class="card" style="text-align:center">
+          <div class="qr-frame qr-main"><div id="qrMain"></div></div>
+          <div class="qr-legend">Receta</div>
+        </section>
+
+        <section class="card" id="panelBarcode">
+          <div class="title">CÓDIGO DE BARRAS (ID)</div>
+          <div style="display:flex;justify-content:center">
+            <canvas id="barcodeCanvas" width="300" height="80"></canvas>
+          </div>
+          <div class="sub" style="text-align:center;margin-top:4px">
+            <span id="barcodeLabel">—</span>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="title">HASH</div>
+          <div class="hash" id="hashTexto">hash: —</div>
+        </section>
+
+        <section class="card" style="text-align:center">
+          <div class="qr-frame qr-chain"><div id="qrChain"></div></div>
+          <div class="qr-legend">
+            Blockchain<br>
+            <span id="blockNum" style="color:#111827;font-weight:800"></span><br>
+            <span class="sub" style="color:#6b7280;font-weight:400">Para consultar bloque visitar kodrx.app</span>
+          </div>
+        </section>
+      </div><!-- /.col-right -->
+    </div><!-- /.receta-wrap -->
+
+    <!-- Pill de estado (lo ocultamos desde JS al terminar verificación) -->
+    <p id="bcStatus" class="pill" style="display:none;">Verificando blockchain…</p>
 
     <!-- Footer -->
-    <div class="footer">Creada con KodRx. Plataforma digital de recetas verificadas con trazabilidad tecnológica.</div>
-    <p id="bcStatus" class="pill" style="display:inline-block;">Verificando blockchain…</p>
-  </div>
-</div>
+    <div class="footer">
+      Creada con KodRx. Plataforma digital de recetas verificadas con trazabilidad tecnológica.
+    </div>
+  </div><!-- /.receta-root -->
+
+
+
+
 
 <!-- jsPDF (UMD) -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
