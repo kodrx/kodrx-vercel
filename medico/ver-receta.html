@@ -282,7 +282,18 @@ async function ensureLibs(){
     document.head.appendChild(s);
   });
 }
-  
+  function updateBadgeFromReceta(r){
+  const el = document.getElementById('badgeOrigen'); if(!el) return;
+  const hasBlock = (r?.blockchain?.block ?? r?.bloque) != null;     // admite recetas viejas
+  const hasHash  = !!(r?.blockchain?.hash ?? r?.hash);
+
+  const S = hasBlock ? {txt:'SELLADO EN BLOCKCHAIN', cls:'badge ok',   bg:'#16a34a', fg:'#fff'}
+        : hasHash   ? {txt:'SELLADO SIMULADO',      cls:'badge warn', bg:'#f59e0b', fg:'#111'}
+                    : {txt:'PENDIENTE',             cls:'badge warn', bg:'#9ca3af', fg:'#111'};
+
+  el.textContent = S.txt; el.className = S.cls; el.style.background = S.bg; el.style.color = S.fg;
+}
+
   async function hydrateIfNeeded(){
     if (window.RECETA_ACTUAL && (window.RECETA_ACTUAL.blockchain || window.RECETA_ACTUAL.hash || window.RECETA_ACTUAL.bloque)) return;
     try{
@@ -336,6 +347,8 @@ async function sellIfPending(receta){
     const hasBlock = (receta.blockchain?.block ?? receta.bloque) != null;
     if (hasBlock){
       await setChainQR(receta.blockchain?.block ?? receta.bloque);
+        updateBadgeFromReceta(receta);                
+  if (typeof window.killVerificandoUI==='function') window.killVerificandoUI();
       return receta;
     }
 
@@ -418,6 +431,7 @@ async function sellIfPending(receta){
     window.RECETA_ACTUAL = receta;
 
     await setChainQR(out.block);
+    updateBadgeFromReceta(receta); 
     if (typeof window.bcDone==='function') window.bcDone(receta);
     if (typeof window.killVerificandoUI==='function') window.killVerificandoUI();
 
@@ -524,6 +538,37 @@ async function renderOnce(){
     new QRCode(host, { text: verURL, width: 260, height: 260, correctLevel: QRCode.CorrectLevel.M });
   }
 }
+// Código de barras (ID)
+{
+  const canvas = document.getElementById('barcodeCanvas');
+  const label  = document.getElementById('barcodeLabel');
+  if (canvas){
+    try{
+      await ensureJsBarcode();
+      // alta densidad (HD) para que no se vea borroso
+      const dpr = Math.max(1, window.devicePixelRatio || 1);
+      const cssW = 300, cssH = 80;
+      canvas.width  = cssW * dpr;
+      canvas.height = cssH * dpr;
+      canvas.style.width  = cssW + 'px';
+      canvas.style.height = cssH + 'px';
+      const ctx = canvas.getContext('2d'); ctx.setTransform(dpr,0,0,dpr,0,0);
+
+      window.JsBarcode(canvas, String(r.id||''), {
+        format:'CODE128',
+        width: 2,              // grosor de barra
+        height: 40,            // alto de barras
+        margin: 4,
+        displayValue: false    // sin texto impreso
+      });
+
+      if (label) label.textContent = r.id || '—';
+    }catch(e){
+      console.warn('[barcode] no se pudo generar', e);
+      if (label) label.textContent = r.id || '—';
+    }
+  }
+}
 
 // QR blockchain (si hay bloque) y sellado perezoso
 {
@@ -552,6 +597,15 @@ async function renderOnce(){
         ?.insertAdjacentHTML('afterend','<br><span class="sub" style="color:#6b7280;font-weight:400">'+text+'</span>');
     }
   }
+
+  // pinta QR si ya hay bloque y dispara sellado perezoso
+{
+  const blk = r?.blockchain?.block ?? r?.bloque ?? null;
+  if (blk) { await setChainQR(blk); }
+  sellIfPending(r); // no await
+}
+// <-- añade esta línea:
+updateBadgeFromReceta(r);
 
   console.log('[ver] render ok');
 }
