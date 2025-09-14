@@ -332,17 +332,13 @@ async function sellIfPending(receta){
   try{
     if (!receta?.id) return receta;
 
-    const hasOK =
-      receta.blockchain?.status === 'ok' &&
-      ((receta.blockchain?.block ?? receta.bloque) != null);
-
-    if (hasOK){
-      const b = receta.blockchain?.block ?? receta.bloque;
-      if (b) await setChainQR(b);
+    // ya sellada → solo pinta QR y sal
+    const hasBlock = (receta.blockchain?.block ?? receta.bloque) != null;
+    if (hasBlock){
+      await setChainQR(receta.blockchain?.block ?? receta.bloque);
       return receta;
     }
 
-    // feedback en badge (opcional)
     if (typeof window.bcStart === 'function') window.bcStart();
 
     // payload
@@ -358,98 +354,82 @@ async function sellIfPending(receta){
       timestamp: tsSec
     };
 
-    // intenta varias rutas conocidas
-const paths = [
-  '/sell',                 // ← más probable
-  '/registrar',
-  '/api/sell',
-  '/api/registrar',
-  '/sellar',
-  '/api/sellar'
-];
+    // intenta varias rutas
+    const paths = ['/sell','/registrar','/api/sell','/api/registrar','/sellar','/api/sellar'];
+    let out = null; const tried = [];
 
-let out = null;
-const tried = [];
-
-for (const p of paths){
-  tried.push(p);
-  try{
-    const res = await fetch(`${BC_BASE}${p}`, {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify(payload),
-      mode:'cors', credentials:'omit'
-    });
-
-    // Si la ruta no existe, sigue probando
-    if (res.status === 404) continue;
-
-    // 405 = existe pero método no permitido → intenta GET con query (fallback)
-    if (res.status === 405){
-      const u = new URL(`${BC_BASE}${p}`, location.origin);
-      u.searchParams.set('id', payload.id);
-      u.searchParams.set('medsIniciales', payload.medsIniciales||'');
-      u.searchParams.set('medico', payload.medico||'');
-      u.searchParams.set('timestamp', String(payload.timestamp||''));
-      const alt = await fetch(u.href, { method:'GET', mode:'cors', credentials:'omit' });
-      if (!alt.ok) continue;
-      const data = await alt.json().catch(()=>null);
-      const block = data?.block ?? data?.bloque ?? null;
-      const hash  = data?.hash  ?? data?.txid  ?? data?.tx ?? null;
-      if (block){ out = { block, hash: hash||null }; break; }
-      continue;
-    }
-
-    if (!res.ok) continue;
-
-    const data = await res.json().catch(()=>null);
-    const block = data?.block ?? data?.bloque ?? null;
-    const hash  = data?.hash  ?? data?.txid  ?? data?.tx ?? null;
-    if (block){ out = { block, hash: hash||null }; break; }
-  }catch(_e){
-    // intenta la siguiente ruta
-    continue;
-  }
-}
-
-if (!out){
-  // Para no spamear, guarda un cooldown en localStorage
-  try {
-    const key = 'bc-last-fail-' + receta.id;
-    localStorage.setItem(key, JSON.stringify({ t: Date.now(), tried }));
-  } catch {}
-  if (typeof window.bcError==='function') window.bcError();
-  if (typeof window.killVerificandoUI==='function') window.killVerificandoUI();
-  return receta;
-}
-  try{
-        const {doc, updateDoc, serverTimestamp} = await _fs();
-        await updateDoc(doc(db,'recetas', receta.id), {
-          blockchain: { status:'ok', block: out.block, hash: out.hash, at: serverTimestamp() },
-          bloque: out.block,
-          hash: out.hash
+    for (const p of paths){
+      tried.push(p);
+      try{
+        const res = await fetch(`${BC_BASE}${p}`, {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify(payload),
+          mode:'cors', credentials:'omit'
         });
-      }catch(e){ console.warn('[bc] Firestore update falló (UI igual se actualiza):', e); }
 
-      // refresca UI/memoria
-      receta.blockchain = {status:'ok', block: out.block, hash: out.hash};
-      receta.bloque = out.block; receta.hash = out.hash;
-      window.RECETA_ACTUAL = receta;
+        if (res.status === 404) continue;
 
-      await setChainQR(out.block);
-      if (typeof window.bcDone === 'function') window.bcDone(receta);
-    }else{
-      if (typeof window.bcError === 'function') window.bcError();
+        if (res.status === 405){
+          const u = new URL(`${BC_BASE}${p}`);
+          u.searchParams.set('id', payload.id);
+          u.searchParams.set('medsIniciales', payload.medsIniciales||'');
+          u.searchParams.set('medico', payload.medico||'');
+          u.searchParams.set('timestamp', String(payload.timestamp||''));
+          const alt = await fetch(u.href, { method:'GET', mode:'cors', credentials:'omit' });
+          if (!alt.ok) continue;
+          const data = await alt.json().catch(()=>null);
+          const block = data?.block ?? data?.bloque ?? null;
+          const hash  = data?.hash  ?? data?.txid  ?? data?.tx ?? null;
+          if (block){ out = { block, hash: hash||null }; break; }
+          continue;
+        }
+
+        if (!res.ok) continue;
+
+        const data = await res.json().catch(()=>null);
+        const block = data?.block ?? data?.bloque ?? null;
+        const hash  = data?.hash  ?? data?.txid  ?? data?.tx ?? null;
+        if (block){ out = { block, hash: hash||null }; break; }
+      }catch{ /* intenta siguiente */ }
     }
 
-    if (typeof window.killVerificandoUI === 'function') window.killVerificandoUI();
+    // si no hubo salida válida
+    if (!out){
+      try{ localStorage.setItem('bc-last-fail-'+receta.id, JSON.stringify({t:Date.now(), tried})); }catch{}
+      if (typeof window.bcError==='function') window.bcError();
+      if (typeof window.killVerificandoUI==='function') window.killVerificandoUI();
+      return receta;
+    }
+
+    // si hubo {block,hash} → actualiza Firestore (best-effort)
+    try{
+      const {doc, updateDoc, serverTimestamp} = await _fs();
+      await updateDoc(doc(db,'recetas', receta.id), {
+        blockchain: { status:'ok', block: out.block, hash: out.hash, at: serverTimestamp() },
+        bloque: out.block,
+        hash: out.hash
+      });
+    }catch(e){ console.warn('[bc] Firestore update falló (UI igual se actualiza):', e); }
+
+    // refresca UI
+    receta.blockchain = { status:'ok', block: out.block, hash: out.hash };
+    receta.bloque = out.block; receta.hash = out.hash;
+    window.RECETA_ACTUAL = receta;
+
+    await setChainQR(out.block);
+    if (typeof window.bcDone==='function') window.bcDone(receta);
+    if (typeof window.killVerificandoUI==='function') window.killVerificandoUI();
+
     return receta;
   }catch(err){
     console.error('[bc] sellIfPending error', err);
-    if (typeof window.bcError === 'function') window.bcError();
+    if (typeof window.bcError==='function') window.bcError();
+    if (typeof window.killVerificandoUI==='function') window.killVerificandoUI();
     return receta;
   }
 }
+
   /* ===== badge ===== */
   function computeBadge(r){
     const bc=r.blockchain||{};
