@@ -390,124 +390,119 @@ async function sellIfPending(receta){
     el.style.background=st.bg; el.style.color=st.fg;
   }
 
-  /* ===== render ===== */
-  async function renderOnce(){
-    for (let i=0;i<100;i++){ if (window.RECETA_ACTUAL) break; await sleep(80); }
-    await hydrateIfNeeded();
-    const r0 = window.RECETA_ACTUAL; if (!r0) return;
-    const r  = window.RECETA_ACTUAL = normalize(r0);
 
-    // fecha / id
-    const ts = r?.timestamp?.seconds ? new Date(r.timestamp.seconds*1000) :
-               (r?.timestamp?.toDate ? r.timestamp.toDate() : new Date());
-    setText('#fechaEmision', ts.toLocaleString('es-MX'));
-    setText('#recetaId',    'ID: ' + (r.id || '—'));
+// ===== renderOnce: reemplazo seguro =====
+async function renderOnce(){
+  // Espera la receta normalizada
+  for (let i=0;i<100;i++){
+    if (window.RECETA_ACTUAL) break;
+    await sleep(80);
+  }
+  await hydrateIfNeeded();
 
-    // médico
-    setText('#doctorNombre', prefixMed(r.medicoNombre, r.medicoGenero||r.genero));
-    setText('#doctorCedula', r.medicoCedula || '—');
-    setText('#doctorEsp',    r.medicoEspecialidad || 'General');
-    setText('#doctorTel',    r.medicoTelefono || '—');
-    setText('#doctorDir',    r.medicoDomicilio || '—');
+  const r0 = window.RECETA_ACTUAL;
+  if (!r0) return;
 
-    // paciente
-    setText('#pacienteNombre', r.nombrePaciente);
-    setText('#pacEdad',        r.edad ?? '—');
-    setText('#pacSexo',        r.sexo || '—');
-    setText('#pacPeso',        r.peso ?? '—');
-    setText('#pacTalla',       r.talla ?? '—');
-    setText('#pacTemp',        r.temperatura ?? '—');
-    setText('#pacPresion',     r.presion ?? '—');
-    setText('#pacIMC',         r.imc ?? '—');
+  // Normaliza y deja en memoria
+  const r = window.RECETA_ACTUAL = normalize(r0);
 
-    // diag / obs
-    setText('#obsTexto',  r.observaciones || r.nota || '—');
-    setText('#diagTexto', r.diagnostico  || r.diagnosis || '—');
+  // === RENDER DE CAMPOS (si ya tienes otra función que lo hace, puedes omitir esta sección) ===
+  const set = (id, v)=>{ const el=document.getElementById(id); if(el) el.textContent = (v ?? '—'); };
 
-    // hash / bloque + badge
-    const bloqueTxt = (Number.isFinite(r.bloque)||typeof r.bloque==='string') ? ('#'+r.bloque)
-                   : ((r.blockchain?.status==='simulado' || r.hash) ? 'Simulado' : '—');
-    setText('#blockNum',  bloqueTxt);
-    setText('#hashTexto', 'hash: ' + (r.hash || r.blockchain?.hash || '—'));
-    paintBadge(r);
+  // Médico
+  set('doctorNombre', r.medico?.nombre ? (r.medico?.genero?.toLowerCase().startsWith('f')?'Dra. ':'Dr. ') + r.medico.nombre : (r.medicoNombre ? ( (r.medicoGenero||'').toLowerCase().startsWith('f')?'Dra. ':'Dr. ') + r.medicoNombre : '—'));
+  set('doctorCedula', r.medico?.cedula ?? r.medicoCedula ?? '—');
+  set('doctorEsp',    r.medico?.especialidad ?? r.medicoEspecialidad ?? '—');
+  set('doctorTel',    r.medico?.telefono ?? r.medicoTelefono ?? '—');
+  set('doctorDir',    r.medico?.direccion ?? r.medicoDomicilio ?? '—');
 
-    
-    // medicamentos
-    if (!Array.isArray(r.medicamentos) || !r.medicamentos.length){
-      try{
-        const core = await import('/firebase-init.js');
-        const fs   = await import('https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js');
-        const medsSnap = await fs.getDocs(fs.collection(fs.doc(core.db,'recetas', r.id),'medicamentos'));
-        r.medicamentos = medsSnap.docs.map(d=>d.data());
-      }catch(e){ console.warn('[ver] meds subcol warn', e); }
+  // Paciente
+  set('pacienteNombre', r.paciente?.nombre ?? r.nombrePaciente ?? '—');
+  set('pacEdad',        r.paciente?.edad ?? r.edad ?? '—');
+  set('pacSexo',        r.paciente?.sexo ?? r.sexo ?? '—');
+  set('pacPeso',        r.paciente?.peso ?? r.peso ?? '—');
+  set('pacTalla',       r.paciente?.talla ?? r.talla ?? '—');
+  set('pacTemp',        r.paciente?.temperatura ?? r.temperatura ?? '—');
+  set('pacPresion',     r.paciente?.presion ?? r.presion ?? '—');
+  set('pacIMC',         r.paciente?.imc ?? r.imc ?? '—');
+
+  // Texto libre
+  set('obsTexto',  r.observaciones ?? '—');
+  set('diagTexto', r.diagnostico   ?? '—');
+
+  // ID y fecha
+  set('recetaId', 'ID: ' + (r.id || '—'));
+  try{
+    let ts = r.timestamp;
+    if (ts && typeof ts.toDate==='function') ts = ts.toDate();
+    else if (ts && typeof ts.seconds==='number') ts=new Date(ts.seconds*1000 + Math.floor((ts.nanoseconds||0)/1e6));
+    else if (!(ts instanceof Date)) ts = new Date(ts);
+    set('fechaEmision', ts ? ts.toLocaleString('es-MX',{year:'numeric',month:'long',day:'numeric',hour:'2-digit',minute:'2-digit'}) : '—');
+  }catch{ set('fechaEmision','—'); }
+
+  // Medicamentos → texto
+  const meds = Array.isArray(r.medicamentos) ? r.medicamentos : [];
+  const medsTxt = meds.length
+    ? meds.map((m,i)=>`${i+1}. ${m.nombre}\n   Dosis: ${m.dosis}\n   Duración: ${m.duracion}`).join('\n\n')
+    : '—';
+  const medsEl = document.getElementById('listaMedsDerecha');
+  if (medsEl) medsEl.textContent = medsTxt;
+
+  // Hash (si hay)
+  const hashEl = document.getElementById('hashTexto');
+  if (hashEl){
+    const h = r.hash ?? r.blockchain?.hash ?? '';
+    hashEl.textContent = h ? `hash (BC): ${h}` : (r.id ? `hash (local): ${hashSimulado(r)}` : 'hash: —');
+  }
+
+  // ====== LIBRERÍAS + CÓDIGOS ======
+  await ensureLibs();
+
+  // QR principal (ver-receta)
+  {
+    const host = document.getElementById('qrMain');
+    if (host){
+      host.innerHTML = '';
+      const verURL = location.origin + '/ver-receta.html?id=' + encodeURIComponent(r.id);
+      new QRCode(host, { text: verURL, width: 260, height: 260, correctLevel: QRCode.CorrectLevel.M });
     }
-    const pre=document.getElementById('listaMedsDerecha');
-    if (pre){
-      if (!r.medicamentos?.length) setText(pre,'—');
-      else {
-        const lines=r.medicamentos.map((m,i)=>`${i+1}. ${m?.nombre||'—'}\n   Dosis: ${m?.dosis||'—'}   Duración: ${m?.duracion||'—'}`).join('\n\n');
-        setText(pre, lines);
+  }
+
+  // Código de barras
+  {
+    try{
+      await ensureJsBarcode?.();
+      const canvas = document.getElementById('barcodeCanvas');
+      const label  = document.getElementById('barcodeLabel');
+      if (canvas && window.JsBarcode){
+        JsBarcode(canvas, String(r.id||''), {format:'CODE128', width:2, height:40, margin:4, displayValue:false});
+        if (label) label.textContent = r.id || '—';
       }
+    }catch{}
+  }
+
+  // QR de blockchain: pinta si ya hay bloque; si no, intenta sellado en background
+  {
+    const blk = r?.blockchain?.block ?? r?.bloque ?? null;
+    if (blk) { await setChainQR(blk); }
+    sellIfPending(r); // no await
+  }
+
+  // Leyenda bajo el número de bloque
+  {
+    const legendHolder = document.querySelector('.qr-legend .sub');
+    const text = 'Para consultar bloque visitar kodrx.app';
+    if (legendHolder) {
+      legendHolder.textContent = text;
+    } else {
+      document.getElementById('blockNum')
+        ?.insertAdjacentHTML('afterend','<br><span class="sub" style="color:#6b7280;font-weight:400">'+text+'</span>');
     }
-
-    // libs + QRs/barcode
-    await ensureLibs();
-    const qrMainDiv  = document.getElementById('qrMain');
-    const qrChainDiv = document.getElementById('qrChain');
-    const canvas     = document.getElementById('barcodeCanvas');
-    const label      = document.getElementById('barcodeLabel');
-
-   /* QR principal (ver-receta) */
-{
-  const host = document.getElementById('qrMain');
-  if (host){
-    host.innerHTML = '';
-    const verURL = location.origin + '/ver-receta.html?id=' + encodeURIComponent(r.id);
-    new QRCode(host, { text: verURL, width: 260, height: 260, correctLevel: QRCode.CorrectLevel.M });
   }
+
+  console.log('[ver] render ok');
 }
 
-/* QR blockchain (solo por bloque; si no hay, sellar en background) */
-{
-  const blk = r?.blockchain?.block ?? r?.bloque ?? null;
-  if (blk) { await setChainQR(blk); }
-  sellIfPending(r); // no await: deja que llegue el sellado y repinte
-}
-
-/* Leyenda bajo el número de bloque */
-{
-  const legendHolder = document.querySelector('.qr-legend .sub');
-  const text = 'Para consultar bloque visitar kodrx.app';
-  if (legendHolder) {
-    legendHolder.textContent = text;
-  } else {
-    document.getElementById('blockNum')
-      ?.insertAdjacentHTML('afterend','<br><span class="sub" style="color:#6b7280;font-weight:400">'+text+'</span>');
-  }
-}
-
-    // barcode
-    if (canvas && canvas.getContext && !canvas.__done){
-      try{ JsBarcode(canvas, r.id, {format:'CODE128', displayValue:false, margin:0, width:2, height:70}); canvas.__done=true; }catch(e){}
-    }
-    if (label) setText(label, r.id || '—');
-
-    // export QRS → PDF
-    const qrMainData  = qrDivToDataURL(qrMainDiv);
-    const qrChainData = qrDivToDataURL(qrChainDiv);
-    const barcodeData = (()=>{
-      try{ return canvas ? canvas.toDataURL('image/png') : ''; }catch{ return ''; }
-    })();
-window.QRS = {
-  get qrMain(){  return (function(d){ if(!d) return ''; const i=d.querySelector('img'); if(i?.src) return i.src; const c=d.querySelector('canvas'); return c?c.toDataURL('image/png'):''; })(document.getElementById('qrMain')); },
-  get qrChain(){ return (function(d){ if(!d) return ''; const i=d.querySelector('img'); if(i?.src) return i.src; const c=d.querySelector('canvas'); return c?c.toDataURL('image/png'):''; })(document.getElementById('qrChain')); },
-  get barcode(){ try{ const c=document.getElementById('barcodeCanvas'); return c?c.toDataURL('image/png'):''; }catch{return ''} }
-};
-
-
-
-    console.log('[ver] render ok');
-  }
 
   /* ===== PDF ===== */
  function prefixMedico(nombre,genero){
@@ -800,7 +795,7 @@ window.QRS = {
   } else {
     renderOnce().catch(console.warn); bindButtons();
   }
-}();
+})();
 </script>
 
 <script>
