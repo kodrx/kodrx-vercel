@@ -196,7 +196,10 @@ button{appearance:none;border:0;border-radius:12px;padding:10px 14px;font-weight
     </div><!-- /.receta-wrap -->
 
     <!-- Pill de estado (lo ocultamos desde JS al terminar verificación) -->
-    <p id="bcStatus" class="pill" style="display:none;">Verificando blockchain…</p>
+    <div id="verifyScope" data-role="verificando">
+  <p id="bcStatus" class="pill verificando">Verificando blockchain…</p>
+  <div id="panelVerificando" class="verificando spinner-verify">…spinner…</div>
+</div>
 
     <!-- Footer -->
     <div class="footer">
@@ -410,9 +413,7 @@ window.QRS = {
   get barcode(){ try{ const c=document.getElementById('barcodeCanvas'); return c?c.toDataURL('image/png'):''; }catch{return ''} }
 };
 
-    // apaga spinners “verificando…”
-    ['#badgeVerificando','#spinnerVerificando','#panelVerificando','[data-role="verificando"]','.verificando','.spinner-verify']
-      .forEach(sel => document.querySelectorAll(sel).forEach(el => el.style.display='none'));
+
 
     console.log('[ver] render ok');
   }
@@ -714,32 +715,45 @@ window.QRS = {
 
 <script>
 (() => {
-  function hideVerify(){
-    const sels = [
-      '#badgeVerificando','#spinnerVerificando','#panelVerificando',
-      '[data-role="verificando"]','.verificando','.spinner-verify',
-      '.spinner','.loading','#loading'
-    ];
-    // Oculta por selectores comunes
-    for (const sel of sels) {
-      document.querySelectorAll(sel).forEach(el=>{
-        if (/verific/i.test((el.id||'')+' '+(el.className||'')+' '+(el.textContent||''))) {
-          el.style.display='none';
-        }
-      });
-    }
-    // Además, cualquier nodo de texto suelto que contenga “verific”
-    document.querySelectorAll('body *').forEach(el=>{
-      if (el.childElementCount===0 && /verific/i.test(el.textContent||'')) {
-        el.style.display='none';
-      }
+  // Nunca ocultar:
+  const NEVER = 'footer, .footer, [data-role="footer"], .qr-legend, .qr-chain, #blockNum, #hashTexto';
+
+  // ÚNICO listado permitido (allowlist):
+  const ALLOW = [
+    '#badgeVerificando',
+    '#spinnerVerificando',
+    '#panelVerificando',
+    '#bcStatus',                // tu pill de estado
+    '[data-role="verificando"]',
+    '.verificando',
+    '.spinner-verify'
+  ];
+
+  function hideVerify(root){
+    const ctx = root || document;
+    const targets = ALLOW
+      .flatMap(sel => Array.from(ctx.querySelectorAll(sel)))
+      .filter(el => el && !el.closest(NEVER));
+
+    targets.forEach(el => {
+      el.style.display = 'none';
+      el.setAttribute('data-hidden-by','kodrx');
     });
+
+
   }
-  if (document.readyState==='loading') document.addEventListener('DOMContentLoaded', hideVerify, {once:true});
-  else hideVerify();
-  window.kodrxHideVerify = hideVerify; // por si lo quieres invocar manual
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => hideVerify(), { once:true });
+  } else {
+    hideVerify();
+  }
+
+  // por si quieres llamarlo manualmente después
+  window.kodrxHideVerify = hideVerify;
 })();
 </script>
+
 
 </body>
 </html>
