@@ -271,6 +271,18 @@ async function ensureLibs(){
     const img=div.querySelector('img'); if (img?.src) return img.src;
     const c=div.querySelector('canvas'); return c ? c.toDataURL('image/png') : '';
   }
+  
+  async function ensureQRCode(){
+  if (window.QRCode) return;
+  await new Promise((res, rej)=>{
+    const s = document.createElement('script');
+    // cualquiera de estos sirve; deja 1 y el otro de backup si quieres
+    s.src = "https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js";
+    s.onload = res; s.onerror = rej;
+    document.head.appendChild(s);
+  });
+}
+  
   async function hydrateIfNeeded(){
     if (window.RECETA_ACTUAL && (window.RECETA_ACTUAL.blockchain || window.RECETA_ACTUAL.hash || window.RECETA_ACTUAL.bloque)) return;
     try{
@@ -303,13 +315,16 @@ async function _fs(){
 
 /* Construye el QR del bloque (solo ?id=<bloque>) */
 async function setChainQR(block){
-  const url  = `${BC_BASE}/verificar.html?id=${encodeURIComponent(block)}`;
-  const png  = await makeQRDataURL(url, 220); // usa tu helper existente
-  const img  = new Image(); img.alt = 'QR blockchain'; img.src = png;
   const host = document.getElementById('qrChain');
-  if (host){ host.innerHTML=''; host.appendChild(img); }
+  if (!host) return;
+  await ensureQRCode();               // 👈 asegura la lib
+
+  const url = `${BC_BASE}/verificar.html?id=${encodeURIComponent(block)}`;
+  host.innerHTML = '';
+  new QRCode(host, { text: url, width: 220, height: 220, correctLevel: QRCode.CorrectLevel.M });
+
   const bn = document.getElementById('blockNum');
-  if (bn) bn.textContent = String(block||'—');
+  if (bn) bn.textContent = String(block || '—');
 }
 
 /* Lógica de sellado: intenta varios endpoints; si alguno responde {block,hash}, actualiza Firestore */
@@ -477,31 +492,28 @@ async function renderOnce(){
 
   // ====== LIBRERÍAS + CÓDIGOS ======
   await ensureLibs();
+  await ensureQRCode();
 
-  // QR principal (ver-receta)
-  {
-    const host = document.getElementById('qrMain');
-    if (host){
-      host.innerHTML = '';
-      const verURL = location.origin + '/ver-receta.html?id=' + encodeURIComponent(r.id);
-      new QRCode(host, { text: verURL, width: 260, height: 260, correctLevel: QRCode.CorrectLevel.M });
-    }
+  // QR principal
+{
+  const host = document.getElementById('qrMain');
+  if (host){
+    host.innerHTML = '';
+    const verURL = location.origin + '/verificar.html?id=' + encodeURIComponent(r.id);
+    new QRCode(host, { text: verURL, width: 260, height: 260, correctLevel: QRCode.CorrectLevel.M });
   }
+}
 
-  // Código de barras
-  {
-    try{
-      await ensureJsBarcode?.();
-      const canvas = document.getElementById('barcodeCanvas');
-      const label  = document.getElementById('barcodeLabel');
-      if (canvas && window.JsBarcode){
-        JsBarcode(canvas, String(r.id||''), {format:'CODE128', width:2, height:40, margin:4, displayValue:false});
-        if (label) label.textContent = r.id || '—';
-      }
-    }catch{}
-  }
+// QR blockchain (si hay bloque) y sellado perezoso
+{
+  const blk = r?.blockchain?.block ?? r?.bloque ?? null;
+  if (blk) { await setChainQR(blk); }
+  sellIfPending(r); // no await
+}
 
   // QR de blockchain: pinta si ya hay bloque; si no, intenta sellado en background
+  
+  
   {
     const blk = r?.blockchain?.block ?? r?.bloque ?? null;
     if (blk) { await setChainQR(blk); }
