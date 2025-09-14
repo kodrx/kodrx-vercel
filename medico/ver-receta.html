@@ -422,7 +422,34 @@ if (!out){
   if (typeof window.killVerificandoUI==='function') window.killVerificandoUI();
   return receta;
 }
-  
+  try{
+        const {doc, updateDoc, serverTimestamp} = await _fs();
+        await updateDoc(doc(db,'recetas', receta.id), {
+          blockchain: { status:'ok', block: out.block, hash: out.hash, at: serverTimestamp() },
+          bloque: out.block,
+          hash: out.hash
+        });
+      }catch(e){ console.warn('[bc] Firestore update falló (UI igual se actualiza):', e); }
+
+      // refresca UI/memoria
+      receta.blockchain = {status:'ok', block: out.block, hash: out.hash};
+      receta.bloque = out.block; receta.hash = out.hash;
+      window.RECETA_ACTUAL = receta;
+
+      await setChainQR(out.block);
+      if (typeof window.bcDone === 'function') window.bcDone(receta);
+    }else{
+      if (typeof window.bcError === 'function') window.bcError();
+    }
+
+    if (typeof window.killVerificandoUI === 'function') window.killVerificandoUI();
+    return receta;
+  }catch(err){
+    console.error('[bc] sellIfPending error', err);
+    if (typeof window.bcError === 'function') window.bcError();
+    return receta;
+  }
+}
   /* ===== badge ===== */
   function computeBadge(r){
     const bc=r.blockchain||{};
