@@ -346,7 +346,8 @@ async function sellIfPending(receta){
     // ya sellada → solo pinta QR y sal
     const hasBlock = (receta.blockchain?.block ?? receta.bloque) != null;
     if (hasBlock){
-      await setChainQR(receta.blockchain?.block ?? receta.bloque);
+      console.log('[bc] ya tenía bloque:', receta.blockchain?.block ?? receta.bloque);
+    await setChainQR(receta.blockchain?.block ?? receta.bloque);
         updateBadgeFromReceta(receta);                
   if (typeof window.killVerificandoUI==='function') window.killVerificandoUI();
       return receta;
@@ -366,7 +367,7 @@ async function sellIfPending(receta){
       medico: receta.medicoNombre || receta.medico?.nombre || '',
       timestamp: tsSec
     };
-
+console.log('[bc] payload:', payload);
     // intenta varias rutas
     const paths = ['/sell','/registrar','/api/sell','/api/registrar','/sellar','/api/sellar'];
     let out = null; const tried = [];
@@ -374,13 +375,16 @@ async function sellIfPending(receta){
     for (const p of paths){
       tried.push(p);
       try{
+         console.log('[bc] intentando', p);
         const res = await fetch(`${BC_BASE}${p}`, {
           method:'POST',
           headers:{'Content-Type':'application/json'},
           body: JSON.stringify(payload),
           mode:'cors', credentials:'omit'
         });
-
+const peek = await res.clone().text().catch(()=>'(no text)');
+        console.log('[bc] resp', p, res.status, peek.slice(0,200));
+        
         if (res.status === 404) continue;
 
         if (res.status === 405){
@@ -390,6 +394,7 @@ async function sellIfPending(receta){
           u.searchParams.set('medico', payload.medico||'');
           u.searchParams.set('timestamp', String(payload.timestamp||''));
           const alt = await fetch(u.href, { method:'GET', mode:'cors', credentials:'omit' });
+          console.log('[bc] GET fallback', p, alt.status);
           if (!alt.ok) continue;
           const data = await alt.json().catch(()=>null);
           const block = data?.block ?? data?.bloque ?? null;
@@ -406,9 +411,10 @@ async function sellIfPending(receta){
         if (block){ out = { block, hash: hash||null }; break; }
       }catch{ /* intenta siguiente */ }
     }
-
+console.warn('[bc] error al llamar', p, e);
     // si no hubo salida válida
     if (!out){
+      console.warn('[bc] sin bloque. Rutas probadas:', tried);
       try{ localStorage.setItem('bc-last-fail-'+receta.id, JSON.stringify({t:Date.now(), tried})); }catch{}
       if (typeof window.bcError==='function') window.bcError();
       if (typeof window.killVerificandoUI==='function') window.killVerificandoUI();
@@ -423,6 +429,8 @@ async function sellIfPending(receta){
         bloque: out.block,
         hash: out.hash
       });
+
+      console.log('[bc] firestore actualizado:', out);
     }catch(e){ console.warn('[bc] Firestore update falló (UI igual se actualiza):', e); }
 
     // refresca UI
