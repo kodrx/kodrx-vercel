@@ -254,20 +254,35 @@ async function onSubmit(){
       bloque: null
     };
 
-    const ref = await addDoc(collection(db, 'recetas'), recetaData);
-    console.log('[panel] receta creada:', ref.id);
-// Después de addDoc(...)
-try{
-  fetch(`${BC_BASE}/api/sellar`, {
-    method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({
-      id: ref.id,
-      medsIniciales: recetaData.medsIniciales,
-      medico: recetaData.medicoNombre,
-      timestamp: Math.floor(Date.now()/1000)
-    })
-  }).catch(()=>{});
-}catch{}
+// tras crear la receta
+const ref = await addDoc(collection(db, 'recetas'), recetaData);
+console.log('[panel] receta creada:', ref.id);
+
+// --- SELLADO fire-and-forget (no bloquea UI) ---
+const BC_BASE = 'https://kodrx-blockchain.onrender.com'; // quita si ya existe
+try {
+  const payload = {
+    id: ref.id,
+    medsIniciales: recetaData.medsIniciales || '',
+    medico: recetaData.medicoNombre || '',
+    timestamp: Math.floor(Date.now()/1000)
+  };
+
+  // evita duplicados en esta sesión (30s)
+  const lockKey = 'bc-selling-' + ref.id;
+  if (!localStorage.getItem(lockKey)) {
+    localStorage.setItem(lockKey, String(Date.now()));
+    setTimeout(()=>localStorage.removeItem(lockKey), 30000);
+
+    // prueba 2 rutas comunes + 1 legacy; no esperamos respuesta
+    fetch(`${BC_BASE}/sell`,      { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) }).catch(()=>{});
+    fetch(`${BC_BASE}/registrar`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) }).catch(()=>{});
+    fetch(`${BC_BASE}/api/sellar`,{ method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) }).catch(()=>{});
+
+    console.log('[panel] sell dispatched', payload);
+  }
+} catch {}
+// -----------------------------------------------
 
     
     // Redirección a ver-receta con el ID
