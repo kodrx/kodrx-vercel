@@ -1,6 +1,17 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
+  <script type="module">
+  import { db } from "/firebase-init.js";
+  import {
+    doc, updateDoc, serverTimestamp
+  } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
+
+  // expón a window para que los vea el script inline clásico
+  window.db = db;
+  window.__fs = { doc, updateDoc, serverTimestamp };
+</script>
+
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>KodRx | Receta Digital</title>
@@ -319,10 +330,12 @@ function inicialesDeMeds(meds){
 /* Carga on-demand funciones de Firestore que necesitamos para actualizar */
 let __fsMod = null;
 async function _fs(){
+  if (window.__fs) return window.__fs;  // ← usa el shim si existe
   if (__fsMod) return __fsMod;
   __fsMod = await import('https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js');
   return __fsMod;
 }
+
 
 /* Construye el QR del bloque (solo ?id=<bloque>) */
 async function setChainQR(block){
