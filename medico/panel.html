@@ -104,6 +104,11 @@ import {
 } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js";
 
+  // Exponer a window para que los vea el script inline clásico:
+  window.db = db;
+  window.auth = auth;
+  window.__fs = { collection, addDoc, updateDoc, doc, getDoc, serverTimestamp, Timestamp };
+  
 /* ---------- estado ---------- */
 const state = { user:null, medico:null };
 
@@ -446,6 +451,161 @@ console.log('[panel] ready');
 })();
 </script>
 
+<script>
+;(() => {
+  console.log('[panel] submit bind');
+
+  const $ = s => document.querySelector(s);
+
+  function pickForm(){
+    return document.getElementById('generarRecetaForm')
+        || document.getElementById('formReceta')
+        || document.querySelector('form');
+  }
+
+  async function onSubmit(e){
+    e.preventDefault();
+    const form = e.currentTarget;
+    if (form.__busy) return;
+    form.__busy = true;
+
+    try{
+      // --- Recolección de datos del form ---
+      const v = id => (document.getElementById(id)?.value ?? '').trim();
+
+      const nombrePaciente = v('nombrePaciente');
+      const edad          = v('edad');
+      const sexo          = v('sexo');
+      const talla         = v('talla');
+      const peso          = v('peso');
+      const imc           = v('imc');
+      const temperatura   = v('temperatura');
+      const presion       = v('presion');
+      const observaciones = v('observaciones');
+      const diagnostico   = v('diagnostico');
+
+      // medicamentos (de filas .medicamento)
+      const meds = [...document.querySelectorAll('#medicamentosContainer .medicamento')].map(row => {
+        const get = cls => row.querySelector('.'+cls)?.value?.trim() || '';
+        const nombre   = get('nombre');
+        const dosis    = get('dosis');
+        const duracion = get('duracion');
+        // iniciales (3 chars máx) p/ blockchain
+        const ini = nombre.split(/\s+/).map(w=>w[0]||'').join('').slice(0,3).toUpperCase();
+        return { nombre, dosis, duracion, ini };
+      });
+
+      // --- Cargar médico actual (desde Firestore) ---
+      const u = window.auth?.currentUser;
+      if (!u) { alert('No hay sesión. Inicia sesión de nuevo.'); return; }
+
+      const { doc, getDoc, collection, addDoc, updateDoc, serverTimestamp } = window.__fs || {};
+      if (!doc) { alert('Firestore no cargó. Recarga la página.'); return; }
+
+      let medico = {};
+      try{
+        const mSnap = await getDoc(doc(window.db, 'medicos', u.uid));
+        if (mSnap.exists()) medico = mSnap.data();
+      }catch{}
+
+      const recetaData = {
+        nombrePaciente,
+        paciente: {
+          nombre: nombrePaciente,
+          edad, sexo, talla, peso, imc, temperatura, presion
+        },
+        observaciones,
+        diagnostico,
+        medicamentos: meds,
+        medsIniciales: meds.map(m=>m.ini).join('-'),
+        medicoNombre: medico.nombre || (u.displayName || ''),
+        medicoCedula: medico.cedula || '',
+        medicoEspecialidad: medico.especialidad || 'General',
+        medicoTelefono: medico.telefono || '',
+        medicoDomicilio: medico.direccion || [
+          medico.calle, medico.numero, medico.colonia, medico.municipio, medico.estado, `CP ${medico.cp||''}`
+        ].filter(Boolean).join(', '),
+        correo: u.email || '',
+        uidMedico: u.uid,
+        timestamp: (window.__fs?.Timestamp || Date).now ? (window.__fs?.Timestamp.now?.() ?? new Date()) : new Date()
+      };
+
+      // --- Guardar receta ---
+      const ref = await addDoc(collection(window.db, 'recetas'), recetaData);
+      console.log('[panel] receta creada:', ref.id);
+
+      // --- Sellar vía proxy /api/bloques (requerido: receta, medico, cedula) ---
+      try{
+        const recetaResumen = meds.map(m => `${m.nombre} ${m.dosis} por ${m.duracion}`).join(', ');
+        const payload = {
+          receta: recetaResumen,
+          medico: recetaData.medicoNombre || '',
+          cedula: recetaData.medicoCedula || '',
+          medicamentos: meds,
+          iniciales: meds.map(m=>m.ini),
+          idReceta: ref.id,
+          timestamp: Math.floor(Date.now()/1000)
+        };
+
+        const resp = await fetch('/api/bloques', {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify(payload)
+        });
+
+        let raw = {};
+        try { raw = await resp.json(); } catch {}
+        console.log('[BC][raw]', raw);
+
+        const toNum = v => (typeof v==='number'&&Number.isFinite(v)) ? v : (/^\d+$/.test(String(v??'')) ? Number(v) : NaN);
+        const block = [raw?.bloque?.index, raw?.index, raw?.bloqueIndex, raw?.block].map(toNum).find(Number.isFinite);
+        const hash  = raw?.bloque?.hash || raw?.hash || raw?.blockHash || raw?.txid || null;
+
+        const updates = {};
+        if (resp.ok && Number.isFinite(block) && hash) {
+          updates.blockchain = { status:'ok', block, hash, at: serverTimestamp() };
+          updates.bloque = block;
+          updates.hash = hash;
+        } else if (raw?.url || raw?.consultaUrl) {
+          updates.urlBlockchain = raw.url || raw.consultaUrl;
+          updates.blockchain = { status:'simulado' };
+        }
+
+        if (Object.keys(updates).length){
+          try{ await updateDoc(doc(window.db,'recetas',ref.id), updates); }
+          catch(e){ console.warn('[BC] Firestore update falló:', e?.message||e); }
+        }
+      }catch(e){
+        console.error(' Error al sellar vía /api/bloques:', e?.message||e);
+      }
+
+      // --- Navegar a ver-receta ---
+      location.href = `/public/ver-receta.html?id=${encodeURIComponent(ref.id)}`;
+
+    } catch(err){
+      console.error(' Error al guardar la receta:', err);
+      alert('No se pudo generar la receta. Revisa los campos e intenta de nuevo.');
+    } finally {
+      form.__busy = false;
+    }
+  }
+
+  function bindSubmit(){
+    const form = pickForm();
+    if (!form) return console.warn('[panel] No se encontró formulario');
+    if (!form.__kodrxSubmitBound){
+      form.addEventListener('submit', onSubmit, { capture:true });
+      form.__kodrxSubmitBound = true;
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', bindSubmit, { once:true });
+  } else {
+    bindSubmit();
+  }
+})();
+</script>
 
 
 </body>
