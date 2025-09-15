@@ -469,65 +469,49 @@ console.log('[panel] ready');
     if (form.__busy) return;
     form.__busy = true;
 
-    try{
-      // --- Recolección de datos del form ---
+    try {
+      // --- Recolección de datos ---
       const v = id => (document.getElementById(id)?.value ?? '').trim();
-
       const nombrePaciente = v('nombrePaciente');
-      const edad          = v('edad');
-      const sexo          = v('sexo');
-      const talla         = v('talla');
-      const peso          = v('peso');
-      const imc           = v('imc');
-      const temperatura   = v('temperatura');
-      const presion       = v('presion');
-      const observaciones = v('observaciones');
-      const diagnostico   = v('diagnostico');
+      const edad = v('edad'), sexo = v('sexo'), talla = v('talla'), peso = v('peso');
+      const imc = v('imc'), temperatura = v('temperatura'), presion = v('presion');
+      const observaciones = v('observaciones'), diagnostico = v('diagnostico');
 
-      // medicamentos (de filas .medicamento)
       const meds = [...document.querySelectorAll('#medicamentosContainer .medicamento')].map(row => {
         const get = cls => row.querySelector('.'+cls)?.value?.trim() || '';
-        const nombre   = get('nombre');
-        const dosis    = get('dosis');
-        const duracion = get('duracion');
-        // iniciales (3 chars máx) p/ blockchain
+        const nombre = get('nombre'), dosis = get('dosis'), duracion = get('duracion');
         const ini = nombre.split(/\s+/).map(w=>w[0]||'').join('').slice(0,3).toUpperCase();
         return { nombre, dosis, duracion, ini };
       });
 
-      // --- Cargar médico actual (desde Firestore) ---
+      // --- Médico actual ---
       const u = window.auth?.currentUser;
       if (!u) { alert('No hay sesión. Inicia sesión de nuevo.'); return; }
 
-      const { doc, getDoc, collection, addDoc, updateDoc, serverTimestamp } = window.__fs || {};
+      const { doc, getDoc, collection, addDoc, updateDoc, serverTimestamp, Timestamp } = window.__fs || {};
       if (!doc) { alert('Firestore no cargó. Recarga la página.'); return; }
 
       let medico = {};
-      try{
+      try {
         const mSnap = await getDoc(doc(window.db, 'medicos', u.uid));
         if (mSnap.exists()) medico = mSnap.data();
-      }catch{}
+      } catch {}
 
       const recetaData = {
         nombrePaciente,
-        paciente: {
-          nombre: nombrePaciente,
-          edad, sexo, talla, peso, imc, temperatura, presion
-        },
-        observaciones,
-        diagnostico,
+        paciente: { nombre: nombrePaciente, edad, sexo, talla, peso, imc, temperatura, presion },
+        observaciones, diagnostico,
         medicamentos: meds,
         medsIniciales: meds.map(m=>m.ini).join('-'),
-        medicoNombre: medico.nombre || (u.displayName || ''),
-        medicoCedula: medico.cedula || '',
+        medicoNombre:  medico.nombre || (u.displayName || ''),
+        medicoCedula:  medico.cedula || '',
         medicoEspecialidad: medico.especialidad || 'General',
-        medicoTelefono: medico.telefono || '',
-        medicoDomicilio: medico.direccion || [
+        medicoTelefono:    medico.telefono || '',
+        medicoDomicilio:   medico.direccion || [
           medico.calle, medico.numero, medico.colonia, medico.municipio, medico.estado, `CP ${medico.cp||''}`
         ].filter(Boolean).join(', '),
-        correo: u.email || '',
-        uidMedico: u.uid,
-        timestamp: (window.__fs?.Timestamp || Date).now ? (window.__fs?.Timestamp.now?.() ?? new Date()) : new Date()
+        correo: u.email || '', uidMedico: u.uid,
+        timestamp: (Timestamp?.now?.() ?? new Date())
       };
 
       // --- Guardar receta ---
@@ -548,8 +532,7 @@ console.log('[panel] ready');
         };
 
         const resp = await fetch('/api/bloques', {
-          method:'POST',
-          headers:{'Content-Type':'application/json'},
+          method:'POST', headers:{'Content-Type':'application/json'},
           body: JSON.stringify(payload)
         });
 
@@ -564,26 +547,25 @@ console.log('[panel] ready');
         const updates = {};
         if (resp.ok && Number.isFinite(block) && hash) {
           updates.blockchain = { status:'ok', block, hash, at: serverTimestamp() };
-          updates.bloque = block;
-          updates.hash = hash;
+          updates.bloque = block; updates.hash = hash;
         } else if (raw?.url || raw?.consultaUrl) {
           updates.urlBlockchain = raw.url || raw.consultaUrl;
           updates.blockchain = { status:'simulado' };
         }
 
         if (Object.keys(updates).length){
-          try{ await updateDoc(doc(window.db,'recetas',ref.id), updates); }
-          catch(e){ console.warn('[BC] Firestore update falló:', e?.message||e); }
+          try { await updateDoc(doc(window.db,'recetas',ref.id), updates); }
+          catch (e) { console.warn('[BC] Firestore update falló:', e?.message||e); }
         }
-      }catch(e){
-        console.error(' Error al sellar vía /api/bloques:', e?.message||e);
+      } catch (e) {
+        console.error('Error al sellar vía /api/bloques:', e?.message||e);
       }
 
       // --- Navegar a ver-receta ---
       location.href = `/public/ver-receta.html?id=${encodeURIComponent(ref.id)}`;
 
-    } catch(err){
-      console.error(' Error al guardar la receta:', err);
+    } catch (err) {
+      console.error('Error al guardar la receta:', err);
       alert('No se pudo generar la receta. Revisa los campos e intenta de nuevo.');
     } finally {
       form.__busy = false;
@@ -606,6 +588,7 @@ console.log('[panel] ready');
   }
 })();
 </script>
+
 
 
 </body>
