@@ -307,7 +307,7 @@ async function ensureLibs(){
   }
 
 
-  const BC_BASE = 'https://kodrx-blockchain.onrender.com';
+ 
 
 /* Iniciales por si no fueron guardadas (AMO-IBU-PAR) */
 function inicialesDeMeds(meds){
@@ -338,116 +338,99 @@ async function setChainQR(block){
   if (bn) bn.textContent = String(block || '—');
 }
 
-/* Lógica de sellado: intenta varios endpoints; si alguno responde {block,hash}, actualiza Firestore */
+
+// helper opcional para limpiar acentos y dejar solo A-Z/.- en iniciales
+function sanitizeInitials(str){
+  return String(str||'')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .toUpperCase().replace(/[^A-Z.\-]/g,'');
+}
+
+const __locks = new Set();
+
 async function sellIfPending(receta){
   try{
     if (!receta?.id) return receta;
 
-    // ya sellada → solo pinta QR y sal
+    // ¿ya trae bloque?
     const hasBlock = (receta.blockchain?.block ?? receta.bloque) != null;
     if (hasBlock){
-      console.log('[bc] ya tenía bloque:', receta.blockchain?.block ?? receta.bloque);
-    await setChainQR(receta.blockchain?.block ?? receta.bloque);
-        updateBadgeFromReceta(receta);                
-  if (typeof window.killVerificandoUI==='function') window.killVerificandoUI();
+      await setChainQR(receta.blockchain?.block ?? receta.bloque);
+      updateBadgeFromReceta?.(receta);
+      window.killVerificandoUI?.();
       return receta;
     }
 
-    if (typeof window.bcStart === 'function') window.bcStart();
+    // lock 30s para no reintentar en la misma pestaña
+    const k = 'bc-selling-' + receta.id;
+    if (__locks.has(k) || localStorage.getItem(k)) return receta;
+    __locks.add(k); localStorage.setItem(k, Date.now().toString());
+    setTimeout(()=>{ __locks.delete(k); localStorage.removeItem(k); }, 30000);
 
-    // payload
+    window.bcStart?.();
+
+    // payload mínimo para /api/bloques
     const tsSec =
       (receta.timestamp && typeof receta.timestamp.toDate === 'function')
         ? Math.floor(receta.timestamp.toDate().getTime()/1000)
         : (receta.timestamp?.seconds ?? Math.floor(Date.now()/1000));
 
+    // iniciales: array (preferido por tu proxy)
+    const fromArray = Array.isArray(receta.iniciales) && receta.iniciales.length
+      ? receta.iniciales
+      : sanitizeInitials(receta.medsIniciales || inicialesDeMeds(receta.medicamentos)).split('-').filter(Boolean);
+
     const payload = {
-      id: receta.id,
-      medsIniciales: receta.medsIniciales || inicialesDeMeds(receta.medicamentos),
-      medico: receta.medicoNombre || receta.medico?.nombre || '',
+      idReceta: receta.id,
+      iniciales: fromArray,
+      medico: (receta.medicoNombre || receta.medico?.nombre || '')
+                .normalize('NFD').replace(/[\u0300-\u036f]/g,''),
       timestamp: tsSec
     };
-console.log('[bc] payload:', payload);
-    // intenta varias rutas
-    const paths = ['/sell','/registrar','/api/sell','/api/registrar','/sellar','/api/sellar'];
-    let out = null; const tried = [];
+    console.log('[bc] payload /api/bloques:', payload);
 
-    for (const p of paths){
-      tried.push(p);
-      try{
-         console.log('[bc] intentando', p);
-        const res = await fetch(`${BC_BASE}${p}`, {
-          method:'POST',
-          headers:{'Content-Type':'application/json'},
-          body: JSON.stringify(payload),
-          mode:'cors', credentials:'omit'
-        });
-const peek = await res.clone().text().catch(()=>'(no text)');
-        console.log('[bc] resp', p, res.status, peek.slice(0,200));
-        
-        if (res.status === 404) continue;
+    const resp = await fetch('/api/bloques', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(payload)
+    });
+    const raw = await resp.json().catch(()=> ({}));
+    console.log('[bc] raw /api/bloques:', raw);
 
-        if (res.status === 405){
-          const u = new URL(`${BC_BASE}${p}`);
-          u.searchParams.set('id', payload.id);
-          u.searchParams.set('medsIniciales', payload.medsIniciales||'');
-          u.searchParams.set('medico', payload.medico||'');
-          u.searchParams.set('timestamp', String(payload.timestamp||''));
-          const alt = await fetch(u.href, { method:'GET', mode:'cors', credentials:'omit' });
-          console.log('[bc] GET fallback', p, alt.status);
-          if (!alt.ok) continue;
-          const data = await alt.json().catch(()=>null);
-          const block = data?.block ?? data?.bloque ?? null;
-          const hash  = data?.hash  ?? data?.txid  ?? data?.tx ?? null;
-          if (block){ out = { block, hash: hash||null }; break; }
-          continue;
-        }
+    const toNum = v => (typeof v==='number'&&Number.isFinite(v)) ? v : (/^\d+$/.test(String(v??'')) ? Number(v) : NaN);
+    const block = [raw?.bloque?.index, raw?.index, raw?.bloqueIndex, raw?.block].map(toNum).find(Number.isFinite);
+    const hash  = raw?.bloque?.hash || raw?.hash || raw?.blockHash || raw?.txid || null;
 
-        if (!res.ok) continue;
-
-        const data = await res.json().catch(()=>null);
-        const block = data?.block ?? data?.bloque ?? null;
-        const hash  = data?.hash  ?? data?.txid  ?? data?.tx ?? null;
-        if (block){ out = { block, hash: hash||null }; break; }
-      }catch{ /* intenta siguiente */ }
-    }
-console.warn('[bc] error al llamar', p, e);
-    // si no hubo salida válida
-    if (!out){
-      console.warn('[bc] sin bloque. Rutas probadas:', tried);
-      try{ localStorage.setItem('bc-last-fail-'+receta.id, JSON.stringify({t:Date.now(), tried})); }catch{}
-      if (typeof window.bcError==='function') window.bcError();
-      if (typeof window.killVerificandoUI==='function') window.killVerificandoUI();
+    if (!(resp.ok && Number.isFinite(block) && hash)) {
+      console.warn('[bc] pendiente (no block/hash)', { raw });
+      window.bcError?.(); window.killVerificandoUI?.();
       return receta;
     }
 
-    // si hubo {block,hash} → actualiza Firestore (best-effort)
+    // actualizar Firestore (best-effort)
     try{
       const {doc, updateDoc, serverTimestamp} = await _fs();
       await updateDoc(doc(db,'recetas', receta.id), {
-        blockchain: { status:'ok', block: out.block, hash: out.hash, at: serverTimestamp() },
-        bloque: out.block,
-        hash: out.hash
+        blockchain: { status:'ok', block, hash, at: serverTimestamp() },
+        bloque: block,
+        hash
       });
-
-      console.log('[bc] firestore actualizado:', out);
     }catch(e){ console.warn('[bc] Firestore update falló (UI igual se actualiza):', e); }
 
-    // refresca UI
-    receta.blockchain = { status:'ok', block: out.block, hash: out.hash };
-    receta.bloque = out.block; receta.hash = out.hash;
+    // refrescar UI
+    receta.blockchain = { status:'ok', block, hash };
+    receta.bloque = block; receta.hash = hash;
     window.RECETA_ACTUAL = receta;
 
-    await setChainQR(out.block);
-    updateBadgeFromReceta(receta); 
-    if (typeof window.bcDone==='function') window.bcDone(receta);
-    if (typeof window.killVerificandoUI==='function') window.killVerificandoUI();
-
+    await setChainQR(block);
+    updateBadgeFromReceta?.(receta);
+    window.bcDone?.(receta);
+    window.killVerificandoUI?.();
     return receta;
+
   }catch(err){
     console.error('[bc] sellIfPending error', err);
-    if (typeof window.bcError==='function') window.bcError();
-    if (typeof window.killVerificandoUI==='function') window.killVerificandoUI();
+    window.bcError?.(); window.killVerificandoUI?.();
     return receta;
   }
 }
