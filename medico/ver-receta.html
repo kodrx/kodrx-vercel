@@ -352,7 +352,7 @@ async function sellIfPending(receta){
   try{
     if (!receta?.id) return receta;
 
-    // ¿ya trae bloque?
+    // ya sellada → pinta y sal
     const hasBlock = (receta.blockchain?.block ?? receta.bloque) != null;
     if (hasBlock){
       await setChainQR(receta.blockchain?.block ?? receta.bloque);
@@ -361,7 +361,7 @@ async function sellIfPending(receta){
       return receta;
     }
 
-    // lock 30s para no reintentar en la misma pestaña
+    // evita reintentos en la misma pestaña (30s)
     const k = 'bc-selling-' + receta.id;
     if (__locks.has(k) || localStorage.getItem(k)) return receta;
     __locks.add(k); localStorage.setItem(k, Date.now().toString());
@@ -369,22 +369,27 @@ async function sellIfPending(receta){
 
     window.bcStart?.();
 
-    // payload mínimo para /api/bloques
     const tsSec =
       (receta.timestamp && typeof receta.timestamp.toDate === 'function')
         ? Math.floor(receta.timestamp.toDate().getTime()/1000)
         : (receta.timestamp?.seconds ?? Math.floor(Date.now()/1000));
 
-    // iniciales: array (preferido por tu proxy)
-    const fromArray = Array.isArray(receta.iniciales) && receta.iniciales.length
-      ? receta.iniciales
-      : sanitizeInitials(receta.medsIniciales || inicialesDeMeds(receta.medicamentos)).split('-').filter(Boolean);
+    const meds = Array.isArray(receta.medicamentos) ? receta.medicamentos : [];
+    const recetaResumen = meds.map(m => `${m.nombre} ${m.dosis} por ${m.duracion}`).join(', ');
+    const inicialesArr =
+      Array.isArray(receta.iniciales) && receta.iniciales.length
+        ? receta.iniciales
+        : (receta.medsIniciales || '')
+            .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+            .toUpperCase().split('-').filter(Boolean);
 
     const payload = {
+      receta: recetaResumen,                         // ← requerido
+      medico: receta.medicoNombre || receta.medico?.nombre || '',   // ← requerido
+      cedula: receta.medicoCedula || receta.medico?.cedula || '',   // ← requerido
+      medicamentos: meds,
+      iniciales: inicialesArr,
       idReceta: receta.id,
-      iniciales: fromArray,
-      medico: (receta.medicoNombre || receta.medico?.nombre || '')
-                .normalize('NFD').replace(/[\u0300-\u036f]/g,''),
       timestamp: tsSec
     };
     console.log('[bc] payload /api/bloques:', payload);
@@ -394,7 +399,9 @@ async function sellIfPending(receta){
       headers:{'Content-Type':'application/json'},
       body: JSON.stringify(payload)
     });
-    const raw = await resp.json().catch(()=> ({}));
+
+    let raw = {};
+    try { raw = await resp.json(); } catch {}
     console.log('[bc] raw /api/bloques:', raw);
 
     const toNum = v => (typeof v==='number'&&Number.isFinite(v)) ? v : (/^\d+$/.test(String(v??'')) ? Number(v) : NaN);
@@ -417,7 +424,6 @@ async function sellIfPending(receta){
       });
     }catch(e){ console.warn('[bc] Firestore update falló (UI igual se actualiza):', e); }
 
-    // refrescar UI
     receta.blockchain = { status:'ok', block, hash };
     receta.bloque = block; receta.hash = hash;
     window.RECETA_ACTUAL = receta;
