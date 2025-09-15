@@ -294,33 +294,34 @@ try {
   const hash  = raw?.bloque?.hash || raw?.hash || raw?.blockHash || raw?.txid || null;
 
   if (resp.ok && Number.isFinite(block) && hash) {
-    try {
-      await updateDoc(doc(db, 'recetas', ref.id), {
-        blockchain: { status:'ok', block, hash, at: serverTimestamp() },
-        bloque: block,
-        hash
-      });
-      console.log('[BC] guardado en receta:', { block, hash });
-    } catch (e) {
-      console.warn('[BC] Firestore update falló (UI igual se actualiza):', e);
-    }
-  } else {
-    console.warn('⚠ Respuesta BC sin block/hash numérico', { raw });
-    if (raw?.url || raw?.consultaUrl) {
-      try {
-        await updateDoc(doc(db, 'recetas', ref.id), {
-          urlBlockchain: raw.url || raw.consultaUrl,
-          blockchain: { status: 'simulado' }
-        });
-      } catch {}
-    }
+    // tras obtener `resp` y `raw`, y calcular `block` y `hash`…
+const updates = {};
+
+if (resp.ok && Number.isFinite(block) && hash) {
+  updates.blockchain = { status: 'ok', block, hash, at: serverTimestamp() };
+  updates.bloque = block;
+  updates.hash = hash;
+  console.log('[BC] listo para guardar:', { block, hash });
+} else if (raw?.url || raw?.consultaUrl) {
+  updates.urlBlockchain = raw.url || raw.consultaUrl;
+  updates.blockchain = { status: 'simulado' };
+  console.warn('⚠ Respuesta BC sin block/hash; guardando URL de consulta');
+} else {
+  console.warn('⚠ Respuesta BC sin datos utilizables', { raw });
+}
+
+// Una sola escritura a Firestore (si hay algo que actualizar)
+try {
+  if (Object.keys(updates).length) {
+    await updateDoc(doc(db, 'recetas', ref.id), updates);
   }
 } catch (e) {
-  console.error(' Error al sellar vía /api/bloques:', e);
+  console.warn('[BC] Firestore update falló (UI igual se actualiza):', e?.message || e);
 }
+
 // =====================================================
 
-// =================================================================
+
 
     
     // Redirección a ver-receta con el ID
@@ -350,6 +351,8 @@ window.agregarMedicamento = window.agregarMedicamento || agregarMedicamento;
 window.kodrxPanelSubmit  = onSubmit;
 
 console.log('[panel] ready');
+
+
 </script>
 
 
