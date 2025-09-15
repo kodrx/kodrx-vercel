@@ -355,6 +355,96 @@ console.log('[panel] ready');
 
 </script>
 
+<script>
+;(() => {
+  console.log('[panel][hotfix] bindUI v2');
+
+  const $ = s => document.querySelector(s);
+  let medsHost = null;
+
+  function ensureMedsContainer(){
+    if (medsHost && medsHost.isConnected) return medsHost;
+    medsHost = document.getElementById('medicamentosContainer')
+          || document.querySelector('[data-meds]');
+    if (!medsHost){
+      medsHost = document.createElement('div');
+      medsHost.id = 'medicamentosContainer';
+      (document.getElementById('generarRecetaForm')
+        || document.getElementById('formReceta')
+        || document.body).appendChild(medsHost);
+    }
+    return medsHost;
+  }
+
+  // expone agregarMedicamento si no existe
+  window.agregarMedicamento = window.agregarMedicamento || function agregarMedicamento(){
+    const host = ensureMedsContainer();
+    const row = document.createElement('div');
+    row.className = 'medicamento';
+    row.style.display = 'grid';
+    row.style.gridTemplateColumns = '1fr 1fr 1fr auto';
+    row.style.gap = '8px';
+    row.innerHTML = `
+      <input type="text" class="nombre"   placeholder="Nombre del medicamento">
+      <input type="text" class="dosis"    placeholder="Dosis">
+      <input type="text" class="duracion" placeholder="Duración">
+      <button type="button" class="rm" title="Eliminar">🗑️</button>`;
+    row.querySelector('.rm').onclick = () => row.remove();
+    host.appendChild(row);
+    if (typeof window.iniciarAutocompletado === 'function') {
+      const input = row.querySelector('.nombre');
+      setTimeout(()=>window.iniciarAutocompletado(input), 50);
+    }
+  };
+
+  function generarReceta(){
+    const form = document.getElementById('generarRecetaForm')
+             || document.getElementById('formReceta')
+             || document.querySelector('form');
+    if (!form) return console.warn('[panel] No se encontró el formulario');
+    if (form.__busy) return;
+    form.__busy = true; setTimeout(()=>{ form.__busy = false; }, 5000);
+    if (form.requestSubmit) form.requestSubmit(); else form.submit();
+  }
+  window.generarReceta = window.generarReceta || generarReceta;
+
+  function bindButton(btn, fn){
+    if (!btn) return false;
+    btn.type = 'button';
+    btn.disabled = false;
+    btn.removeAttribute('aria-busy');
+    btn.style.pointerEvents = '';
+    btn.style.opacity = '';
+    if (!btn.__bound){
+      btn.addEventListener('click', e => { e.preventDefault(); fn(); }, {capture:true});
+      btn.__bound = true;
+    }
+    return true;
+  }
+
+  function bindUI(){
+    ensureMedsContainer();
+    const addOk = bindButton(
+      document.getElementById('btnAgregarMedicamento')
+      || document.querySelector('[data-add-med], .add-med'),
+      window.agregarMedicamento
+    );
+    const genOk = bindButton(
+      document.getElementById('btnGenerar')
+      || document.querySelector('[data-generate], .generate'),
+      window.generarReceta
+    );
+    console.log('[panel][hotfix] bindUI:', { addOk, genOk });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', bindUI, { once:true });
+  } else {
+    bindUI();
+  }
+  window.kodrxBindUI = bindUI; // por si quieres re-binder desde la consola
+})();
+</script>
 
 
 
