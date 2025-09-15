@@ -258,31 +258,59 @@ async function onSubmit(){
 const ref = await addDoc(collection(db, 'recetas'), recetaData);
 console.log('[panel] receta creada:', ref.id);
 
-// --- SELLADO fire-and-forget (no bloquea UI) ---
-const BC_BASE = 'https://kodrx-blockchain.onrender.com'; // quita si ya existe
+// === Enviar a blockchain vía proxy /api/bloques (mismo origen, sin CORS/secret) ===
 try {
+  const meds = Array.isArray(recetaData.medicamentos) ? recetaData.medicamentos : [];
+  const iniciales =
+    recetaData.medsIniciales ||
+    meds.map(m => String(m?.nombre||'').trim().split(/\s+/).map(w => w[0]||'').join('').slice(0,3).toUpperCase());
+
+  const recetaResumen = meds.map(m => `${m.nombre} ${m.dosis} por ${m.duracion}`).join(', ');
+
   const payload = {
-    id: ref.id,
-    medsIniciales: recetaData.medsIniciales || '',
+    receta: recetaResumen,
     medico: recetaData.medicoNombre || '',
+    cedula: recetaData.medicoCedula || '',
+    medicamentos: meds,
+    iniciales,               // array está bien; el proxy reenvía tal cual
+    idReceta: ref.id,
     timestamp: Math.floor(Date.now()/1000)
   };
 
-  // evita duplicados en esta sesión (30s)
-  const lockKey = 'bc-selling-' + ref.id;
-  if (!localStorage.getItem(lockKey)) {
-    localStorage.setItem(lockKey, String(Date.now()));
-    setTimeout(()=>localStorage.removeItem(lockKey), 30000);
+  const resp = await fetch('/api/bloques', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
 
-    // prueba 2 rutas comunes + 1 legacy; no esperamos respuesta
-    fetch(`${BC_BASE}/sell`,      { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) }).catch(()=>{});
-    fetch(`${BC_BASE}/registrar`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) }).catch(()=>{});
-    fetch(`${BC_BASE}/api/sellar`,{ method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) }).catch(()=>{});
+  const raw = await resp.json().catch(() => ({}));
+  console.log('[BC][raw]', raw);
 
-    console.log('[panel] sell dispatched', payload);
+  // parseo robusto: acepta varias formas de respuesta
+  const toNum = v => (typeof v === 'number' && Number.isFinite(v)) ? v : (/^\d+$/.test(String(v||'')) ? Number(v) : NaN);
+  const block = [raw?.bloque?.index, raw?.index, raw?.bloqueIndex, raw?.block].map(toNum).find(Number.isFinite);
+  const hash  = raw?.bloque?.hash || raw?.hash || raw?.blockHash || raw?.txid || null;
+
+  if (resp.ok && Number.isFinite(block) && hash) {
+    await updateDoc(doc(db, 'recetas', ref.id), {
+      blockchain: { status:'ok', block, hash, at: serverTimestamp() },
+      bloque: block,
+      hash
+    });
+    console.log('[BC] guardado en receta:', { block, hash });
+  } else {
+    console.warn('⚠ Respuesta BC sin block/hash numérico', { raw });
+    if (raw?.url || raw?.consultaUrl) {
+      await updateDoc(doc(db, 'recetas', ref.id), {
+        urlBlockchain: raw.url || raw.consultaUrl,
+        blockchain: { status:'simulado' }
+      });
+    }
   }
-} catch {}
-// -----------------------------------------------
+} catch (e) {
+  console.error(' Error al sellar vía /api/bloques:', e);
+}
+// =================================================================
 
     
     // Redirección a ver-receta con el ID
