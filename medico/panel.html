@@ -254,11 +254,12 @@ async function onSubmit(){
       bloque: null
     };
 
+
 // tras crear la receta
 const ref = await addDoc(collection(db, 'recetas'), recetaData);
 console.log('[panel] receta creada:', ref.id);
 
-// === Enviar a blockchain vía proxy /api/bloques (mismo origen, sin CORS/secret) ===
+// === Sellado vía proxy /api/bloques (mismo origen) ===
 try {
   const meds = Array.isArray(recetaData.medicamentos) ? recetaData.medicamentos : [];
   const iniciales =
@@ -268,11 +269,11 @@ try {
   const recetaResumen = meds.map(m => `${m.nombre} ${m.dosis} por ${m.duracion}`).join(', ');
 
   const payload = {
-    receta: recetaResumen,
-    medico: recetaData.medicoNombre || '',
-    cedula: recetaData.medicoCedula || '',
+    receta: recetaResumen,                          // ← requerido por tu proxy
+    medico: recetaData.medicoNombre || '',          // ← requerido
+    cedula: recetaData.medicoCedula || '',          // ← requerido
     medicamentos: meds,
-    iniciales,               // array está bien; el proxy reenvía tal cual
+    iniciales,                                      // array está bien
     idReceta: ref.id,
     timestamp: Math.floor(Date.now()/1000)
   };
@@ -283,33 +284,42 @@ try {
     body: JSON.stringify(payload)
   });
 
-  const raw = await resp.json().catch(() => ({}));
+  let raw = {};
+  try { raw = await resp.json(); } catch {}
   console.log('[BC][raw]', raw);
 
-  // parseo robusto: acepta varias formas de respuesta
-  const toNum = v => (typeof v === 'number' && Number.isFinite(v)) ? v : (/^\d+$/.test(String(v||'')) ? Number(v) : NaN);
+  // Acepta varios shapes de respuesta
+  const toNum = v => (typeof v === 'number' && Number.isFinite(v)) ? v : (/^\d+$/.test(String(v??'')) ? Number(v) : NaN);
   const block = [raw?.bloque?.index, raw?.index, raw?.bloqueIndex, raw?.block].map(toNum).find(Number.isFinite);
   const hash  = raw?.bloque?.hash || raw?.hash || raw?.blockHash || raw?.txid || null;
 
   if (resp.ok && Number.isFinite(block) && hash) {
-    await updateDoc(doc(db, 'recetas', ref.id), {
-      blockchain: { status:'ok', block, hash, at: serverTimestamp() },
-      bloque: block,
-      hash
-    });
-    console.log('[BC] guardado en receta:', { block, hash });
+    try {
+      await updateDoc(doc(db, 'recetas', ref.id), {
+        blockchain: { status:'ok', block, hash, at: serverTimestamp() },
+        bloque: block,
+        hash
+      });
+      console.log('[BC] guardado en receta:', { block, hash });
+    } catch (e) {
+      console.warn('[BC] Firestore update falló (UI igual se actualiza):', e);
+    }
   } else {
     console.warn('⚠ Respuesta BC sin block/hash numérico', { raw });
     if (raw?.url || raw?.consultaUrl) {
-      await updateDoc(doc(db, 'recetas', ref.id), {
-        urlBlockchain: raw.url || raw.consultaUrl,
-        blockchain: { status:'simulado' }
-      });
+      try {
+        await updateDoc(doc(db, 'recetas', ref.id), {
+          urlBlockchain: raw.url || raw.consultaUrl,
+          blockchain: { status: 'simulado' }
+        });
+      } catch {}
     }
   }
 } catch (e) {
   console.error(' Error al sellar vía /api/bloques:', e);
 }
+// =====================================================
+
 // =================================================================
 
     
