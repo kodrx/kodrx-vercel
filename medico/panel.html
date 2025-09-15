@@ -246,8 +246,8 @@ async function onSubmit(e){
     }
 
     // --------- 2) Contexto médico / sesión ----------
-    const u = window.auth?.currentUser;
-    if (!u){ alert('No hay sesión. Inicia sesión de nuevo.'); return; }
+    const usr = window.auth?.currentUser;
+    if (!usr){ alert('No hay sesión. Inicia sesión de nuevo.'); return; }
 
     const { collection, addDoc, updateDoc, doc, getDoc, serverTimestamp, Timestamp } = window.__fs || {};
     if (!collection){ alert('Firestore no cargó. Recarga la página.'); return; }
@@ -276,7 +276,7 @@ async function onSubmit(e){
       medsIniciales,
 
       // médico (flatten)
-      medicoNombre: m.nombre || u.displayName || '',
+      medicoNombre: m.nombre || usr.displayName || '',
       medicoGenero: m.genero || '',
       medicoCedula: m.cedula || '',
       medicoEspecialidad: m.especialidad || 'General',
@@ -284,9 +284,9 @@ async function onSubmit(e){
       medicoDomicilio,
 
       // índices
-      medicoUid: u.uid,
-      medicoEmail: u.email || '',
-      correo: u.email || '',
+      medicoUid: usr.uid,
+      medicoEmail: usr.email || '',
+      correo: usr.email || '',
 
       timestamp: (Timestamp?.now?.() ?? new Date()),
       blockchain: { status: 'pendiente' },
@@ -350,11 +350,9 @@ async function onSubmit(e){
 
     
     // Redirección a ver-receta con el ID
-    const u = new URL('/medico/ver-receta.html', location.origin);
-    u.searchParams.set('id', ref.id);
-    // feedback mínimo antes de irnos
-    alert('Receta creada: ' + ref.id);
-    location.href = u.href;
+  const goto = new URL('/medico/ver-receta.html', location.origin); // ajusta la ruta si es /public/
+goto.searchParams.set('id', ref.id);
+ location.href = goto.href;
 
   }catch(err){
     console.error('[panel] error al guardar receta', err);
