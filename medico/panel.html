@@ -345,19 +345,7 @@ async function onSubmit(e){
       console.error('Error al sellar vía /api/bloques:', e?.message || e);
     }
 
-    // --------- 5) Redirigir a ver-receta ----------
-    const VER_RECETA_PATH = '/public/ver-receta.html'; // cámbialo a '/medico/ver-receta.html' si aplica
-    const uurl = new URL(VER_RECETA_PATH, location.origin);
-    uurl.searchParams.set('id', ref.id);
-    location.href = uurl.href;
 
-  } catch (err) {
-    console.error('[panel] error al guardar receta', err);
-    alert('No se pudo generar la receta. Revisa los campos e intenta de nuevo.');
-  } finally {
-    if (btnGen){ btnGen.disabled = false; btnGen.textContent = prevTxt || 'Generar receta'; }
-  }
-}
 
 
     
