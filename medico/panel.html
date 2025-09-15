@@ -336,7 +336,7 @@ try {
     alert('Receta creada: ' + ref.id);
     location.href = u.href;
 
-  catch(err){
+  }catch(err){
     console.error('[panel] error al guardar receta', err);
     alert('No se pudo generar la receta. Revisa los campos e intenta de nuevo.');
   }finally{
