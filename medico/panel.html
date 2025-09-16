@@ -335,26 +335,41 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.2.1/fi
   window.kodrxSubmit = kodrxSubmit;
 
   // === ENGANCHAR (único) ===
-  function bindSubmit(){
-    const form = byId('generarRecetaForm') || byId('formReceta') || q('form');
-    if (!form) return console.warn('[panel] No se encontró formulario');
-    // elimina listeners previos clonando (nuke)
-    const clone = form.cloneNode(true);
-    form.parentNode.replaceChild(clone, form);
-    clone.addEventListener('submit', kodrxSubmit, {capture:true});
-    clone.__kodrxSubmitBound = true;
-    // cablea botón
-    const btn = byId('btnGenerar') || q('[type=submit], [data-generate], .generate');
-    if (btn){
-      btn.type = 'button';
-      btn.addEventListener('click', ()=> {
-        if (clone.requestSubmit) clone.requestSubmit();
-        else clone.dispatchEvent(new Event('submit', {cancelable:true}));
-      }, {capture:true});
-    }
-    console.log('[panel] submit bound (clean)');
+function bindSubmit(){
+  // 1) Localiza el form
+  let form = document.getElementById('generarRecetaForm')
+        || document.getElementById('formReceta')
+        || document.querySelector('form');
+  if (!form) return console.warn('[panel] No se encontró formulario');
+
+  // 2) (Opcional) limpiar listeners previos clonando una sola vez
+  if (!form.__kodrxCleaned){
+    const cloned = form.cloneNode(true);          // copia DOM
+    form.parentNode.replaceChild(cloned, form);   // sustituye
+    form = cloned;
+    form.__kodrxCleaned = true;
   }
 
+  // 3) Vincula el submit si aún no está
+  if (!form.__kodrxSubmitBound){
+    form.addEventListener('submit', kodrxSubmit, {capture:true});
+    form.__kodrxSubmitBound = true;
+  }
+
+  // 4) Re-cablea los botones usando el *form actual*
+  const addBtn =
+    form.querySelector('#btnAgregarMedicamento')
+    || form.querySelector('[data-add-med], .add-med');
+  bindButton(addBtn, agregarMedicamento);
+
+  const genBtn =
+    form.querySelector('#btnGenerar')
+    || form.querySelector('[data-generate], .generate')
+    || form.querySelector('[type=submit]');
+  bindButton(genBtn, generarReceta);
+
+  console.log('[panel] submit bound (clean) + buttons rebound');
+}
   // === ARRANQUE ===
   function start(){
     bindUI();
@@ -365,21 +380,7 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.2.1/fi
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, {once:true});
   else start();
 
-  const addBtn =
-  clone.querySelector('#btnAgregarMedicamento')
-  || clone.querySelector('[data-add-med], .add-med');
-
-bindButton(addBtn, agregarMedicamento);
-
-// (opcional) si quieres, vuelve a cablear también "Generar" con nuestro helper
-const genBtn =
-  clone.querySelector('#btnGenerar')
-  || clone.querySelector('[data-generate], .generate')
-  || clone.querySelector('[type=submit]');
-
-bindButton(genBtn, generarReceta);
-
-console.log('[panel] submit bound (clean) + buttons rebound');
+  
 
 })();
 </script>
