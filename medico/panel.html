@@ -75,25 +75,12 @@
     <div id="qrContainer" style="margin-top: 20px;"></div>
   </main>
 
-  <!-- Scripts -->
+ <!-- Scripts -->
   <script src="/medico/autocomplete.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
   <script type="module" src="/firebase-init.js"></script>
 
-  <script>
-    // Cálculo automático de IMC
-    document.getElementById("peso").addEventListener("input", calcularIMC);
-    document.getElementById("talla").addEventListener("input", calcularIMC);
-
-    function calcularIMC() {
-      const peso = parseFloat(document.getElementById("peso").value);
-      const talla = parseFloat(document.getElementById("talla").value) / 100;
-      if (!isNaN(peso) && !isNaN(talla) && talla > 0) {
-        const imc = peso / (talla * talla);
-        document.getElementById("imc").value = imc.toFixed(2);
-      }
-    }
-  </script>
+ 
 <script type="module">
 console.log('[panel] boot');
 
@@ -109,298 +96,57 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.2.1/fi
   window.auth = auth;
   window.__fs = { collection, addDoc, updateDoc, doc, getDoc, serverTimestamp, Timestamp };
   
-/* ---------- estado ---------- */
-const state = { user:null, medico:null };
 
-/* ---------- helpers UI ---------- */
-function $(sel,root=document){ return root.querySelector(sel); }
-function $all(sel,root=document){ return Array.from(root.querySelectorAll(sel)); }
-
-function ensureMedsContainer(){
-  let el = document.getElementById('medicamentosContainer') || $('[data-meds]');
-  if (!el){ el = document.createElement('div'); el.id='medicamentosContainer'; document.body.appendChild(el); }
-  return el;
-}
-const medsContainer = ensureMedsContainer();
-
-function iniciarAutocompletadoSiExiste(input){
-  if (typeof window.iniciarAutocompletado === 'function'){
-    setTimeout(()=> window.iniciarAutocompletado(input), 50);
-  }
-}
-
-function agregarMedicamento(){
-  const wrap = document.createElement('div');
-  wrap.className = 'medicamento';
-  wrap.style.cssText = 'position:relative; display:grid; grid-template-columns:1fr 1fr 1fr auto; gap:8px; margin-bottom:8px;';
-
-  const nombre   = Object.assign(document.createElement('input'), {type:'text',  placeholder:'Nombre',   className:'nombre'});
-  const dosis    = Object.assign(document.createElement('input'), {type:'text',  placeholder:'Dosis',    className:'dosis'});
-  const duracion = Object.assign(document.createElement('input'), {type:'text',  placeholder:'Duración', className:'duracion'});
-  const delBtn   = Object.assign(document.createElement('button'),{type:'button', textContent:'🗑️'});
-  delBtn.style.cssText='padding:.4rem .6rem;'; delBtn.onclick = ()=> wrap.remove();
-
-  wrap.append(nombre,dosis,duracion,delBtn);
-  medsContainer.appendChild(wrap);
-  iniciarAutocompletadoSiExiste(nombre);
-}
-
-function leerMedicamentos(){
-  return $all('.medicamento').map(row=>{
-    const nombre   = $('.nombre', row)?.value?.trim() || '';
-    const dosis    = $('.dosis', row)?.value?.trim() || '';
-    const duracion = $('.duracion', row)?.value?.trim() || '';
-    if(!nombre && !dosis && !duracion) return null;
-    return { nombre, dosis, duracion };
-  }).filter(Boolean);
-}
-
-function computeIMC(peso, tallaCm){
-  const p = parseFloat(peso), t = parseFloat(tallaCm);
-  if (!p || !t) return '';
-  const m = t/100;
-  const imc = p/(m*m);
-  return (Math.round(imc*100)/100).toFixed(2);
-}
-
-function inicialesDeMeds(meds){
-  // “iniciales” amigables para blockchain, p.ej. AMO-IBU-PAR
-  return (meds||[])
-    .map(m=> (m?.nombre||'').trim().split(/\s+/).map(w=>w[0]||'').join('').slice(0,3).toUpperCase())
-    .filter(s=>s).join('-');
-}
-
-/* ---------- bind de UI ---------- */
-function bindUI(){
-  const btnAdd = document.getElementById('btnAgregarMedicamento') || document.querySelector('[data-add-med], .add-med');
-  const btnGen = document.getElementById('btnGenerar') || document.querySelector('[data-generate], .generate');
-
-  if (btnAdd && !btnAdd.__bound){ btnAdd.type='button'; btnAdd.addEventListener('click', (e)=>{ e.preventDefault(); agregarMedicamento(); }); btnAdd.__bound=true; }
-  if (btnGen && !btnGen.__bound){ btnGen.type='button'; btnGen.addEventListener('click', (e)=>{ e.preventDefault(); onSubmit(); }); btnGen.__bound=true; }
-
-  // IMC en vivo
-  const peso  = document.getElementById('peso');
-  const talla = document.getElementById('talla');
-  const imcEl = document.getElementById('imc');
-  if (peso && talla && imcEl){
-    const upd = ()=> imcEl.value = computeIMC(peso.value, talla.value);
-    peso.addEventListener('input', upd); talla.addEventListener('input', upd);
-  }
-}
-
-/* ---------- auth + carga del médico ---------- */
-onAuthStateChanged(auth, async (user)=>{
-  if (!user){ alert('Inicia sesión para generar recetas'); location.href='/acceso.html'; return; }
-  state.user = user;
-  try{
-    const medSnap = await getDoc(doc(db,'medicos', user.uid));
-    if (!medSnap.exists()){ alert('Perfil de médico no encontrado'); return; }
-    state.medico = medSnap.data();
-    console.log('[panel] médico:', state.medico?.nombre || '(sin nombre)');
-  }catch(err){
-    console.error('[panel] error leyendo /medicos/{uid}', err);
-    alert('No se pudo leer tu perfil de médico.');
-  }
-});
-
-async function onSubmit(e){
-  e?.preventDefault?.();
-
-  // botón
-  const btnGen  = document.getElementById('btnGenerar') || document.querySelector('[data-generate], .generate');
-  const prevTxt = btnGen?.textContent;
-  if (btnGen){ btnGen.disabled = true; btnGen.textContent = 'Guardando…'; }
-
-  // helper para leer inputs por id
-  const $ = (id) => document.getElementById(id);
-
-  try {
-    // --------- 1) Datos del formulario ----------
-    const nombrePaciente = $('#nombrePaciente')?.value?.trim() || '';
-    const edad           = parseInt($('#edad')?.value||'',10) || null;
-    const sexo           = $('#sexo')?.value || '';
-    const talla          = $('#talla')?.value || '';
-    const peso           = $('#peso')?.value || '';
-    const imc            = $('#imc')?.value || '';
-    const temperatura    = $('#temperatura')?.value || '';
-    const presion        = $('#presion')?.value || '';
-    const observaciones  = $('#observaciones')?.value?.trim() || '';
-    const diagnostico    = $('#diagnostico')?.value?.trim() || '';
-
-    if (!nombrePaciente){ alert('Falta el nombre del paciente'); return; }
-
-    // medicamentos
-    const leerMedicamentos = () =>
-      [...document.querySelectorAll('#medicamentosContainer .medicamento')].map(row => {
-        const get = cls => row.querySelector('.'+cls)?.value?.trim() || '';
-        const nombre   = get('nombre');
-        const dosis    = get('dosis');
-        const duracion = get('duracion');
-        const ini = nombre.split(/\s+/).map(w=>w[0]||'').join('').slice(0,3).toUpperCase();
-        return { nombre, dosis, duracion, ini };
-      });
-
-    const medicamentos = leerMedicamentos();
-    if (!medicamentos.length){
-      if (!confirm('No agregaste medicamentos. ¿Continuar?')) return;
-    }
-
-    // --------- 2) Contexto médico / sesión ----------
-    const usr = window.auth?.currentUser;
-    if (!usr){ alert('No hay sesión. Inicia sesión de nuevo.'); return; }
-
-    const { collection, addDoc, updateDoc, doc, getDoc, serverTimestamp, Timestamp } = window.__fs || {};
-    if (!collection){ alert('Firestore no cargó. Recarga la página.'); return; }
-
-    // carga ficha del médico
-    let m = {};
-    try{
-      const ms = await getDoc(doc(window.db, 'medicos', u.uid));
-      if (ms.exists()) m = ms.data();
-    }catch{}
-
-    const medicoDomicilio = (m.direccion ||
-      `${m.calle||''} ${m.numero||''}, ${m.colonia||''}, ${m.municipio||''}, ${m.estado||''}, CP ${m.cp||''}`)
-      .replace(/\s+,/g,',').replace(/,\s*,/g,', ').trim();
-
-    const medsIniciales = (window.inicialesDeMeds
-      ? inicialesDeMeds(medicamentos)
-      : medicamentos.map(x=>x.nombre.split(/\s+/).map(w=>w[0]||'').join('').slice(0,3).toUpperCase()).join('-'));
-
-    // --------- 3) Documento receta ----------
-    const recetaData = {
-      // legacy flatten (pantalla)
-      nombrePaciente, edad, sexo, peso, talla, imc, temperatura, presion,
-      observaciones, diagnostico,
-      medicamentos,
-      medsIniciales,
-
-      // médico (flatten)
-      medicoNombre: m.nombre || usr.displayName || '',
-      medicoGenero: m.genero || '',
-      medicoCedula: m.cedula || '',
-      medicoEspecialidad: m.especialidad || 'General',
-      medicoTelefono: m.telefono || '',
-      medicoDomicilio,
-
-      // índices
-      medicoUid: usr.uid,
-      medicoEmail: usr.email || '',
-      correo: usr.email || '',
-
-      timestamp: (Timestamp?.now?.() ?? new Date()),
-      blockchain: { status: 'pendiente' },
-      hash: null, bloque: null
-    };
-
-    // guardar
-    const ref = await addDoc(collection(window.db, 'recetas'), recetaData);
-    console.log('[panel] receta creada:', ref.id);
-
-    // --------- 4) Sellado vía proxy /api/bloques ----------
-    try {
-      const recetaResumen = medicamentos.map(m => `${m.nombre} ${m.dosis} por ${m.duracion}`).join(', ');
-      const payload = {
-        receta: recetaResumen,                    // requerido por tu proxy
-        medico: recetaData.medicoNombre || '',   // requerido
-        cedula: recetaData.medicoCedula || '',   // requerido
-        medicamentos,
-        iniciales: medicamentos.map(x=>x.ini),
-        idReceta: ref.id,
-        timestamp: Math.floor(Date.now()/1000)
-      };
-
-      const resp = await fetch('/api/bloques', {
-        method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify(payload)
-      });
-
-      let raw = {};
-      try{ raw = await resp.json(); }catch{}
-      console.log('[BC][raw]', raw);
-
-      // normaliza respuesta
-      const toNum  = v => (typeof v==='number'&&Number.isFinite(v)) ? v : (/^\d+$/.test(String(v??'')) ? Number(v) : NaN);
-      const block  = [raw?.bloque?.index, raw?.index, raw?.bloqueIndex, raw?.block].map(toNum).find(Number.isFinite);
-      const hash   =  raw?.bloque?.hash || raw?.hash || raw?.blockHash || raw?.txid || null;
-
-      // una sola escritura de updates
-      const updates = {};
-      if (resp.ok && Number.isFinite(block) && hash) {
-        updates.blockchain = { status:'ok', block, hash, at: serverTimestamp() };
-        updates.bloque = block; updates.hash = hash;
-      } else if (raw?.url || raw?.consultaUrl) {
-        updates.urlBlockchain = raw.url || raw.consultaUrl;
-        updates.blockchain = { status:'simulado' };
-      }
-
-      if (Object.keys(updates).length){
-        try{
-          await updateDoc(doc(window.db, 'recetas', ref.id), updates);
-        }catch(e){
-          console.warn('[BC] Firestore update falló (UI igual se actualiza):', e?.message || e);
-        }
-      }
-    } catch (e) {
-      console.error('Error al sellar vía /api/bloques:', e?.message || e);
-    }
-
-
-
-
-    
-    // Redirección a ver-receta con el ID
-  const goto = new URL('/medico/ver-receta.html', location.origin); // ajusta la ruta si es /public/
-goto.searchParams.set('id', ref.id);
- location.href = goto.href;
-
-  }catch(err){
-    console.error('[panel] error al guardar receta', err);
-    alert('No se pudo generar la receta. Revisa los campos e intenta de nuevo.');
-  }finally{
-    if (btnGen){ btnGen.disabled=false; btnGen.textContent = prevTxt || 'Generar receta'; }
-  }
-}
-
-/* ---------- ready ---------- */
-if (document.readyState === 'loading'){
-  document.addEventListener('DOMContentLoaded', ()=>{ bindUI(); }, {once:true});
-}else{
-  bindUI();
-}
-
-// expón si necesitas dispararlos desde consola
-window.agregarMedicamento = window.agregarMedicamento || agregarMedicamento;
-window.kodrxPanelSubmit  = onSubmit;
-
-console.log('[panel] ready');
-
-
-</script>
-
-<script>
 ;(() => {
-  console.log('[panel][hotfix] bindUI v2');
+  console.log('[panel] unified inline boot');
 
-  const $ = s => document.querySelector(s);
+  // ==== CONFIG RUTA DE VISTA ====
+  const VER_RECETA_PATH = '/medico/ver-re
+  
+
+;(() => {
+  console.log('[panel] unified inline boot');
+
+  // ==== CONFIG RUTA DE VISTA ====
+  const VER_RECETA_PATH = '/medico/ver-receta.html'; // ← cambia a '/public/ver-receta.html' si aplica
+
+  // ==== HELPERS BÁSICOS ====
+  const byId = (id)=> document.getElementById(id);
+  const q    = (sel)=> document.querySelector(sel);
+
+  // Evita doble-bindeos
+  if (window.__KODRX_PANEL_LOCK__) { console.log('[panel] locked, skipping'); return; }
+  window.__KODRX_PANEL_LOCK__ = true;
+
+  // Firestore lazy (usa window.__fs si ya existe)
+  async function fs(){
+    if (window.__fs) return window.__fs;
+    const mod = await import('https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js');
+    const { collection, addDoc, updateDoc, getDoc, doc, serverTimestamp, Timestamp } = mod;
+    return (window.__fs = { collection, addDoc, updateDoc, getDoc, doc, serverTimestamp, Timestamp });
+  }
+
+  // IMC auxiliar
+  function computeIMC(peso, talla){
+    const p = parseFloat(peso), t = parseFloat(talla)/100;
+    if (!p || !t) return '';
+    const v = p/(t*t);
+    return (Math.round(v*100)/100).toFixed(2);
+  }
+
+  // === Medicamentos UI ===
   let medsHost = null;
-
   function ensureMedsContainer(){
     if (medsHost && medsHost.isConnected) return medsHost;
-    medsHost = document.getElementById('medicamentosContainer')
-          || document.querySelector('[data-meds]');
+    medsHost = byId('medicamentosContainer') || q('[data-meds]');
     if (!medsHost){
       medsHost = document.createElement('div');
       medsHost.id = 'medicamentosContainer';
-      (document.getElementById('generarRecetaForm')
-        || document.getElementById('formReceta')
-        || document.body).appendChild(medsHost);
+      (byId('generarRecetaForm') || byId('formReceta') || document.body).appendChild(medsHost);
     }
     return medsHost;
   }
-
-  // expone agregarMedicamento si no existe
-  window.agregarMedicamento = window.agregarMedicamento || function agregarMedicamento(){
+  function agregarMedicamento(){
     const host = ensureMedsContainer();
     const row = document.createElement('div');
     row.className = 'medicamento';
@@ -414,22 +160,13 @@ console.log('[panel] ready');
       <button type="button" class="rm" title="Eliminar">🗑️</button>`;
     row.querySelector('.rm').onclick = () => row.remove();
     host.appendChild(row);
+    // autocompletado opcional
     if (typeof window.iniciarAutocompletado === 'function') {
       const input = row.querySelector('.nombre');
       setTimeout(()=>window.iniciarAutocompletado(input), 50);
     }
-  };
-
-  function generarReceta(){
-    const form = document.getElementById('generarRecetaForm')
-             || document.getElementById('formReceta')
-             || document.querySelector('form');
-    if (!form) return console.warn('[panel] No se encontró el formulario');
-    if (form.__busy) return;
-    form.__busy = true; setTimeout(()=>{ form.__busy = false; }, 5000);
-    if (form.requestSubmit) form.requestSubmit(); else form.submit();
   }
-  window.generarReceta = window.generarReceta || generarReceta;
+  window.agregarMedicamento = window.agregarMedicamento || agregarMedicamento;
 
   function bindButton(btn, fn){
     if (!btn) return false;
@@ -439,7 +176,7 @@ console.log('[panel] ready');
     btn.style.pointerEvents = '';
     btn.style.opacity = '';
     if (!btn.__bound){
-      btn.addEventListener('click', e => { e.preventDefault(); fn(); }, {capture:true});
+      btn.addEventListener('click', (e)=>{ e.preventDefault(); fn(); }, {capture:true});
       btn.__bound = true;
     }
     return true;
@@ -447,57 +184,46 @@ console.log('[panel] ready');
 
   function bindUI(){
     ensureMedsContainer();
-    const addOk = bindButton(
-      document.getElementById('btnAgregarMedicamento')
-      || document.querySelector('[data-add-med], .add-med'),
-      window.agregarMedicamento
-    );
-    const genOk = bindButton(
-      document.getElementById('btnGenerar')
-      || document.querySelector('[data-generate], .generate'),
-      window.generarReceta
-    );
-    console.log('[panel][hotfix] bindUI:', { addOk, genOk });
+    const addOk = bindButton(byId('btnAgregarMedicamento') || q('[data-add-med], .add-med'), agregarMedicamento);
+    const genOk = bindButton(byId('btnGenerar') || q('[data-generate], .generate'), generarReceta);
+    console.log('[panel] UI bound', {addOk, genOk});
   }
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', bindUI, { once:true });
-  } else {
-    bindUI();
+  function generarReceta(){
+    const form = byId('generarRecetaForm') || byId('formReceta') || q('form');
+    if (!form) return console.warn('[panel] No se encontró el formulario');
+    if (form.__busy) return;
+    form.__busy = true; setTimeout(()=>{ form.__busy=false; }, 4000);
+    if (form.requestSubmit) form.requestSubmit(); else form.dispatchEvent(new Event('submit', {cancelable:true}));
   }
-  window.kodrxBindUI = bindUI; // por si quieres re-binder desde la consola
-})();
-</script>
-<script>
-;(() => {
-  console.log('[panel] submit bind (safe)');
+  window.generarReceta = window.generarReceta || generarReceta;
 
-  const $ = (id) => document.getElementById(id);
-
+  // === SUBMIT (ÚNICO handler) ===
   async function kodrxSubmit(e){
     e?.preventDefault?.();
+    console.log('[panel] submit hit');
 
-    const btnGen  = $('#btnGenerar') || document.querySelector('[data-generate], .generate');
+    const btnGen  = byId('btnGenerar') || q('[data-generate], .generate');
     const prevTxt = btnGen?.textContent;
     if (btnGen){ btnGen.disabled = true; btnGen.textContent = 'Guardando…'; }
 
-    try {
-      // 1) Datos del form
-      const nombrePaciente = $('#nombrePaciente')?.value?.trim() || '';
-      const edad           = parseInt($('#edad')?.value||'',10) || null;
-      const sexo           = $('#sexo')?.value || '';
-      const talla          = $('#talla')?.value || '';
-      const peso           = $('#peso')?.value || '';
-      const imc            = $('#imc')?.value || '';
-      const temperatura    = $('#temperatura')?.value || '';
-      const presion        = $('#presion')?.value || '';
-      const observaciones  = $('#observaciones')?.value?.trim() || '';
-      const diagnostico    = $('#diagnostico')?.value?.trim() || '';
+    try{
+      // 1) Lee formulario (sin jQuery)
+      const nombrePaciente = byId('nombrePaciente')?.value?.trim() || '';
+      const edad           = parseInt(byId('edad')?.value||'',10) || null;
+      const sexo           = byId('sexo')?.value || '';
+      const talla          = byId('talla')?.value || '';
+      const peso           = byId('peso')?.value || '';
+      const imc            = byId('imc')?.value || computeIMC(peso,talla) || '';
+      const temperatura    = byId('temperatura')?.value || '';
+      const presion        = byId('presion')?.value || '';
+      const observaciones  = byId('observaciones')?.value?.trim() || '';
+      const diagnostico    = byId('diagnostico')?.value?.trim() || '';
 
-      if (!nombrePaciente){ alert('Falta el nombre del paciente'); return; }
+      if (!nombrePaciente){ alert('Falta el nombre del paciente'); byId('nombrePaciente')?.focus(); return; }
 
-      const medicamentos = [...document.querySelectorAll('#medicamentosContainer .medicamento')].map(row => {
-        const get = cls => row.querySelector('.'+cls)?.value?.trim() || '';
+      const medicamentos = [...document.querySelectorAll('#medicamentosContainer .medicamento')].map(row=>{
+        const get = (cls)=> row.querySelector('.'+cls)?.value?.trim() || '';
         const nombre   = get('nombre');
         const dosis    = get('dosis');
         const duracion = get('duracion');
@@ -506,16 +232,16 @@ console.log('[panel] ready');
       });
 
       if (!medicamentos.length){
-        if (!confirm('No agregaste medicamentos. ¿Continuar?')) return;
+        if(!confirm('No agregaste medicamentos. ¿Continuar?')) return;
       }
 
-      // 2) Usuario / médico (RENOMBRADO: usr)
+      // 2) Usuario y Firestore
       const usr = window.auth?.currentUser;
       if (!usr){ alert('No hay sesión. Inicia sesión de nuevo.'); return; }
+      const { collection, addDoc, updateDoc, getDoc, doc, serverTimestamp, Timestamp } = await fs();
+      if (!window.db){ alert('Firestore no inicializado. Recarga la página.'); return; }
 
-      const { collection, addDoc, updateDoc, doc, getDoc, serverTimestamp, Timestamp } = window.__fs || {};
-      if (!collection){ alert('Firestore no cargó. Recarga la página.'); return; }
-
+      // 3) Datos del médico (opcional)
       let m = {};
       try{
         const ms = await getDoc(doc(window.db, 'medicos', usr.uid));
@@ -526,9 +252,9 @@ console.log('[panel] ready');
         `${m.calle||''} ${m.numero||''}, ${m.colonia||''}, ${m.municipio||''}, ${m.estado||''}, CP ${m.cp||''}`)
         .replace(/\s+,/g,',').replace(/,\s*,/g,', ').trim();
 
-      const medsIniciales = medicamentos.map(x=>x.nombre.split(/\s+/).map(w=>w[0]||'').join('').slice(0,3).toUpperCase()).join('-');
+      const medsIniciales = medicamentos.map(x=>x.ini).join('-');
 
-      // 3) Documento receta
+      // 4) Documento de receta
       const recetaData = {
         nombrePaciente, edad, sexo, peso, talla, imc, temperatura, presion,
         observaciones, diagnostico,
@@ -553,8 +279,8 @@ console.log('[panel] ready');
       const ref = await addDoc(collection(window.db, 'recetas'), recetaData);
       console.log('[panel] receta creada:', ref.id);
 
-      // 4) Sellado vía proxy (opcional/no bloqueante)
-      try {
+      // 5) Sellado vía proxy (no bloqueante)
+      try{
         const recetaResumen = medicamentos.map(m => `${m.nombre} ${m.dosis} por ${m.duracion}`).join(', ');
         const payload = {
           receta: recetaResumen,
@@ -574,10 +300,9 @@ console.log('[panel] ready');
         let raw = {}; try{ raw = await resp.json(); }catch{}
         console.log('[BC][raw]', raw);
 
-        const toNum = v => (typeof v==='number'&&Number.isFinite(v))
-                           ? v : (/^\d+$/.test(String(v??'')) ? Number(v) : NaN);
+        const toNum = v => (typeof v==='number'&&Number.isFinite(v)) ? v : (/^\d+$/.test(String(v??'')) ? Number(v) : NaN);
         const block = [raw?.bloque?.index, raw?.index, raw?.bloqueIndex, raw?.block].map(toNum).find(Number.isFinite);
-        const hash  =  raw?.bloque?.hash || raw?.hash || raw?.blockHash || raw?.txid || null;
+        const hash  = raw?.bloque?.hash || raw?.hash || raw?.blockHash || raw?.txid || null;
 
         const updates = {};
         if (resp.ok && Number.isFinite(block) && hash) {
@@ -592,123 +317,57 @@ console.log('[panel] ready');
           try{ await updateDoc(doc(window.db, 'recetas', ref.id), updates); }
           catch(e){ console.warn('[BC] Firestore update falló (UI igual se actualiza):', e?.message||e); }
         }
-      } catch (e) {
-        console.error('Error al sellar vía /api/bloques:', e?.message || e);
+      }catch(e){
+        console.error('[BC] error /api/bloques:', e?.message||e);
       }
 
-      // 5) Redirigir (ajusta la ruta si tu ver-receta está en /medico/)
-      const VER_RECETA_PATH = '/public/ver-receta.html';
+      // 6) Redirección
       const goto = new URL(VER_RECETA_PATH, location.origin);
       goto.searchParams.set('id', ref.id);
       location.href = goto.href;
 
-    } catch (err) {
+    }catch(err){
       console.error('[panel] error al guardar receta', err);
       alert('No se pudo generar la receta. Revisa los campos e intenta de nuevo.');
-    } finally {
+    }finally{
       if (btnGen){ btnGen.disabled = false; btnGen.textContent = prevTxt || 'Generar receta'; }
     }
   }
-
-  function bindSubmit(){
-    const form = document.getElementById('generarRecetaForm')
-             || document.getElementById('formReceta')
-             || document.querySelector('form');
-    if (!form) return console.warn('[panel] No se encontró formulario');
-    if (!form.__kodrxSubmitBound){
-      form.addEventListener('submit', kodrxSubmit, { capture:true });
-      form.__kodrxSubmitBound = true;
-    }
-  }
-
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', bindSubmit, { once:true });
-  } else {
-    bindSubmit();
-  }
-})();
-</script>
-<script>
-(() => {
-  console.log('[submit-fixer] boot');
-
-  // Seguro contra jQuery: NO usamos $
-  const byId = (id)=> document.getElementById(id);
-
-  async function kodrxSubmit(e){
-    e?.preventDefault?.();
-    console.log('[submit-fixer] handler hit');
-
-    // Lee de DOM directo (sin $)
-    const elNombre = byId('nombrePaciente');
-    const nombrePaciente = (elNombre?.value || '').trim();
-    console.log('[submit-fixer] nombrePaciente el:', elNombre, 'valor:', nombrePaciente);
-
-    if (!nombrePaciente){
-      alert('Falta el nombre del paciente');
-      elNombre?.focus();
-      return;
-    }
-
-    // 👉 aquí solo validamos que el submit funciona.
-    // Si quieres, por ahora loguea el resto de campos:
-    const dump = (id)=> (byId(id)?.value ?? '(no-field)');
-    console.log('[submit-fixer] otros campos:',
-      { edad: dump('edad'), sexo: dump('sexo'), talla: dump('talla'),
-        peso: dump('peso'), imc: dump('imc'), temperatura: dump('temperatura'),
-        presion: dump('presion'), observaciones: dump('observaciones'), diagnostico: dump('diagnostico') }
-    );
-
-    alert('Submit OK (hotfix). Ya podemos reenganchar tu flujo real aquí.');
-    // ⚠️ Importante: deja esto como “prueba” para confirmar que el submit entra.
-    // Después reemplazamos el contenido con tu onSubmit completo.
-  }
-
   window.kodrxSubmit = kodrxSubmit;
 
-  function bind(){
-    // Encuentra el form
-    let form = document.getElementById('generarRecetaForm')
-            || document.getElementById('formReceta')
-            || document.querySelector('form');
-
-    if (!form){ console.warn('[submit-fixer] no hay <form>'); return; }
-
-    // Si había listeners viejos y quieres resetearlos “duro”, descomenta:
-    // const clone = form.cloneNode(true); form.parentNode.replaceChild(clone, form); form = clone;
-
-    if (!form.__kodrxBound){
-      form.addEventListener('submit', kodrxSubmit, {capture:true});
-      form.__kodrxBound = true;
-      console.log('[submit-fixer] bound on', form.id || form.tagName);
-    }
-
-    // Asegura que el botón dispare el submit correcto
-    const btn = document.getElementById('btnGenerar')
-            || document.querySelector('[type=submit], [data-generate], .generate');
-
-    if (btn && !btn.__wired){
-      btn.addEventListener('click', (ev)=>{
-        const f = form;
-        if (f?.requestSubmit) f.requestSubmit();
-        else f?.dispatchEvent(new Event('submit', {cancelable:true}));
+  // === ENGANCHAR (único) ===
+  function bindSubmit(){
+    const form = byId('generarRecetaForm') || byId('formReceta') || q('form');
+    if (!form) return console.warn('[panel] No se encontró formulario');
+    // elimina listeners previos clonando (nuke)
+    const clone = form.cloneNode(true);
+    form.parentNode.replaceChild(clone, form);
+    clone.addEventListener('submit', kodrxSubmit, {capture:true});
+    clone.__kodrxSubmitBound = true;
+    // cablea botón
+    const btn = byId('btnGenerar') || q('[type=submit], [data-generate], .generate');
+    if (btn){
+      btn.type = 'button';
+      btn.addEventListener('click', ()=> {
+        if (clone.requestSubmit) clone.requestSubmit();
+        else clone.dispatchEvent(new Event('submit', {cancelable:true}));
       }, {capture:true});
-      btn.__wired = true;
-      console.log('[submit-fixer] botón cableado');
     }
+    console.log('[panel] submit bound (clean)');
   }
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', bind, {once:true});
-  } else {
-    bind();
+  // === ARRANQUE ===
+  function start(){
+    bindUI();
+    bindSubmit();
+    // expón helpers por si necesitas desde consola
+    window.kodrxForceBind = ()=>{ bindUI(); bindSubmit(); };
   }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, {once:true});
+  else start();
 
-  // util por si quieres reintentar desde consola
-  window.kodrxForceBind = bind;
 })();
 </script>
-
 
 
 
