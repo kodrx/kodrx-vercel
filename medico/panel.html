@@ -164,19 +164,22 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.2.1/fi
   }
   window.agregarMedicamento = window.agregarMedicamento || agregarMedicamento;
 
-  function bindButton(btn, fn){
-    if (!btn) return false;
-    btn.type = 'button';
-    btn.disabled = false;
-    btn.removeAttribute('aria-busy');
-    btn.style.pointerEvents = '';
-    btn.style.opacity = '';
-    if (!btn.__bound){
-      btn.addEventListener('click', (e)=>{ e.preventDefault(); fn(); }, {capture:true});
-      btn.__bound = true;
-    }
-    return true;
+ function bindButton(btn, fn){
+  if (!btn) return false;
+  btn.type = 'button';
+  // fuerza habilitado por si algún CSS/atributo lo dejó “gris”
+  btn.disabled = false;
+  btn.removeAttribute('disabled');
+  btn.classList?.remove?.('disabled','is-disabled');
+  btn.style.pointerEvents = 'auto';
+  btn.style.opacity = '';
+
+  if (!btn.__bound){
+    btn.addEventListener('click', (e)=>{ e.preventDefault(); fn(); }, {capture:true});
+    btn.__bound = true;
   }
+  return true;
+}
 
   function bindUI(){
     ensureMedsContainer();
@@ -361,6 +364,22 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.2.1/fi
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, {once:true});
   else start();
+
+  const addBtn =
+  clone.querySelector('#btnAgregarMedicamento')
+  || clone.querySelector('[data-add-med], .add-med');
+
+bindButton(addBtn, agregarMedicamento);
+
+// (opcional) si quieres, vuelve a cablear también "Generar" con nuestro helper
+const genBtn =
+  clone.querySelector('#btnGenerar')
+  || clone.querySelector('[data-generate], .generate')
+  || clone.querySelector('[type=submit]');
+
+bindButton(genBtn, generarReceta);
+
+console.log('[panel] submit bound (clean) + buttons rebound');
 
 })();
 </script>
