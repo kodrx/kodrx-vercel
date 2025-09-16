@@ -265,11 +265,20 @@ button{appearance:none;border:0;border-radius:12px;padding:10px 14px;font-weight
   }
 async function ensureLibs(){
   const jobs = [];
-  if (!window.QRCode){
-    jobs.push(new Promise((res,rej)=>{ const s=document.createElement('script');
-      s.src='https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js';
-      s.onload=res; s.onerror=rej; document.head.appendChild(s); }));
+
+  // ✅ carga SOLO si faltan ambas libs de QR
+  if (!window.qrcode && !window.QRCode){
+    jobs.push(new Promise((res, rej)=>{
+      const s = document.createElement('script');
+      s.src = 'https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js';
+      s.onload = res; s.onerror = rej; document.head.appendChild(s);
+    }));
   }
+
+  // (si aquí también cargas JsBarcode / jsPDF, déjalos como ya los tengas)
+  return Promise.allSettled(jobs);
+}
+
   if (!window.JsBarcode){
     jobs.push(new Promise((res,rej)=>{ const s=document.createElement('script');
       s.src='https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js';
@@ -293,6 +302,25 @@ async function ensureLibs(){
     document.head.appendChild(s);
   });
 }
+  async function makeQRDataURLCompat(text, size=220){
+  await ensureLibs(); // 👈 asegura QR libs primero
+  try{
+    // lib moderna "qrcode"
+    if (window.qrcode?.toDataURL){
+      return await window.qrcode.toDataURL(text, { width:size, margin:1 });
+    }
+    // qrcodejs "QRCode"
+    if (window.QRCode){
+      const div = document.createElement('div');
+      new QRCode(div, { text, width:size, height:size, correctLevel:(window.QRCode.CorrectLevel?.M ?? 1) });
+      await new Promise(r=>setTimeout(r,0));
+      const img = div.querySelector('img'); if (img?.src) return img.src;
+      const c   = div.querySelector('canvas'); if (c) return c.toDataURL('image/png');
+    }
+  }catch{}
+  return '';
+}
+
   function updateBadgeFromReceta(r){
   const el = document.getElementById('badgeOrigen'); if(!el) return;
   const hasBlock = (r?.blockchain?.block ?? r?.bloque) != null;     // admite recetas viejas
@@ -335,6 +363,33 @@ async function _fs(){
   __fsMod = await import('https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js');
   return __fsMod;
 }
+
+  async function getQRSources(receta){
+  const out = {};
+
+  // 1) leer del DOM si ya están renderizados
+  const mainNode  = document.querySelector('#qrMain canvas, #qrMain img');
+  const chainNode = document.querySelector('#qrChain canvas, #qrChain img');
+
+  if (mainNode)  out.main  = mainNode.tagName==='IMG' ? mainNode.src  : mainNode.toDataURL('image/png');
+  if (chainNode) out.chain = chainNode.tagName==='IMG'? chainNode.src : chainNode.toDataURL('image/png');
+
+  // 2) fallback: regenerar
+  if (!out.main) {
+    const verURL = location.origin + '/public/ver-receta.html?id=' + encodeURIComponent(receta.id);
+    out.main = await makeQRDataURLCompat(verURL, 220);
+  }
+  if (!out.chain) {
+    const blk = receta?.blockchain?.block ?? receta?.bloque ?? null;
+    if (blk) {
+      const base = (typeof BC_BASE==='string' ? BC_BASE : 'https://kodrx-blockchain.onrender.com');
+      out.chain = await makeQRDataURLCompat(`${base}/verificar.html?id=${encodeURIComponent(blk)}`, 220);
+    }
+  }
+
+  return out;
+}
+
 
 
 /* Construye el QR del bloque (solo ?id=<bloque>) */
@@ -687,9 +742,12 @@ updateBadgeFromReceta(r);
 
     // Adaptar receta y QRs
     const receta = adaptLegacy(recetaIn);
-    const qrs = {
-      mainQRUrl : qrsIn?.mainQRUrl || qrsIn?.qrMain  || (window.QRS?.qrMain  || ''),
-      chainQRUrl: qrsIn?.chainQRUrl|| qrsIn?.qrChain || (window.QRS?.qrChain || '')
+ const qrSrc = await getQRSources(receta);
+const mainQRUrl  = qrSrc.main  || qrs?.mainQRUrl  || '';
+const chainQRUrl = qrSrc.chain || qrs?.chainQRUrl || '';
+
+// ... luego doc.addImage(mainQRUrl, 'PNG', ...) y doc.addImage(chainQRUrl, 'PNG', ...)
+
     };
 
     const { jsPDF:Cls } = window.jspdf;
