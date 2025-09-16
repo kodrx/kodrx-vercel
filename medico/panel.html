@@ -628,6 +628,86 @@ console.log('[panel] ready');
   }
 })();
 </script>
+<script>
+(() => {
+  console.log('[submit-fixer] boot');
+
+  // Seguro contra jQuery: NO usamos $
+  const byId = (id)=> document.getElementById(id);
+
+  async function kodrxSubmit(e){
+    e?.preventDefault?.();
+    console.log('[submit-fixer] handler hit');
+
+    // Lee de DOM directo (sin $)
+    const elNombre = byId('nombrePaciente');
+    const nombrePaciente = (elNombre?.value || '').trim();
+    console.log('[submit-fixer] nombrePaciente el:', elNombre, 'valor:', nombrePaciente);
+
+    if (!nombrePaciente){
+      alert('Falta el nombre del paciente');
+      elNombre?.focus();
+      return;
+    }
+
+    // 👉 aquí solo validamos que el submit funciona.
+    // Si quieres, por ahora loguea el resto de campos:
+    const dump = (id)=> (byId(id)?.value ?? '(no-field)');
+    console.log('[submit-fixer] otros campos:',
+      { edad: dump('edad'), sexo: dump('sexo'), talla: dump('talla'),
+        peso: dump('peso'), imc: dump('imc'), temperatura: dump('temperatura'),
+        presion: dump('presion'), observaciones: dump('observaciones'), diagnostico: dump('diagnostico') }
+    );
+
+    alert('Submit OK (hotfix). Ya podemos reenganchar tu flujo real aquí.');
+    // ⚠️ Importante: deja esto como “prueba” para confirmar que el submit entra.
+    // Después reemplazamos el contenido con tu onSubmit completo.
+  }
+
+  window.kodrxSubmit = kodrxSubmit;
+
+  function bind(){
+    // Encuentra el form
+    let form = document.getElementById('generarRecetaForm')
+            || document.getElementById('formReceta')
+            || document.querySelector('form');
+
+    if (!form){ console.warn('[submit-fixer] no hay <form>'); return; }
+
+    // Si había listeners viejos y quieres resetearlos “duro”, descomenta:
+    // const clone = form.cloneNode(true); form.parentNode.replaceChild(clone, form); form = clone;
+
+    if (!form.__kodrxBound){
+      form.addEventListener('submit', kodrxSubmit, {capture:true});
+      form.__kodrxBound = true;
+      console.log('[submit-fixer] bound on', form.id || form.tagName);
+    }
+
+    // Asegura que el botón dispare el submit correcto
+    const btn = document.getElementById('btnGenerar')
+            || document.querySelector('[type=submit], [data-generate], .generate');
+
+    if (btn && !btn.__wired){
+      btn.addEventListener('click', (ev)=>{
+        const f = form;
+        if (f?.requestSubmit) f.requestSubmit();
+        else f?.dispatchEvent(new Event('submit', {cancelable:true}));
+      }, {capture:true});
+      btn.__wired = true;
+      console.log('[submit-fixer] botón cableado');
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', bind, {once:true});
+  } else {
+    bind();
+  }
+
+  // util por si quieres reintentar desde consola
+  window.kodrxForceBind = bind;
+})();
+</script>
 
 
 
