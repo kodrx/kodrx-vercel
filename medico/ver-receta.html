@@ -234,92 +234,125 @@ button{appearance:none;border:0;border-radius:12px;padding:10px 14px;font-weight
   window.__KODRX_VER_INLINE_V7__ = true;
 
   /* ===== utils ===== */
-  const sleep = (ms)=>new Promise(r=>setTimeout(r,ms));
-  const setText = (selOrEl, val)=>{
-    const el = typeof selOrEl==='string' ? document.querySelector(selOrEl) : selOrEl;
-    if (!el) return;
-    const txt = (val ?? '—').toString();
-    if (el.textContent !== txt) el.textContent = txt;
-  };
-  const setClass = (el, cls)=>{ if (el && el.className !== cls) el.className = cls; };
-  function normalize(raw0){
-    const raw = raw0 || {};
-    const bc  = raw.blockchain || {};
-    const blk = (Number.isFinite(raw.bloque) && raw.bloque>0) ? raw.bloque : (bc.block ?? null);
-    const hash= bc.hash ?? raw.hash ?? null;
-    const status = bc.status || (blk ? 'ok' : (hash ? 'simulado' : 'pendiente'));
-    const nombrePaciente = raw.nombrePaciente ?? raw.pacienteNombre ?? raw.paciente ?? '—';
-    return {
-      ...raw,
-      nombrePaciente,
-      bloque: blk,
-      hash,
-      medsSig: bc.medsSig ?? raw.medsSig ?? '',
-      blockchain: { ...bc, status, block: bc.block ?? blk, hash }
-    };
-  }
-  function prefixMed(nombre, genero){
-    if (!nombre) return '—';
-    const g=(genero||'').toLowerCase();
-    return (g.startsWith('f')?'Dra. ':'Dr. ')+nombre;
-  }
+/* ====== Config ====== */
+const BC_BASE = 'https://kodrx-blockchain.onrender.com';
+
+/* ====== Libs (idempotente) ====== */
 async function ensureLibs(){
   const jobs = [];
-
-  // ✅ carga SOLO si faltan ambas libs de QR
-  if (!window.qrcode && !window.QRCode){
-    jobs.push(new Promise((res, rej)=>{
-      const s = document.createElement('script');
-      s.src = 'https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js';
-      s.onload = res; s.onerror = rej; document.head.appendChild(s);
+  // QR
+  if (!window.QRCode && !window.qrcode){
+    jobs.push(new Promise((res,rej)=>{
+      const s=document.createElement('script');
+      s.src='https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js';
+      s.onload=res; s.onerror=rej; document.head.appendChild(s);
     }));
   }
-
-  // (si aquí también cargas JsBarcode / jsPDF, déjalos como ya los tengas)
-  return Promise.allSettled(jobs);
-}
-
+  // Código de barras
   if (!window.JsBarcode){
-    jobs.push(new Promise((res,rej)=>{ const s=document.createElement('script');
+    jobs.push(new Promise((res,rej)=>{
+      const s=document.createElement('script');
       s.src='https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js';
-      s.onload=res; s.onerror=rej; document.head.appendChild(s); }));
+      s.onload=res; s.onerror=rej; document.head.appendChild(s);
+    }));
+  }
+  // jsPDF (por si alguien lo quitó)
+  if (!window.jspdf?.jsPDF){
+    jobs.push(new Promise((res,rej)=>{
+      const s=document.createElement('script');
+      s.src='https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js';
+      s.onload=res; s.onerror=rej; document.head.appendChild(s);
+    }));
   }
   if (jobs.length) await Promise.allSettled(jobs);
 }
-  function qrDivToDataURL(div){
-    if (!div) return '';
-    const img=div.querySelector('img'); if (img?.src) return img.src;
-    const c=div.querySelector('canvas'); return c ? c.toDataURL('image/png') : '';
+// compat: no pinta, solo asegura
+async function ensureQRCode(){ return ensureLibs(); }
+
+/* ====== Helpers QR ====== */
+function makeQR(host, text, size){
+  if (!host) return false;
+  const QR = window.QRCode || window.qrcode;
+  if (!QR) return false;
+  host.innerHTML = '';
+  if (window.QRCode){ // qrcodejs clásico
+    new QRCode(host, { text, width:size, height:size, correctLevel: QRCode.CorrectLevel.M });
+    return true;
   }
-  
-  async function ensureQRCode(){
-  if (window.QRCode) return;
-  await new Promise((res, rej)=>{
-    const s = document.createElement('script');
-    // cualquiera de estos sirve; deja 1 y el otro de backup si quieres
-    s.src = "https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js";
-    s.onload = res; s.onerror = rej;
-    document.head.appendChild(s);
-  });
-}
-  async function makeQRDataURLCompat(text, size=220){
-  await ensureLibs(); // 👈 asegura QR libs primero
   try{
-    // lib moderna "qrcode"
+    if (QR.toCanvas){
+      const c = document.createElement('canvas');
+      host.appendChild(c);
+      QR.toCanvas(c, text, { width: size });
+      return true;
+    }
+  }catch{}
+  return false;
+}
+
+async function makeQRDataURLCompat(text, size=220){
+  await ensureLibs();
+  try{
     if (window.qrcode?.toDataURL){
       return await window.qrcode.toDataURL(text, { width:size, margin:1 });
     }
-    // qrcodejs "QRCode"
     if (window.QRCode){
-      const div = document.createElement('div');
+      const div=document.createElement('div');
       new QRCode(div, { text, width:size, height:size, correctLevel:(window.QRCode.CorrectLevel?.M ?? 1) });
       await new Promise(r=>setTimeout(r,0));
-      const img = div.querySelector('img'); if (img?.src) return img.src;
-      const c   = div.querySelector('canvas'); if (c) return c.toDataURL('image/png');
+      const img=div.querySelector('img'); if (img?.src) return img.src;
+      const c  =div.querySelector('canvas'); if (c) return c.toDataURL('image/png');
     }
   }catch{}
   return '';
 }
+
+/* ====== DB helpers ====== */
+let __fsMod=null;
+async function _fs(){
+  if (window.__fs) return window.__fs; // si ya los expusiste
+  if (!__fsMod) __fsMod = await import('https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js');
+  return __fsMod;
+}
+async function getDB(){
+  if (window.db) return window.db;
+  const core = await import('/firebase-init.js');
+  return core.db;
+}
+
+/* ====== QR Chain (bloque) ====== */
+async function setChainQR(block){
+  const host = document.getElementById('qrChain');
+  if (!host) return;
+  await ensureQRCode();
+  const url = `${BC_BASE}/verificar.html?id=${encodeURIComponent(block)}`;
+  makeQR(host, url, 220);
+  const bn = document.getElementById('blockNum');
+  if (bn) bn.textContent = String(block || '—');
+}
+
+/* ====== Fuente de QRs para PDF ====== */
+async function getQRSources(receta){
+  const out = {};
+  const mainNode  = document.querySelector('#qrMain canvas, #qrMain img');
+  const chainNode = document.querySelector('#qrChain canvas, #qrChain img');
+
+  if (mainNode)  out.main  = mainNode.tagName==='IMG' ? mainNode.src  : mainNode.toDataURL('image/png');
+  if (chainNode) out.chain = chainNode.tagName==='IMG'? chainNode.src : chainNode.toDataURL('image/png');
+
+  if (!out.main){
+    const verURL = `${location.origin}${location.pathname}?id=${encodeURIComponent(receta.id)}`;
+    out.main = await makeQRDataURLCompat(verURL, 220);
+  }
+  if (!out.chain){
+    const blk = receta?.blockchain?.block ?? receta?.bloque ?? null;
+    if (blk){
+      out.chain = await makeQRDataURLCompat(`${BC_BASE}/verificar.html?id=${encodeURIComponent(blk)}`, 220);
+    }
+  }
+  return out;
+}
+
 
   function updateBadgeFromReceta(r){
   const el = document.getElementById('badgeOrigen'); if(!el) return;
@@ -420,7 +453,7 @@ async function sellIfPending(receta){
   try{
     if (!receta?.id) return receta;
 
-    // ya sellada → pinta y sal
+    // si ya tiene bloque → pinta QR/Badge y sal
     const hasBlock = (receta.blockchain?.block ?? receta.bloque) != null;
     if (hasBlock){
       await setChainQR(receta.blockchain?.block ?? receta.bloque);
@@ -429,14 +462,15 @@ async function sellIfPending(receta){
       return receta;
     }
 
-    // evita reintentos en la misma pestaña (30s)
-    const k = 'bc-selling-' + receta.id;
+    // evita reintentos en 30s
+    const k='bc-selling-'+receta.id;
     if (__locks.has(k) || localStorage.getItem(k)) return receta;
     __locks.add(k); localStorage.setItem(k, Date.now().toString());
-    setTimeout(()=>{ __locks.delete(k); localStorage.removeItem(k); }, 30000);
+    setTimeout(()=>{ __locks.delete(k); localStorage.removeItem(k); }, 30_000);
 
     window.bcStart?.();
 
+    // payload para proxy
     const tsSec =
       (receta.timestamp && typeof receta.timestamp.toDate === 'function')
         ? Math.floor(receta.timestamp.toDate().getTime()/1000)
@@ -447,44 +481,41 @@ async function sellIfPending(receta){
     const inicialesArr =
       Array.isArray(receta.iniciales) && receta.iniciales.length
         ? receta.iniciales
-        : (receta.medsIniciales || '')
-            .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
-            .toUpperCase().split('-').filter(Boolean);
+        : (receta.medsIniciales || '').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().split('-').filter(Boolean);
 
     const payload = {
-      receta: recetaResumen,                         // ← requerido
-      medico: receta.medicoNombre || receta.medico?.nombre || '',   // ← requerido
-      cedula: receta.medicoCedula || receta.medico?.cedula || '',   // ← requerido
+      receta: recetaResumen,
+      medico: receta.medicoNombre || receta.medico?.nombre || '',
+      cedula: receta.medicoCedula || receta.medico?.cedula || '',
       medicamentos: meds,
       iniciales: inicialesArr,
       idReceta: receta.id,
       timestamp: tsSec
     };
-    console.log('[bc] payload /api/bloques:', payload);
+    // console.log('[bc] payload /api/bloques:', payload);
 
     const resp = await fetch('/api/bloques', {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
+      method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify(payload)
     });
 
-    let raw = {};
-    try { raw = await resp.json(); } catch {}
-    console.log('[bc] raw /api/bloques:', raw);
+    let raw = {}; try{ raw = await resp.json(); }catch{}
+    // console.log('[bc] raw /api/bloques:', raw);
 
     const toNum = v => (typeof v==='number'&&Number.isFinite(v)) ? v : (/^\d+$/.test(String(v??'')) ? Number(v) : NaN);
     const block = [raw?.bloque?.index, raw?.index, raw?.bloqueIndex, raw?.block].map(toNum).find(Number.isFinite);
-    const hash  = raw?.bloque?.hash || raw?.hash || raw?.blockHash || raw?.txid || null;
+    const hash  =  raw?.bloque?.hash || raw?.hash || raw?.blockHash || raw?.txid || null;
 
     if (!(resp.ok && Number.isFinite(block) && hash)) {
-      console.warn('[bc] pendiente (no block/hash)', { raw });
+      // pendiente
       window.bcError?.(); window.killVerificandoUI?.();
       return receta;
     }
 
-    // actualizar Firestore (best-effort)
+    // actualizar Firestore
     try{
       const {doc, updateDoc, serverTimestamp} = await _fs();
+      const db = await getDB();
       await updateDoc(doc(db,'recetas', receta.id), {
         blockchain: { status:'ok', block, hash, at: serverTimestamp() },
         bloque: block,
@@ -492,6 +523,7 @@ async function sellIfPending(receta){
       });
     }catch(e){ console.warn('[bc] Firestore update falló (UI igual se actualiza):', e); }
 
+    // refrescar UI
     receta.blockchain = { status:'ok', block, hash };
     receta.bloque = block; receta.hash = hash;
     window.RECETA_ACTUAL = receta;
@@ -500,8 +532,8 @@ async function sellIfPending(receta){
     updateBadgeFromReceta?.(receta);
     window.bcDone?.(receta);
     window.killVerificandoUI?.();
-    return receta;
 
+    return receta;
   }catch(err){
     console.error('[bc] sellIfPending error', err);
     window.bcError?.(); window.killVerificandoUI?.();
@@ -590,43 +622,33 @@ async function renderOnce(){
     hashEl.textContent = h ? `hash (BC): ${h}` : (r.id ? `hash (local): ${hashSimulado(r)}` : 'hash: —');
   }
 
-  // ====== LIBRERÍAS + CÓDIGOS ======
-  await ensureLibs();
-  await ensureQRCode();
 
-  // QR principal
+ // ====== LIBRERÍAS + CÓDIGOS ======
+await ensureLibs();
+await ensureQRCode();
+
+// QR principal (link a ver-receta actual)
 {
   const host = document.getElementById('qrMain');
-  if (host){
-    host.innerHTML = '';
-    const verURL = location.origin + '/verificar.html?id=' + encodeURIComponent(r.id);
-    new QRCode(host, { text: verURL, width: 260, height: 260, correctLevel: QRCode.CorrectLevel.M });
+  if (host && !host.querySelector('canvas,img')){
+    const verURL = `${location.origin}${location.pathname}?id=${encodeURIComponent(r.id)}`;
+    makeQR(host, verURL, 260);
   }
 }
+
 // Código de barras (ID)
 {
   const canvas = document.getElementById('barcodeCanvas');
   const label  = document.getElementById('barcodeLabel');
-  if (canvas){
+  if (canvas && window.JsBarcode){
     try{
-      await ensureJsBarcode();
-      // alta densidad (HD) para que no se vea borroso
       const dpr = Math.max(1, window.devicePixelRatio || 1);
-      const cssW = 300, cssH = 80;
-      canvas.width  = cssW * dpr;
-      canvas.height = cssH * dpr;
-      canvas.style.width  = cssW + 'px';
-      canvas.style.height = cssH + 'px';
-      const ctx = canvas.getContext('2d'); ctx.setTransform(dpr,0,0,dpr,0,0);
+      const cssW=300, cssH=80;
+      canvas.width=cssW*dpr; canvas.height=cssH*dpr;
+      canvas.style.width=cssW+'px'; canvas.style.height=cssH+'px';
+      const ctx=canvas.getContext('2d'); ctx.setTransform(dpr,0,0,dpr,0,0);
 
-      window.JsBarcode(canvas, String(r.id||''), {
-        format:'CODE128',
-        width: 2,              // grosor de barra
-        height: 40,            // alto de barras
-        margin: 4,
-        displayValue: false    // sin texto impreso
-      });
-
+      JsBarcode(canvas, String(r.id||''), { format:'CODE128', width:2, height:40, margin:4, displayValue:false });
       if (label) label.textContent = r.id || '—';
     }catch(e){
       console.warn('[barcode] no se pudo generar', e);
@@ -635,45 +657,27 @@ async function renderOnce(){
   }
 }
 
-// QR blockchain (si hay bloque) y sellado perezoso
+// QR de blockchain (si ya hay bloque) + sellado perezoso
 {
   const blk = r?.blockchain?.block ?? r?.bloque ?? null;
   if (blk) { await setChainQR(blk); }
   sellIfPending(r); // no await
 }
 
-  // QR de blockchain: pinta si ya hay bloque; si no, intenta sellado en background
-  
-  
-  {
-    const blk = r?.blockchain?.block ?? r?.bloque ?? null;
-    if (blk) { await setChainQR(blk); }
-    sellIfPending(r); // no await
-  }
-
-  // Leyenda bajo el número de bloque
-  {
-    const legendHolder = document.querySelector('.qr-legend .sub');
-    const text = 'Para consultar bloque visitar kodrx.app';
-    if (legendHolder) {
-      legendHolder.textContent = text;
-    } else {
-      document.getElementById('blockNum')
+// Leyenda bajo bloque
+{
+  const legendHolder = document.querySelector('.qr-legend .sub');
+  const text = 'Para consultar bloque visitar kodrx.app';
+  if (legendHolder) legendHolder.textContent = text;
+  else document.getElementById('blockNum')
         ?.insertAdjacentHTML('afterend','<br><span class="sub" style="color:#6b7280;font-weight:400">'+text+'</span>');
-    }
-  }
-
-  // pinta QR si ya hay bloque y dispara sellado perezoso
-{
-  const blk = r?.blockchain?.block ?? r?.bloque ?? null;
-  if (blk) { await setChainQR(blk); }
-  sellIfPending(r); // no await
 }
-// <-- añade esta línea:
+
+// QRs para PDF (deja esto si tu generarPDF usa window.QRS)
+window.QRS = await getQRSources(r);
+
+// Badge final
 updateBadgeFromReceta(r);
-
-  console.log('[ver] render ok');
-}
 
 
   /* ===== PDF ===== */
