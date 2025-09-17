@@ -1061,23 +1061,57 @@ window.generarPDF = window.generarPDF || async function generarPDF(recetaIn, qrs
 };
 
 // ========= Bind de botones (único) =========
-(() => {
-  function bindPdfButtons(){
-    const btnD = document.getElementById('btnDescargar');
-    const btnP = document.getElementById('btnImprimir');
-    const bind = (btn, mode)=>{
-      if (!btn || btn.__bound) return;
-      btn.type = 'button';
-      btn.addEventListener('click', async ()=>{
-        const r   = window.RECETA_ACTUAL || {};
-        const qrs = window.QRS || await getQRSources(r);
-        await generarPDF(r, qrs, {mode});
-      }, {capture:true});
-      btn.__bound = true;
-    };
-    bind(btnD, 'save'); bind(btnP, 'print');
+/* ===== bind botones ===== */
+function bindButtons(){
+  const btnD = document.getElementById('btnDescargar');
+  const btnP = document.getElementById('btnImprimir');
+  const btnB = document.getElementById('btnVolver');
+
+  const onPDF = (mode)=>async (ev)=>{
+    ev?.preventDefault?.();
+    // generador requerido
+    if (typeof window.generarPDF !== 'function'){
+      console.error('[ver] Falta generarPDF');
+      alert('Falta generador de PDF.');
+      return;
+    }
+    // receta y QRs
+    if (!window.RECETA_ACTUAL) await renderOnce();
+    const r   = window.RECETA_ACTUAL || {};
+    const qrs = window.QRS || await (window.getQRSources ? window.getQRSources(r) : Promise.resolve({}));
+
+    try{
+      await window.generarPDF(r, qrs, mode ? {mode} : {});
+    }catch(e){
+      console.error('[ver] PDF error', e);
+      alert('No se pudo generar el PDF.');
+    }
+  };
+
+  if (btnD && !btnD.__b){ btnD.type='button'; btnD.addEventListener('click', onPDF('save'),  {capture:true}); btnD.__b=true; }
+  if (btnP && !btnP.__b){ btnP.type='button'; btnP.addEventListener('click', onPDF('print'), {capture:true}); btnP.__b=true; }
+  if (btnB && !btnB.__b){
+    btnB.type='button';
+    btnB.addEventListener('click', (e)=>{ e.preventDefault();
+      if (history.length>1) history.back(); else location.href='/medico/panel.html';
+    }, {capture:true});
+    btnB.__b=true;
   }
-  if (document.readyState==='loading') document.addEventListener('DOMContentLoaded', bindPdfButtons, {once:true});
-  else bindPdfButtons();
+}
+
+/* ===== boot ===== */
+if (document.readyState === 'loading'){
+  document.addEventListener('DOMContentLoaded', () => {
+    try { renderOnce().catch(console.error); } catch(e){ console.error(e); }
+    try { bindButtons(); } catch(e){ console.error(e); }
+  }, {once:true});
+} else {
+  try { renderOnce().catch(console.error); } catch(e){ console.error(e); }
+  try { bindButtons(); } catch(e){ console.error(e); }
+}
+
+/* ⤵️ IMPORTANTE: cierra el IIFE de tu script */
 })();
+
+
   </script>
