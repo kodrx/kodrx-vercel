@@ -1060,7 +1060,6 @@ window.generarPDF = window.generarPDF || async function generarPDF(recetaIn, qrs
   }
 };
 
-// ========= Bind de botones (único) =========
 /* ===== bind botones ===== */
 function bindButtons(){
   const btnD = document.getElementById('btnDescargar');
@@ -1069,16 +1068,15 @@ function bindButtons(){
 
   const onPDF = (mode)=>async (ev)=>{
     ev?.preventDefault?.();
-    // generador requerido
+
     if (typeof window.generarPDF !== 'function'){
       console.error('[ver] Falta generarPDF');
       alert('Falta generador de PDF.');
       return;
     }
-    // receta y QRs
     if (!window.RECETA_ACTUAL) await renderOnce();
     const r   = window.RECETA_ACTUAL || {};
-    const qrs = window.QRS || await (window.getQRSources ? window.getQRSources(r) : Promise.resolve({}));
+    const qrs = window.QRS || (window.getQRSources ? await window.getQRSources(r) : {});
 
     try{
       await window.generarPDF(r, qrs, mode ? {mode} : {});
@@ -1110,7 +1108,7 @@ if (document.readyState === 'loading'){
   try { bindButtons(); } catch(e){ console.error(e); }
 }
 
-/* ⤵️ IMPORTANTE: cierra el IIFE de tu script */
+/* === ÚNICO cierre del IIFE === */
 })();
 
 
