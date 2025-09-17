@@ -230,10 +230,14 @@ button{appearance:none;border:0;border-radius:12px;padding:10px 14px;font-weight
 <script>
 ;(() => {
   'use strict';
+  
   if (window.__KODRX_VER_INLINE_V7__) return;
   window.__KODRX_VER_INLINE_V7__ = true;
+  
+const sleep = (ms) => new Promise(res => setTimeout(res, ms));
 
-  /* ===== utils ===== */
+  window.sleep ||= sleep;
+
 /* ====== Config ====== */
 const BC_BASE = 'https://kodrx-blockchain.onrender.com';
 
