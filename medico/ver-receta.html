@@ -230,28 +230,18 @@ button{appearance:none;border:0;border-radius:12px;padding:10px 14px;font-weight
 <script>
 ;(() => {
   'use strict';
-  
-if (window.__KODRX_VER_INLINE_V8__) return;
-window.__KODRX_VER_INLINE_V8__ = true;
 
-function start(){
-  renderOnce().catch(console.error);
-  bindButtons?.();
-  bindPdfButtons?.();
-}
+  if (window.__KODRX_VER_INLINE_V8__) return;
+  window.__KODRX_VER_INLINE_V8__ = true;
 
-document.readyState === 'loading'
-  ? document.addEventListener('DOMContentLoaded', start, {once:true})
-  : start();
-  
-const sleep = (ms) => new Promise(res => setTimeout(res, ms));
-
+  // ✅ utils y helpers OK arriba
+  const sleep = (ms)=> new Promise(res=>setTimeout(res, ms));
   window.sleep ||= sleep;
 
-   window.normalize ||= function normalize(raw0){
-    const raw = raw0 || {};
-    const bc  = raw.blockchain || {};
-
+  window.normalize ||= function normalize(raw0){ /* ...tu normalize... */ };
+  window.prefixMed  ||= function prefixMed(n,g){ /* ... */ };
+  window.hashSimulado ||= function hashSimulado(r){ /* ... */ };
+  
     // bloque: admite r.bloque (num) o bc.block (num/string)
     let bloque = null;
     if (Number.isFinite(raw.bloque)) bloque = raw.bloque;
@@ -1108,8 +1098,21 @@ if (document.readyState === 'loading'){
   try { bindButtons(); } catch(e){ console.error(e); }
 }
 
-/* === ÚNICO cierre del IIFE === */
-})();
+// ========== BOOT (colócalo AL FINAL, tras definir todas las funciones) ==========
+  function start(){
+    try { renderOnce?.().catch?.(console.error); } catch(e){ console.error(e); }
+    try { bindButtons?.(); } catch(e){ console.warn('bindButtons err', e); }
+    try { bindPdfButtons?.(); } catch(e){ console.warn('bindPdfButtons err', e); }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => queueMicrotask(start), {once:true});
+  } else {
+    // garantiza que se ejecuta tras inicializar las const/lets de más abajo
+    setTimeout(start, 0);
+  }
+})();  // ← ÚNICO cierre de la IIFE
+
 
 
   </script>
