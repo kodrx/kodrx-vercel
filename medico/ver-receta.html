@@ -1066,7 +1066,7 @@ function bindButtons(){
     }
     if (!window.RECETA_ACTUAL) await renderOnce();
     const r   = window.RECETA_ACTUAL || {};
-    const qrs = window.QRS || (window.getQRSources ? await window.getQRSources(r) : {});
+    const qrs = window.QRS || (window.getQRSources ? await window.getQRSources(r) : {};
 
     try{
       await window.generarPDF(r, qrs, mode ? {mode} : {});
