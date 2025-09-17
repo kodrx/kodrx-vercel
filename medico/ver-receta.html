@@ -302,6 +302,57 @@ const sleep = (ms) => new Promise(res => setTimeout(res, ms));
   };
 
 
+  // ---- Rebind de botones PDF/Imprimir ----
+  async function bindPdfButtons(){
+    const btnPdf   = document.getElementById('btnDescargar');
+    const btnPrint = document.getElementById('btnImprimir');
+
+    // intenta cargar jsPDF si no está
+    async function ensureJsPDF(){
+      if (window.jspdf?.jsPDF) return window.jspdf.jsPDF;
+      await new Promise((res,rej)=>{
+        const s=document.createElement('script');
+        s.src='https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+        s.onload=res; s.onerror=rej; document.head.appendChild(s);
+      });
+      return window.jspdf.jsPDF;
+    }
+
+    async function go(mode){
+      try{
+        await ensureJsPDF();
+        if (typeof window.getQRSources !== 'function' || typeof window.generarPDF !== 'function') {
+          alert('Falta generador de PDF.'); return;
+        }
+        const r = window.RECETA_ACTUAL;
+        if (!r?.id){ alert('Aún no hay receta cargada.'); return; }
+        const qrs = await window.getQRSources(r);
+        await window.generarPDF(r, qrs, { mode });
+      }catch(e){
+        console.error('[pdf] error', e);
+        alert('No se pudo generar el PDF.');
+      }
+    }
+
+    if (btnPdf && !btnPdf.__bound){
+      btnPdf.disabled = false;
+      btnPdf.addEventListener('click', e => { e.preventDefault(); go('save'); }, {capture:true});
+      btnPdf.__bound = true;
+    }
+    if (btnPrint && !btnPrint.__bound){
+      btnPrint.disabled = false;
+      btnPrint.addEventListener('click', e => { e.preventDefault(); go('print'); }, {capture:true});
+      btnPrint.__bound = true;
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', bindPdfButtons, {once:true});
+  } else {
+    bindPdfButtons();
+  }
+
+
 /* ====== Config ====== */
 const BC_BASE = 'https://kodrx-blockchain.onrender.com';
 
