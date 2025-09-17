@@ -389,13 +389,6 @@ function inicialesDeMeds(meds){
 }
 
 /* Carga on-demand funciones de Firestore que necesitamos para actualizar */
-let __fsMod = null;
-async function _fs(){
-  if (window.__fs) return window.__fs;  // ← usa el shim si existe
-  if (__fsMod) return __fsMod;
-  __fsMod = await import('https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js');
-  return __fsMod;
-}
 
   async function getQRSources(receta){
   const out = {};
@@ -409,7 +402,7 @@ async function _fs(){
 
   // 2) fallback: regenerar
   if (!out.main) {
-    const verURL = location.origin + '/public/ver-receta.html?id=' + encodeURIComponent(receta.id);
+    const verURL = location.origin + '/verificar.html?id=' + encodeURIComponent(receta.id);
     out.main = await makeQRDataURLCompat(verURL, 220);
   }
   if (!out.chain) {
@@ -977,141 +970,6 @@ const chainQRUrl = qrSrc.chain || qrs?.chainQRUrl || '';
 })();
 </script>
 
-<script>
-/* ====== Config Blockchain ====== */
-const BC_BASE = 'https://kodrx-blockchain.onrender.com';
-
-/* Iniciales por si no fueron guardadas (AMO-IBU-PAR) */
-function inicialesDeMeds(meds){
-  return (meds||[])
-    .map(m => String(m?.nombre||'').trim().split(/\s+/).map(w=>w[0]||'').join('').slice(0,3).toUpperCase())
-    .filter(Boolean).join('-');
-}
-
-/* Carga on-demand funciones de Firestore que necesitamos para actualizar */
-let __fsMod=null;
-async function _fs(){
-  if(__fsMod) return __fsMod;
-  __fsMod = await import('https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js');
-  return __fsMod;
-}
-
-/* Construye el QR del bloque (solo ?id=<bloque>) */
-async function setChainQR(block){
-  const url = `${BC_BASE}/verificar.html?id=${encodeURIComponent(block)}`;
-  const png = await makeQRDataURL(url, 220); // ya tienes makeQRDataURL
-  const img = new Image(); img.alt = 'QR blockchain'; img.src = png;
-  const host = document.getElementById('qrChain');
-  if (host){ host.innerHTML=''; host.appendChild(img); }
-  const bn = document.getElementById('blockNum');
-  if (bn) bn.textContent = String(block||'—');
-}
-
-/* Lógica de sellado: intenta varios endpoints conocidos; si alguno responde con {block, hash}, actualiza Firestore */
-async function sellIfPending(receta){
-  if (!receta?.id) return receta;
-  const already = (receta.blockchain?.status==='ok') && ((receta.blockchain?.block ?? receta.bloque) != null);
-  if (already) { // ya está sellado: solo asegurar QR
-    const block = receta.blockchain?.block ?? receta.bloque;
-    if (block) await setChainQR(block);
-    return receta;
-  }
-
-  // Feedback visual solo con badge (sin spinner)
-  if (typeof window.bcStart==='function') window.bcStart();
-
-  const payload = {
-    id: receta.id,
-    medsIniciales: receta.medsIniciales || inicialesDeMeds(receta.medicamentos),
-    medico: receta.medicoNombre || receta.medico?.nombre || '',
-    timestamp: (receta.timestamp && receta.timestamp.seconds) ? receta.timestamp.seconds : Math.floor(Date.now()/1000)
-  };
-  const paths = ['/api/sellar','/sell','/registrar','/api/registrar'];
-
-  let out=null;
-  for (const p of paths){
-    try{
-      const res = await fetch(`${BC_BASE}${p}`, {
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body: JSON.stringify(payload),
-        mode: 'cors', credentials: 'omit'
-      });
-      if (!res.ok) continue;
-      const data = await res.json().catch(()=>null);
-      const block = data?.block ?? data?.bloque ?? null;
-      const hash  = data?.hash  ?? data?.txid  ?? data?.tx ?? null;
-      if (block){ out = {block, hash: hash||null}; break; }
-    }catch(_e){ /* prueba siguiente endpoint */ }
-  }
-
-  if (out){
-    // Actualiza Firestore
-    const {doc, updateDoc, serverTimestamp} = await _fs();
-    try{
-      const ref = doc(db,'recetas', receta.id);
-      await updateDoc(ref, {
-        blockchain: { status:'ok', block: out.block, hash: out.hash, at: serverTimestamp() },
-        bloque: out.block,
-        hash: out.hash
-      });
-    }catch(e){ console.warn('[bc] no se pudo actualizar firestore (seguimos en UI):', e); }
-
-    // Refresca estado en memoria y UI
-    receta.blockchain = {status:'ok', block: out.block, hash: out.hash};
-    receta.bloque = out.block; receta.hash = out.hash;
-    window.RECETA_ACTUAL = receta;
-
-    await setChainQR(out.block);
-    if (typeof window.bcDone==='function') window.bcDone(receta);
-  }else{
-    if (typeof window.bcError==='function') window.bcError();
-  }
-
-  if (typeof window.killVerificandoUI==='function') window.killVerificandoUI();
-  return receta;
-}
-</script>
-<script>
-(() => {
-  // Nunca ocultar:
-  const NEVER = 'footer, .footer, [data-role="footer"], .qr-legend, .qr-chain, #blockNum, #hashTexto';
-
-  // ÚNICO listado permitido (allowlist):
-  const ALLOW = [
-    '#badgeVerificando',
-    '#spinnerVerificando',
-    '#panelVerificando',
-    '#bcStatus',                // tu pill de estado
-    '[data-role="verificando"]',
-    '.verificando',
-    '.spinner-verify'
-  ];
-
-  function hideVerify(root){
-    const ctx = root || document;
-    const targets = ALLOW
-      .flatMap(sel => Array.from(ctx.querySelectorAll(sel)))
-      .filter(el => el && !el.closest(NEVER));
-
-    targets.forEach(el => {
-      el.style.display = 'none';
-      el.setAttribute('data-hidden-by','kodrx');
-    });
-
-
-  }
-
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => hideVerify(), { once:true });
-  } else {
-    hideVerify();
-  }
-
-  // por si quieres llamarlo manualmente después
-  window.kodrxHideVerify = hideVerify;
-})();
-</script>
 
 
 </body>
