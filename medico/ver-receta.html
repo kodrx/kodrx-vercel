@@ -498,7 +498,99 @@ async function getQRSources(receta){
   }
 
 
- 
+   // --- Carga jsPDF si hace falta ---
+  async function ensureJsPDF(){
+    if (window.jspdf?.jsPDF) return window.jspdf.jsPDF;
+    await new Promise((res,rej)=>{
+      const s=document.createElement('script');
+      s.src='https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+      s.onload=res; s.onerror=rej; document.head.appendChild(s);
+    });
+    return window.jspdf.jsPDF;
+  }
+
+  // --- Carga JsBarcode si lo usas dentro del PDF (opcional) ---
+  async function ensureJsBarcode(){
+    if (window.JsBarcode) return;
+    await new Promise((res,rej)=>{
+      const s=document.createElement('script');
+      s.src='https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js';
+      s.onload=res; s.onerror=rej; document.head.appendChild(s);
+    });
+  }
+
+  // --- Obtener QRs desde el DOM o regenerarlos (si no los has pegado ya) ---
+  window.getQRSources = window.getQRSources || async function getQRSources(r){
+    const out = {};
+    const mainNode  = document.querySelector('#qrMain canvas, #qrMain img');
+    const chainNode = document.querySelector('#qrChain canvas, #qrChain img');
+
+    if (mainNode)  out.main  = mainNode.tagName==='IMG' ? mainNode.src  : mainNode.toDataURL('image/png');
+    if (chainNode) out.chain = chainNode.tagName==='IMG'? chainNode.src : chainNode.toDataURL('image/png');
+
+    // Si por alguna razón aún no existen en pantalla, puedes regenerar aquí
+    // (omitido para mantener esto corto). Con lo que ya tienes debería bastar.
+    return out;
+  };
+
+  // --- Generador PDF básico (solo si no existe) ---
+  window.generarPDF = window.generarPDF || async function generarPDF(r, qrs, {mode='save'}={}){
+    const jsPDF = await ensureJsPDF();
+    const doc = new jsPDF({ unit:'pt', format:'letter' }); // 612x792
+
+    const W = doc.internal.pageSize.getWidth();
+    let y = 50;
+
+    // Header simple
+    doc.setFont('helvetica','bold'); doc.setFontSize(14);
+    doc.text('KodRx — Receta médica digital', 40, y); y += 22;
+
+    // Paciente
+    doc.setFont('helvetica','normal'); doc.setFontSize(11);
+    doc.text(`Paciente: ${r.nombrePaciente || r.paciente?.nombre || '—'}`, 40, y); y += 16;
+    doc.text(`ID: ${r.id || '—'}`, 40, y); y += 16;
+
+    // Doctor
+    doc.text(`Médico: Dr(a). ${r.medicoNombre || r.medico?.nombre || '—'}`, 40, y); y += 16;
+    doc.text(`Cédula: ${r.medicoCedula || r.medico?.cedula || '—'}`, 40, y); y += 20;
+
+    // Observ/Diag resumidos
+    const wrap = (t,w)=>doc.splitTextToSize(String(t??'—'), w);
+    doc.setFont('helvetica','bold'); doc.text('Observaciones:', 40, y); y += 14;
+    doc.setFont('helvetica','normal'); doc.text(wrap(r.observaciones, W-80), 40, y); y += 40;
+    doc.setFont('helvetica','bold'); doc.text('Diagnóstico:', 40, y); y += 14;
+    doc.setFont('helvetica','normal'); doc.text(wrap(r.diagnostico, W-80), 40, y); y += 40;
+
+    // Medicamentos (simple)
+    const meds = Array.isArray(r.medicamentos) ? r.medicamentos : [];
+    doc.setFont('helvetica','bold'); doc.text('Medicamentos:', 40, y); y += 14;
+    doc.setFont('helvetica','normal');
+    const medsText = meds.length
+      ? meds.map((m,i)=>`${i+1}. ${m.nombre} — Dosis: ${m.dosis} — Duración: ${m.duracion}`).join('\n')
+      : '—';
+    doc.text(wrap(medsText, W-80), 40, y); y += 60;
+
+    // QRs (si los tenemos)
+    if (qrs?.main){
+      try { doc.addImage(qrs.main, 'PNG', W-40-160, 80, 160, 160, undefined, 'FAST'); } catch {}
+    }
+    if (qrs?.chain){
+      try { doc.addImage(qrs.chain,'PNG', W-40-120, 260, 120, 120, undefined, 'FAST'); } catch {}
+    }
+
+    // Footer simple
+    doc.setFont('helvetica','bold'); doc.setFontSize(10);
+    doc.text('Creada con KodRx. Tecnología que verifica, salud que protege.', W/2, 780, {align:'center'});
+
+    const filename = `receta_${r.id||'sin-id'}.pdf`;
+    if (mode==='print'){
+      try { doc.autoPrint(); doc.output('dataurlnewwindow'); } catch { doc.save(filename); }
+    } else if (mode==='open'){
+      const url = doc.output('bloburl'); window.open(url,'_blank');
+    } else {
+      doc.save(filename);
+    }
+  };
 
 /* Iniciales por si no fueron guardadas (AMO-IBU-PAR) */
 function inicialesDeMeds(meds){
@@ -521,7 +613,7 @@ function inicialesDeMeds(meds){
 
   // 2) fallback: regenerar
   if (!out.main) {
-    const verURL = location.origin + '/verificar.html?id=' + encodeURIComponent(receta.id);
+    const verURL = location.origin + '/verificar.html?id=' + encodeURIComponent(r.id);
     out.main = await makeQRDataURLCompat(verURL, 220);
   }
   if (!out.chain) {
