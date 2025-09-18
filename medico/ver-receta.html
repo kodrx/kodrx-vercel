@@ -451,38 +451,9 @@ async function getDB(){
   return core.db;
 }
 
-/* ====== QR Chain (bloque) ====== */
-async function setChainQR(block){
-  const host = document.getElementById('qrChain');
-  if (!host) return;
-  await ensureQRCode();
-  const url = `${BC_BASE}/verificar.html?id=${encodeURIComponent(block)}`;
-  makeQR(host, url, 220);
-  const bn = document.getElementById('blockNum');
-  if (bn) bn.textContent = String(block || '—');
-}
 
-/* ====== Fuente de QRs para PDF ====== */
-async function getQRSources(receta){
-  const out = {};
-  const mainNode  = document.querySelector('#qrMain canvas, #qrMain img');
-  const chainNode = document.querySelector('#qrChain canvas, #qrChain img');
 
-  if (mainNode)  out.main  = mainNode.tagName==='IMG' ? mainNode.src  : mainNode.toDataURL('image/png');
-  if (chainNode) out.chain = chainNode.tagName==='IMG'? chainNode.src : chainNode.toDataURL('image/png');
 
-  if (!out.main){
-    const verURL = `${location.origin}${location.pathname}?id=${encodeURIComponent(receta.id)}`;
-    out.main = await makeQRDataURLCompat(verURL, 220);
-  }
-  if (!out.chain){
-    const blk = receta?.blockchain?.block ?? receta?.bloque ?? null;
-    if (blk){
-      out.chain = await makeQRDataURLCompat(`${BC_BASE}/verificar.html?id=${encodeURIComponent(blk)}`, 220);
-    }
-  }
-  return out;
-}
 
 
   function updateBadgeFromReceta(r){
@@ -521,8 +492,7 @@ function inicialesDeMeds(meds){
 
 /* Carga on-demand funciones de Firestore que necesitamos para actualizar */
 
-  async function getQRSources(receta){
-  const out = {};
+ 
 
   // 1) leer del DOM si ya están renderizados
   const mainNode  = document.querySelector('#qrMain canvas, #qrMain img');
@@ -534,19 +504,7 @@ function inicialesDeMeds(meds){
 
  
 
-/* Construye el QR del bloque (solo ?id=<bloque>) */
-async function setChainQR(block){
-  const host = document.getElementById('qrChain');
-  if (!host) return;
-  await ensureQRCode();               // 👈 asegura la lib
 
-  const url = `${BC_BASE}/verificar.html?id=${encodeURIComponent(block)}`;
-  host.innerHTML = '';
-  new QRCode(host, { text: url, width: 220, height: 220, correctLevel: QRCode.CorrectLevel.M });
-
-  const bn = document.getElementById('blockNum');
-  if (bn) bn.textContent = String(block || '—');
-}
 
 
 // helper opcional para limpiar acentos y dejar solo A-Z/.- en iniciales
