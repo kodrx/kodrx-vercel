@@ -315,7 +315,62 @@ button{appearance:none;border:0;border-radius:12px;padding:10px 14px;font-weight
     setTimeout(start, 0);
   }
 
+window.ensureJsPDF ||= async function ensureJsPDF(){
+  if (window.jspdf?.jsPDF) return window.jspdf.jsPDF;
+  await new Promise((res,rej)=>{
+    const s=document.createElement('script');
+    s.src='https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js';
+    s.onload=res; s.onerror=rej; document.head.appendChild(s);
+  });
+  return window.jspdf.jsPDF;
+};
 
+window.setChainQR ||= async function setChainQR(block){
+  const host = document.getElementById('qrChain');
+  if (!host) return;
+
+  // Asegura libs de QR (usa tu ensureLibs/ensureQRCode; cualquiera está bien)
+  await (window.ensureLibs?.() ?? window.ensureQRCode?.());
+
+  const url = `${BC_BASE}/verificar.html?id=${encodeURIComponent(block)}`;
+
+  // intenta con tu helper genérico
+  let ok=false;
+  try { ok = window.makeQR?.(host, url, 220) === true; } catch {}
+
+  // fallback directo con QRCode clásico
+  if (!ok && window.QRCode){
+    host.innerHTML = '';
+    new QRCode(host, { text:url, width:220, height:220, correctLevel:(window.QRCode.CorrectLevel?.M ?? 1) });
+  }
+
+  const bn = document.getElementById('blockNum');
+  if (bn) bn.textContent = String(block || '—');
+};
+
+window.getQRSources ||= async function getQRSources(r){
+  const out = {};
+  const mainNode  = document.querySelector('#qrMain  canvas, #qrMain  img');
+  const chainNode = document.querySelector('#qrChain canvas, #qrChain img');
+
+  if (mainNode)  out.main  = mainNode.tagName==='IMG' ? mainNode.src  : mainNode.toDataURL('image/png');
+  if (chainNode) out.chain = chainNode.tagName==='IMG'? chainNode.src : chainNode.toDataURL('image/png');
+
+  // Regenera si faltan
+  if (!out.main && window.makeQRDataURLCompat){
+    const verURL = `${location.origin}${location.pathname}?id=${encodeURIComponent(r.id)}`;
+    out.main = await window.makeQRDataURLCompat(verURL, 220);
+  }
+  if (!out.chain && window.makeQRDataURLCompat){
+    const blk = r?.blockchain?.block ?? r?.bloque ?? null;
+    if (blk){
+      out.chain = await window.makeQRDataURLCompat(
+        `${BC_BASE}/verificar.html?id=${encodeURIComponent(blk)}`, 220
+      );
+    }
+  }
+  return out;
+};
 
 
   // ---- Rebind de botones PDF/Imprimir ----
