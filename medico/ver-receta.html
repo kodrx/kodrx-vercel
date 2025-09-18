@@ -242,25 +242,49 @@ button{appearance:none;border:0;border-radius:12px;padding:10px 14px;font-weight
   };
 
   // Normaliza la receta (soporta legacy)
-  function normalize(raw0){
-    const raw = raw0 || {};
-    const bc  = raw.blockchain || {};
-    let bloque = null;
-    if (Number.isFinite(raw.bloque)) bloque = raw.bloque;
-    else if (typeof bc.block === 'number' || typeof bc.block === 'string') bloque = bc.block;
-    const hash   = (bc.hash ?? raw.hash) || null;
-    const status = bc.status || (bloque ? 'ok' : (hash ? 'simulado' : 'pendiente'));
-    const nombrePaciente = raw.nombrePaciente ?? raw.pacienteNombre ?? raw.paciente?.nombre ?? raw.paciente ?? '—';
-    const medico = raw.medico || {
-      nombre: raw.medicoNombre, genero: raw.medicoGenero, cedula: raw.medicoCedula,
-      especialidad: raw.medicoEspecialidad, telefono: raw.medicoTelefono, direccion: raw.medicoDomicilio
-    };
-    return {
-      ...raw,
-      nombrePaciente, medico, bloque, hash,
-      blockchain: { ...bc, status, block:(bc.block ?? bloque) ?? null, hash }
-    };
-  }
+  window.normalize = function normalize(raw0){
+  const raw = raw0 || {};
+  const bc  = raw.blockchain || {};
+
+  // bloque: admite r.bloque o bc.block
+  let bloque = null;
+  if (Number.isFinite(raw.bloque)) bloque = raw.bloque;
+  else if (typeof bc.block === 'number' || typeof bc.block === 'string') bloque = bc.block;
+
+  // hash: primero blockchain.hash, si no r.hash
+  const hash = (bc.hash ?? raw.hash) || null;
+
+  // status derivado si no viene en bc.status
+  const status = bc.status || (bloque ? 'ok' : (hash ? 'simulado' : 'pendiente'));
+
+  // nombre del paciente (compat)
+  const nombrePaciente =
+    raw.nombrePaciente ?? raw.pacienteNombre ?? raw.paciente?.nombre ?? raw.paciente ?? '—';
+
+  // objeto médico desde campos sueltos (compat)
+  const medico = raw.medico || {
+    nombre:       raw.medicoNombre,
+    genero:       raw.medicoGenero,
+    cedula:       raw.medicoCedula,
+    especialidad: raw.medicoEspecialidad,
+    telefono:     raw.medicoTelefono,
+    direccion:    raw.medicoDomicilio
+  };
+
+  return {
+    ...raw,
+    nombrePaciente,
+    medico,
+    bloque,
+    hash,
+    blockchain: {
+      ...bc,
+      status,
+      block: (bc.block ?? bloque) ?? null,
+      hash:  hash
+    }
+  };
+};
 
   // ===== Libs (idempotentes) =====
   async function ensureLibs(){
