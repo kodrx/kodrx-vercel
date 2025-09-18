@@ -405,7 +405,77 @@ button{appearance:none;border:0;border-radius:12px;padding:10px 14px;font-weight
       if (snap.exists()) window.RECETA_ACTUAL = { id:snap.id, ...(window.RECETA_ACTUAL||{}), ...(snap.data()||{}) };
     }catch(e){ console.warn('[ver] hydrate warn', e); }
   }
+// === Writer tolerante a ID/data-bind/clase ===
+function writeField(key, val){
+  const sels = ['#'+key, `[data-bind="${key}"]`, '.'+key];
+  let hits = 0;
+  for (const sel of sels){
+    document.querySelectorAll(sel).forEach(el => { el.textContent = String(val ?? '—'); hits++; });
+  }
+  return hits; // útil para depurar
+}
 
+function prefixMed(nombre, genero){
+  if (!nombre) return '—';
+  const g = String(genero||'').toLowerCase();
+  return (g.startsWith('f') ? 'Dra. ' : 'Dr. ') + nombre;
+}
+
+function paintFields(recetaRaw){
+  const r = (typeof normalize === 'function') ? normalize(recetaRaw||{}) : (recetaRaw||{});
+  const med = r.medico || {};
+
+  // Médico
+  writeField('doctorNombre', prefixMed(med.nombre ?? r.medicoNombre, med.genero ?? r.medicoGenero));
+  writeField('doctorCedula', med.cedula ?? r.medicoCedula);
+  writeField('doctorEsp',    med.especialidad ?? r.medicoEspecialidad);
+  writeField('doctorTel',    med.telefono ?? r.medicoTelefono);
+  writeField('doctorDir',    med.direccion ?? r.medicoDomicilio);
+
+  // Paciente
+  writeField('pacienteNombre', r.paciente?.nombre ?? r.nombrePaciente ?? r.pacienteNombre);
+  writeField('pacEdad',        r.paciente?.edad ?? r.edad);
+  writeField('pacSexo',        r.paciente?.sexo ?? r.sexo);
+  writeField('pacPeso',        r.paciente?.peso ?? r.peso);
+  writeField('pacTalla',       r.paciente?.talla ?? r.talla);
+  writeField('pacTemp',        r.paciente?.temperatura ?? r.temperatura);
+  writeField('pacPresion',     r.paciente?.presion ?? r.presion);
+  writeField('pacIMC',         r.paciente?.imc ?? r.imc);
+
+  // Textos
+  writeField('obsTexto',  r.observaciones);
+  writeField('diagTexto', r.diagnostico);
+
+  // ID y fecha
+  writeField('recetaId', 'ID: ' + (r.id || '—'));
+  try{
+    let ts = r.timestamp;
+    if (ts && typeof ts.toDate==='function') ts = ts.toDate();
+    else if (ts && typeof ts.seconds==='number') ts = new Date(ts.seconds*1000 + Math.floor((ts.nanoseconds||0)/1e6));
+    else if (!(ts instanceof Date)) ts = new Date(ts);
+    writeField('fechaEmision', ts ? ts.toLocaleString('es-MX',{year:'numeric',month:'long',day:'numeric',hour:'2-digit',minute:'2-digit'}) : '—');
+  }catch{ writeField('fechaEmision', '—'); }
+
+  // Si algún overlay tapa la vista, lo escondemos
+  ['#badgeVerificando','#spinnerVerificando','#panelVerificando','[data-role="verificando"]','.verificando','.spinner-verify']
+    .forEach(sel => document.querySelectorAll(sel).forEach(el=>el.style.display='none'));
+}
+
+// 👉 Llama a paintFields dentro de tu renderOnce
+// Ejemplo mini de integración:
+if (typeof renderOnce === 'function'){
+  const _renderOnce = renderOnce;
+  window.renderOnce = async function(){
+    const out = await _renderOnce();
+    paintFields(window.RECETA_ACTUAL); // pinta al final
+    return out;
+  };
+} else {
+  // Si aún no existe renderOnce, pinta cuando cargue el DOM
+  document.readyState === 'loading'
+    ? document.addEventListener('DOMContentLoaded', ()=>paintFields(window.RECETA_ACTUAL), {once:true})
+    : paintFields(window.RECETA_ACTUAL);
+}
   // ===== Render principal =====
   async function renderOnce(){
     for (let i=0;i<100;i++){ if (window.RECETA_ACTUAL) break; await sleep(60); }
