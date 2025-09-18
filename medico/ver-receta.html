@@ -349,22 +349,7 @@ window.setChainQR ||= async function setChainQR(block){
 
 
 
-  // Regenera si faltan
-  if (!out.main && window.makeQRDataURLCompat){
-    const verURL = `${location.origin}${location.pathname}?id=${encodeURIComponent(r.id)}`;
-    out.main = await window.makeQRDataURLCompat(verURL, 220);
-  }
-  if (!out.chain && window.makeQRDataURLCompat){
-    const blk = r?.blockchain?.block ?? r?.bloque ?? null;
-    if (blk){
-      out.chain = await window.makeQRDataURLCompat(
-        `${BC_BASE}/verificar.html?id=${encodeURIComponent(blk)}`, 220
-      );
-    }
-  }
-  return out;
-};
-
+ 
 
   // ---- Rebind de botones PDF/Imprimir ----
   async function bindPdfButtons(){
