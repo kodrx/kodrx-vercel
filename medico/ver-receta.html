@@ -231,70 +231,65 @@ button{appearance:none;border:0;border-radius:12px;padding:10px 14px;font-weight
 ;(() => {
   'use strict';
 
-  if (window.__KODRX_VER_INLINE_V8__) return;
-  window.__KODRX_VER_INLINE_V8__ = true;
+  // Evita doble carga
+  if (window.__KODRX_VER_INLINE_V9__) return;
+  window.__KODRX_VER_INLINE_V9__ = true;
 
-  // ✅ utils y helpers OK arriba
+  // Utils básicos
   const sleep = (ms)=> new Promise(res=>setTimeout(res, ms));
   window.sleep ||= sleep;
 
-window.normalize = function normalize(raw0){
-  const raw = raw0 || {};
-  const bc  = raw.blockchain || {};
+  // Normalizador COMPLETO (nada de “/* ...tu normalize... */”)
+  function normalize(raw0){
+    const raw = raw0 || {};
+    const bc  = raw.blockchain || {};
 
-  // bloque: admite r.bloque o bc.block
-  let bloque = null;
-  if (Number.isFinite(raw.bloque)) bloque = raw.bloque;
-  else if (typeof bc.block === 'number' || typeof bc.block === 'string') bloque = bc.block;
+    // bloque: admite r.bloque (num) o bc.block (num/string)
+    let bloque = null;
+    if (Number.isFinite(raw.bloque)) bloque = raw.bloque;
+    else if (typeof bc.block === 'number' || typeof bc.block === 'string') bloque = bc.block;
 
-  // hash primero en blockchain, luego en raw
-  const hash = (bc.hash ?? raw.hash) || null;
+    // hash
+    const hash = (bc.hash ?? raw.hash) || null;
 
-  // status derivado
-  const status = bc.status || (bloque ? 'ok' : (hash ? 'simulado' : 'pendiente'));
+    // status
+    const status = bc.status || (bloque ? 'ok' : (hash ? 'simulado' : 'pendiente'));
 
-  // nombre paciente — soporta legacy
-  const nombrePaciente =
-    raw.nombrePaciente ??
-    raw.pacienteNombre ??
-    raw.paciente?.nombre ??
-    raw.paciente ??
-    '—';
+    // nombre de paciente (legacy-friendly)
+    const nombrePaciente =
+      raw.nombrePaciente ??
+      raw.pacienteNombre ??
+      raw.paciente?.nombre ??
+      raw.paciente ??
+      '—';
 
-  // objeto médico (compacta campos sueltos)
-  const medico = raw.medico || {
-    nombre:       raw.medicoNombre,
-    genero:       raw.medicoGenero,
-    cedula:       raw.medicoCedula,
-    especialidad: raw.medicoEspecialidad,
-    telefono:     raw.medicoTelefono,
-    direccion:    raw.medicoDomicilio
-  };
+    // objeto médico (compacta campos sueltos)
+    const medico = raw.medico || {
+      nombre:       raw.medicoNombre,
+      genero:       raw.medicoGenero,
+      cedula:       raw.medicoCedula,
+      especialidad: raw.medicoEspecialidad,
+      telefono:     raw.medicoTelefono,
+      direccion:    raw.medicoDomicilio
+    };
 
-  return {
-    ...raw,
-    nombrePaciente,
-    medico,
-    bloque,
-    hash,
-    blockchain: {
-      ...bc,
-      status,
-      block: (bc.block ?? bloque) ?? null,
-      hash:  hash
-    }
-  };
-};
+    return {
+      ...raw,
+      nombrePaciente,
+      medico,
+      bloque,
+      hash,
+      blockchain: {
+        ...bc,
+        status,
+        block: (bc.block ?? bloque) ?? null,
+        hash:  hash
+      }
+    };
+  }
+  window.normalize ||= normalize;
 
-function setText(selOrEl, val){
-  const el = typeof selOrEl==='string' ? document.querySelector(selOrEl) : selOrEl;
-  if (!el) return;
-  const txt = (val ?? '—').toString();
-  if (el.textContent !== txt) el.textContent = txt;
-}
-function setClass(el, cls){ if (el && el.className !== cls) el.className = cls; }
-
-  // (OPCIONAL) Por si más adelante faltaran estos helpers, deja stubs seguros:
+  // Prefijos y hash simulado (stubs seguros)
   window.prefixMed ||= function prefixMed(nombre, genero){
     if (!nombre) return '—';
     const g = String(genero||'').toLowerCase();
@@ -303,11 +298,24 @@ function setClass(el, cls){ if (el && el.className !== cls) el.className = cls; 
   window.hashSimulado ||= function hashSimulado(r){
     try{
       const base = (r?.id || '') + '|' + (r?.timestamp?.seconds || r?.timestamp || '');
-      // mini huella legible (no criptográfica)
       let h=0; for (let i=0;i<base.length;i++) h = (h*31 + base.charCodeAt(i)) >>> 0;
       return h.toString(16).padStart(8,'0');
     }catch{ return '—'; }
   };
+
+  // Arranque: lo ejecutamos tras definir TODO lo de arriba
+  function start(){
+    try { window.renderOnce?.().catch?.(console.error); } catch(e){ console.error(e); }
+    try { window.bindButtons?.(); } catch(e){}
+    try { window.bindPdfButtons?.(); } catch(e){}
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', ()=>queueMicrotask(start), {once:true});
+  } else {
+    setTimeout(start, 0);
+  }
+
+
 
 
   // ---- Rebind de botones PDF/Imprimir ----
@@ -1091,19 +1099,7 @@ if (document.readyState === 'loading'){
   try { bindButtons(); } catch(e){ console.error(e); }
 }
 
-// ========== BOOT (colócalo AL FINAL, tras definir todas las funciones) ==========
-  function start(){
-    try { renderOnce?.().catch?.(console.error); } catch(e){ console.error(e); }
-    try { bindButtons?.(); } catch(e){ console.warn('bindButtons err', e); }
-    try { bindPdfButtons?.(); } catch(e){ console.warn('bindPdfButtons err', e); }
-  }
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => queueMicrotask(start), {once:true});
-  } else {
-    // garantiza que se ejecuta tras inicializar las const/lets de más abajo
-    setTimeout(start, 0);
-  }
 
   /* FIX TEMP */ }
  /* FIX TEMP */ }
