@@ -535,7 +535,7 @@ button{appearance:none;border:0;border-radius:12px;padding:10px 14px;font-weight
     else { doc.save(filename); }
   }
 
-  function bindButtons(){
+    function bindButtons(){
     const btnD = document.getElementById('btnDescargar');
     const btnP = document.getElementById('btnImprimir');
     const btnB = document.getElementById('btnVolver');
@@ -543,9 +543,10 @@ button{appearance:none;border:0;border-radius:12px;padding:10px 14px;font-weight
     const onPDF = (mode)=>async (e)=>{
       e?.preventDefault?.();
       try{
-        if (!window.RECETA_ACTUAL) await renderOnce();
-        const r = window.RECETA_ACTUAL || {};
-        const qrs = window.QRS || await getQRSources(r);
+        if (!window.RECETA_ACTUAL && typeof renderOnce==='function') await renderOnce();
+        const r   = window.RECETA_ACTUAL || {};
+        const qrs = window.QRS || (typeof getQRSources==='function' ? await getQRSources(r) : {});
+        if (typeof generarPDF !== 'function'){ alert('Falta generador de PDF'); return; }
         await generarPDF(r, qrs, {mode});
       }catch(err){ console.error('[pdf]',err); alert('No se pudo generar el PDF.'); }
     };
@@ -553,16 +554,15 @@ button{appearance:none;border:0;border-radius:12px;padding:10px 14px;font-weight
     if (btnD && !btnD.__b){ btnD.type='button'; btnD.disabled=false; btnD.addEventListener('click', onPDF('save'),  {capture:true}); btnD.__b=true; }
     if (btnP && !btnP.__b){ btnP.type='button'; btnP.disabled=false; btnP.addEventListener('click', onPDF('print'), {capture:true}); btnP.__b=true; }
     if (btnB && !btnB.__b){
-      btnB.type='button'; btnB.addEventListener('click', (e)=>{ e.preventDefault();
-        if (history.length>1) history.back(); else location.href='/medico/panel.html';
-      }, {capture:true}); btnB.__b=true;
+      btnB.type='button';
+      btnB.addEventListener('click', (e)=>{ e.preventDefault(); if (history.length>1) history.back(); else location.href='/medico/panel.html'; }, {capture:true});
+      btnB.__b=true;
     }
   }
 
-
   // --- Normalizador básico (solo si falta) ---
-  function if (typeof window.normalize !== 'function') {
-    window.normalize = function (raw0) {
+  if (typeof window.normalize !== 'function') {
+    window.normalize = function normalize(raw0) {
       const raw = raw0 || {};
       const bc  = raw.blockchain || {};
       const bloque = Number.isFinite(raw.bloque) ? raw.bloque : (bc.block ?? null);
@@ -596,7 +596,7 @@ button{appearance:none;border:0;border-radius:12px;padding:10px 14px;font-weight
   // --- pintado central ---
   function paint() {
     const r0 = window.RECETA_ACTUAL;
-    if (!r0) return;
+    if (!r0 || typeof window.normalize!=='function') return;
     const r  = window.normalize(r0);
     const m  = r.medico || {};
 
@@ -631,15 +631,13 @@ button{appearance:none;border:0;border-radius:12px;padding:10px 14px;font-weight
       write('fechaEmision', ts ? ts.toLocaleString('es-MX',{year:'numeric',month:'long',day:'numeric',hour:'2-digit',minute:'2-digit'}) : '—');
     } catch { write('fechaEmision','—'); }
 
-    // Apaga posibles overlays de verificación
+    // oculta overlays “verificando”
     ['#badgeVerificando','#spinnerVerificando','#panelVerificando','[data-role="verificando"]','.verificando','.spinner-verify']
       .forEach(sel => document.querySelectorAll(sel).forEach(el => { el.style.display='none'; }));
   }
-
-  // Exponer por si quieres dispararlo en consola
   window.kodrxPaint = paint;
 
-  // --- Hook robusto a renderOnce (cuando exista) ---
+  // --- Hook a renderOnce ---
   (function hook() {
     if (typeof window.renderOnce === 'function' && !window.renderOnce.__kodrxHooked) {
       const orig = window.renderOnce;
@@ -649,21 +647,19 @@ button{appearance:none;border:0;border-radius:12px;padding:10px 14px;font-weight
         return out;
       };
       window.renderOnce.__kodrxHooked = true;
-      setTimeout(paint, 0); // pinta una vez
+      setTimeout(paint, 0);
       return;
     }
-    // reintenta cada 250ms (suficientemente largo para tu flujo)
     setTimeout(hook, 250);
   })();
 
-  // --- Repintado defensivo por si otro script borra el contenido ---
+  // repintado defensivo
   let n=0; const int = setInterval(() => { paint(); if (++n>=25) clearInterval(int); }, 200);
 
-  
   // ===== Boot =====
   function start(){
-    renderOnce().catch(console.error);
-    bindButtons();
+    try{ typeof renderOnce==='function' && renderOnce().catch?.(console.error); }catch(e){}
+    try{ bindButtons(); }catch(e){ console.warn('bindButtons err', e); }
   }
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', start, {once:true});
