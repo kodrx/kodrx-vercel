@@ -561,7 +561,7 @@ button{appearance:none;border:0;border-radius:12px;padding:10px 14px;font-weight
 
 
   // --- Normalizador básico (solo si falta) ---
-  if (typeof window.normalize !== 'function') {
+  function if (typeof window.normalize !== 'function') {
     window.normalize = function (raw0) {
       const raw = raw0 || {};
       const bc  = raw.blockchain || {};
