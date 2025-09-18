@@ -559,92 +559,107 @@ button{appearance:none;border:0;border-radius:12px;padding:10px 14px;font-weight
     }
   }
 
-  // writer tolerante a id / data-bind / clase
-  function writeField(key, val) {
-    const sels = ['#' + key, `[data-bind="${key}"]`, '.' + key];
-    let hits = 0;
-    for (const sel of sels) {
-      document.querySelectorAll(sel).forEach(el => {
-        el.textContent = String(val ?? '—');
-        hits++;
-      });
-    }
-    return hits;
+
+  // --- Normalizador básico (solo si falta) ---
+  if (typeof window.normalize !== 'function') {
+    window.normalize = function (raw0) {
+      const raw = raw0 || {};
+      const bc  = raw.blockchain || {};
+      const bloque = Number.isFinite(raw.bloque) ? raw.bloque : (bc.block ?? null);
+      const hash   = bc.hash ?? raw.hash ?? null;
+      const status = bc.status || (bloque ? 'ok' : (hash ? 'simulado' : 'pendiente'));
+      const medico = raw.medico || {
+        nombre: raw.medicoNombre, genero: raw.medicoGenero, cedula: raw.medicoCedula,
+        especialidad: raw.medicoEspecialidad, telefono: raw.medicoTelefono, direccion: raw.medicoDomicilio
+      };
+      const nombrePaciente = raw.nombrePaciente ?? raw.pacienteNombre ?? raw.paciente?.nombre ?? raw.paciente ?? '—';
+      return {
+        ...raw, nombrePaciente, medico, bloque, hash,
+        blockchain: { ...bc, status, block: (bc.block ?? bloque) ?? null, hash }
+      };
+    };
   }
 
-  function prefixMed(nombre, genero) {
+  // --- helpers mínimos ---
+  function write(key, val) {
+    const sels = ['#'+key, `[data-bind="${key}"]`, '.'+key];
+    for (const sel of sels) {
+      document.querySelectorAll(sel).forEach(el => { el.textContent = String(val ?? '—'); });
+    }
+  }
+  function prefixMed(nombre, genero){
     if (!nombre) return '—';
-    const g = String(genero || '').toLowerCase();
+    const g = String(genero||'').toLowerCase();
     return (g.startsWith('f') ? 'Dra. ' : 'Dr. ') + nombre;
   }
 
-  function paintFields(raw) {
-    const norm = (typeof window.normalize === 'function') ? window.normalize : (x => x || {});
-    const r = norm(raw || {});
-    const med = r.medico || {};
+  // --- pintado central ---
+  function paint() {
+    const r0 = window.RECETA_ACTUAL;
+    if (!r0) return;
+    const r  = window.normalize(r0);
+    const m  = r.medico || {};
 
     // Médico
-    writeField('doctorNombre', prefixMed(med.nombre ?? r.medicoNombre, med.genero ?? r.medicoGenero));
-    writeField('doctorCedula', med.cedula ?? r.medicoCedula);
-    writeField('doctorEsp',    med.especialidad ?? r.medicoEspecialidad);
-    writeField('doctorTel',    med.telefono ?? r.medicoTelefono);
-    writeField('doctorDir',    med.direccion ?? r.medicoDomicilio);
+    write('doctorNombre', prefixMed(m.nombre ?? r.medicoNombre, m.genero ?? r.medicoGenero));
+    write('doctorCedula', m.cedula ?? r.medicoCedula);
+    write('doctorEsp',    m.especialidad ?? r.medicoEspecialidad);
+    write('doctorTel',    m.telefono ?? r.medicoTelefono);
+    write('doctorDir',    m.direccion ?? r.medicoDomicilio);
 
     // Paciente
-    writeField('pacienteNombre', r.paciente?.nombre ?? r.nombrePaciente ?? r.pacienteNombre);
-    writeField('pacEdad',        r.paciente?.edad ?? r.edad);
-    writeField('pacSexo',        r.paciente?.sexo ?? r.sexo);
-    writeField('pacPeso',        r.paciente?.peso ?? r.peso);
-    writeField('pacTalla',       r.paciente?.talla ?? r.talla);
-    writeField('pacTemp',        r.paciente?.temperatura ?? r.temperatura);
-    writeField('pacPresion',     r.paciente?.presion ?? r.presion);
-    writeField('pacIMC',         r.paciente?.imc ?? r.imc);
+    write('pacienteNombre', r.paciente?.nombre ?? r.nombrePaciente ?? r.pacienteNombre);
+    write('pacEdad',   r.paciente?.edad ?? r.edad);
+    write('pacSexo',   r.paciente?.sexo ?? r.sexo);
+    write('pacPeso',   r.paciente?.peso ?? r.peso);
+    write('pacTalla',  r.paciente?.talla ?? r.talla);
+    write('pacTemp',   r.paciente?.temperatura ?? r.temperatura);
+    write('pacPresion',r.paciente?.presion ?? r.presion);
+    write('pacIMC',    r.paciente?.imc ?? r.imc);
 
     // Textos
-    writeField('obsTexto',  r.observaciones);
-    writeField('diagTexto', r.diagnostico);
+    write('obsTexto',  r.observaciones);
+    write('diagTexto', r.diagnostico);
 
     // ID y fecha
-    writeField('recetaId', 'ID: ' + (r.id || '—'));
+    write('recetaId', 'ID: ' + (r.id || '—'));
     try {
       let ts = r.timestamp;
-      if (ts && typeof ts.toDate === 'function') ts = ts.toDate();
-      else if (ts && typeof ts.seconds === 'number') ts = new Date(ts.seconds * 1000 + Math.floor((ts.nanoseconds || 0) / 1e6));
+      if (ts && typeof ts.toDate==='function') ts = ts.toDate();
+      else if (ts && typeof ts.seconds==='number') ts = new Date(ts.seconds*1000 + Math.floor((ts.nanoseconds||0)/1e6));
       else if (!(ts instanceof Date)) ts = new Date(ts);
-      writeField('fechaEmision', ts ? ts.toLocaleString('es-MX', { year:'numeric', month:'long', day:'numeric', hour:'2-digit', minute:'2-digit' }) : '—');
-    } catch { writeField('fechaEmision', '—'); }
+      write('fechaEmision', ts ? ts.toLocaleString('es-MX',{year:'numeric',month:'long',day:'numeric',hour:'2-digit',minute:'2-digit'}) : '—');
+    } catch { write('fechaEmision','—'); }
 
-    // por si un overlay tapa la vista
+    // Apaga posibles overlays de verificación
     ['#badgeVerificando','#spinnerVerificando','#panelVerificando','[data-role="verificando"]','.verificando','.spinner-verify']
-      .forEach(sel => document.querySelectorAll(sel).forEach(el => el.style.display = 'none'));
+      .forEach(sel => document.querySelectorAll(sel).forEach(el => { el.style.display='none'; }));
   }
 
-  // hookea renderOnce si existe; si no, espera y reintenta
-  function patchRender() {
-    if (typeof window.renderOnce === 'function' && !window.renderOnce.__paintPatched) {
-      const _r = window.renderOnce;
-      window.renderOnce = async function (...args) {
-        const out = await _r.apply(this, args);
-        try { paintFields(window.RECETA_ACTUAL); } catch {}
+  // Exponer por si quieres dispararlo en consola
+  window.kodrxPaint = paint;
+
+  // --- Hook robusto a renderOnce (cuando exista) ---
+  (function hook() {
+    if (typeof window.renderOnce === 'function' && !window.renderOnce.__kodrxHooked) {
+      const orig = window.renderOnce;
+      window.renderOnce = async function(...args) {
+        const out = await orig.apply(this, args);
+        try { paint(); } catch {}
         return out;
       };
-      window.renderOnce.__paintPatched = true;
-      // pinta una vez por si ya estaba todo
-      setTimeout(() => paintFields(window.RECETA_ACTUAL), 0);
-    } else {
-      // aún no existe: reintenta un poco
-      if (!patchRender.__tries) patchRender.__tries = 0;
-      if (patchRender.__tries++ < 20) setTimeout(patchRender, 100);
-      // pinta provisionalmente si ya hay datos
-      setTimeout(() => paintFields(window.RECETA_ACTUAL), 0);
+      window.renderOnce.__kodrxHooked = true;
+      setTimeout(paint, 0); // pinta una vez
+      return;
     }
-  }
+    // reintenta cada 250ms (suficientemente largo para tu flujo)
+    setTimeout(hook, 250);
+  })();
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', patchRender, { once: true });
-  } else {
-    patchRender();
-  }
+  // --- Repintado defensivo por si otro script borra el contenido ---
+  let n=0; const int = setInterval(() => { paint(); if (++n>=25) clearInterval(int); }, 200);
+
+  
   // ===== Boot =====
   function start(){
     renderOnce().catch(console.error);
