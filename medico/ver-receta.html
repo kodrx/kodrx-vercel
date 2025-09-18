@@ -559,21 +559,6 @@ button{appearance:none;border:0;border-radius:12px;padding:10px 14px;font-weight
     }
   }
 
-  // ===== Boot =====
-  function start(){
-    renderOnce().catch(console.error);
-    bindButtons();
-  }
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', start, {once:true});
-  } else {
-    start();
-  }
-})();
-</script>
-<script>
-// ===== Pintado tolerante + hook seguro =====
-(function () {
   // writer tolerante a id / data-bind / clase
   function writeField(key, val) {
     const sels = ['#' + key, `[data-bind="${key}"]`, '.' + key];
@@ -660,8 +645,16 @@ button{appearance:none;border:0;border-radius:12px;padding:10px 14px;font-weight
   } else {
     patchRender();
   }
-
-  // por si quieres dispararlo manual desde consola
-  window.kodrxPaint = () => paintFields(window.RECETA_ACTUAL);
+  // ===== Boot =====
+  function start(){
+    renderOnce().catch(console.error);
+    bindButtons();
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', start, {once:true});
+  } else {
+    start();
+  }
 })();
 </script>
+
