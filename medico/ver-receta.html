@@ -558,21 +558,6 @@ button{appearance:none;border:0;border-radius:12px;padding:10px 14px;font-weight
       }, {capture:true}); btnB.__b=true;
     }
   }
-
-  // ===== Boot =====
-  function start(){
-    renderOnce().catch(console.error);
-    bindButtons();
-  }
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', start, {once:true});
-  } else {
-    start();
-  }
-})();
-</script>
-<script>
-// === Writer tolerante a ID/data-bind/clase ===
 function writeField(key, val){
   const sels = ['#'+key, `[data-bind="${key}"]`, '.'+key];
   let hits = 0;
@@ -643,5 +628,15 @@ if (typeof renderOnce === 'function'){
     ? document.addEventListener('DOMContentLoaded', ()=>paintFields(window.RECETA_ACTUAL), {once:true})
     : paintFields(window.RECETA_ACTUAL);
 }
+  // ===== Boot =====
+  function start(){
+    renderOnce().catch(console.error);
+    bindButtons();
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', start, {once:true});
+  } else {
+    start();
+  }
+})();
 </script>
-
