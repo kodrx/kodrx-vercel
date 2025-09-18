@@ -347,13 +347,7 @@ window.setChainQR ||= async function setChainQR(block){
   if (bn) bn.textContent = String(block || '—');
 };
 
-window.getQRSources ||= async function getQRSources(r){
-  const out = {};
-  const mainNode  = document.querySelector('#qrMain  canvas, #qrMain  img');
-  const chainNode = document.querySelector('#qrChain canvas, #qrChain img');
 
-  if (mainNode)  out.main  = mainNode.tagName==='IMG' ? mainNode.src  : mainNode.toDataURL('image/png');
-  if (chainNode) out.chain = chainNode.tagName==='IMG'? chainNode.src : chainNode.toDataURL('image/png');
 
   // Regenera si faltan
   if (!out.main && window.makeQRDataURLCompat){
@@ -661,7 +655,9 @@ async function sellIfPending(receta){
     return receta;
   }
 }
-
+const setText  = (elOrSel, v)=>{ const el = typeof elOrSel==='string' ? document.querySelector(elOrSel) : elOrSel; if (el) el.textContent = (v ?? ''); };
+const setClass = (el, cls)=>{ if (el) el.className = cls; };
+  
   /* ===== badge ===== */
   function computeBadge(r){
     const bc=r.blockchain||{};
@@ -820,23 +816,24 @@ window.ensureJsBarcode = window.ensureJsBarcode || async function ensureJsBarcod
   });
 };
 
-window.getQRSources = window.getQRSources || async function getQRSources(rr){
+window.getQRSources = window.getQRSources || async function getQRSources(receta){
   const out = {};
   const mainNode  = document.querySelector('#qrMain  canvas, #qrMain  img');
   const chainNode = document.querySelector('#qrChain canvas, #qrChain img');
+
   if (mainNode)  out.main  = mainNode.tagName==='IMG' ? mainNode.src  : mainNode.toDataURL('image/png');
   if (chainNode) out.chain = chainNode.tagName==='IMG'? chainNode.src : chainNode.toDataURL('image/png');
 
-  // Regenera si faltara alguno
   if (!out.main && window.makeQRDataURLCompat){
-    const verURL = location.origin + '/public/ver-receta.html?id=' + encodeURIComponent(rr.id);
+    const verURL = `${location.origin}${location.pathname}?id=${encodeURIComponent(receta.id)}`;
     out.main = await window.makeQRDataURLCompat(verURL, 220);
   }
   if (!out.chain && window.makeQRDataURLCompat){
-    const blk = rr?.blockchain?.block ?? rr?.bloque ?? null;
+    const blk = receta?.blockchain?.block ?? receta?.bloque ?? null;
     if (blk){
-      const base = (typeof BC_BASE==='string' ? BC_BASE : 'https://kodrx-blockchain.onrender.com');
-      out.chain = await window.makeQRDataURLCompat(`${base}/verificar.html?id=${encodeURIComponent(blk)}`, 220);
+      out.chain = await window.makeQRDataURLCompat(
+        `${BC_BASE}/verificar.html?id=${encodeURIComponent(blk)}`, 220
+      );
     }
   }
   return out;
@@ -1113,8 +1110,7 @@ if (document.readyState === 'loading'){
 
 
 
-  /* FIX TEMP */ }
- /* FIX TEMP */ }
+  
 
 })();  // ← ÚNICO cierre de la IIFE
 
