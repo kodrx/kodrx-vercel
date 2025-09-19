@@ -4,31 +4,60 @@
   <meta charset="utf-8" />
   <title>KodRx · Verificar receta</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <script src="/componentes/header-landing.js" defer></script>
+  <!-- Tu header global puede ir aquí -->
+  <!-- <script src="/componentes/header-landing.js" defer></script> -->
+
   <style>
-    :root { --fg:#111827; --sub:#6b7280; --ok:#16a34a; --warn:#f59e0b; --bg:#f8fafc; }
-    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; margin:0; background:var(--bg); color:var(--fg); }
-    .wrap { max-width:920px; margin:24px auto; padding:16px; }
-    .card { background:#fff; border:1px solid #e5e7eb; border-radius:14px; padding:18px 20px; box-shadow:0 1px 2px rgba(0,0,0,.04); }
-    .row { display:grid; grid-template-columns: 1fr 320px; gap:18px; }
-    h1 { font-size:18px; margin:0 0 8px; }
-    .pill { display:inline-block; padding:6px 10px; border-radius:999px; font-weight:700; font-size:12px; }
-    .ok   { background:var(--ok); color:white; }
-    .warn { background:var(--warn); color:#111; }
-    .lbl  { color:var(--sub); font-weight:700; font-size:12px; margin-top:10px }
-    .val  { margin:2px 0 8px; white-space:pre-wrap }
-    ul    { margin:6px 0 0 18px }
-    .qrbox{ border:2px solid #0b5bd3; border-radius:12px; padding:10px; display:flex; align-items:center; justify-content:center; }
-    .muted{ color:var(--sub) }
-    .actions { display:flex; gap:10px; margin-top:12px }
-    .btn { appearance:none; border-radius:10px; border:1px solid #d1d5db; padding:8px 12px; background:#fff; cursor:pointer; }
-    .err { color:#b91c1c; font-weight:600; }
-    .foot{ margin-top:18px; text-align:center; color:#334155; font-weight:700; }
+    /* ===== Área aislada para que el header no rompa estilos ===== */
+    .verify { 
+      max-width: 920px; margin: 16px auto; padding: 0 12px;
+      isolation: isolate; /* corta contextos de apilado/herencias raras */
+    }
+    .verify * { box-sizing: border-box; }
+    .verify .card {
+      background: #fff; border:1px solid #e5e7eb; border-radius: 14px;
+      padding: 18px 18px 20px; box-shadow: 0 1px 2px rgba(0,0,0,.04);
+    }
+    .verify h1 {
+      margin: 0 0 8px;
+      font-weight: 700;
+      font-size: clamp(18px, 4.8vw, 22px);
+      line-height: 1.2;
+      color: #111827;
+    }
+    .verify .pill {
+      display: inline-block; padding: 6px 10px; border-radius: 999px;
+      font-weight: 700; font-size: 12px;
+    }
+    .verify .ok   { background:#16a34a; color:#fff; }
+    .verify .warn { background:#f59e0b; color:#111; }
+
+    .verify .lbl  { color:#6b7280; font-weight:700; font-size:12px; margin-top:12px }
+    .verify .val  { margin:4px 0 10px; white-space:pre-wrap }
+    .verify .muted{ color:#6b7280 }
+    .verify ul    { margin:6px 0 0 18px; padding:0 }
+    .verify li    { margin: 4px 0 }
+
+    .verify .row { display:grid; grid-template-columns: 1fr; gap: 16px; }
+    @media (min-width: 840px){
+      .verify .row { grid-template-columns: 1fr 1fr; }
+    }
+
+    .verify .idline { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+    .verify .idline .chip {
+      background:#f3f4f6; color:#111827; border:1px solid #e5e7eb;
+      border-radius: 8px; padding:6px 10px; font-size:12px;
+    }
+
+    /* Evita desbordes feos de textos largos */
+    .verify .break { overflow-wrap:anywhere; word-break:break-word; }
   </style>
 </head>
 <body>
-  <div class="wrap">
-    <div id="error" class="err" style="display:none"></div>
+  <main class="verify" id="verifyRoot">
+    <div id="error" class="card" style="display:none; border-color:#fecaca; background:#fff1f2; color:#b91c1c;">
+      ❌ No se pudo cargar la receta.
+    </div>
 
     <div class="card">
       <div style="display:flex; align-items:center; justify-content:space-between; gap:12px">
@@ -36,14 +65,15 @@
         <span id="badgeOrigen" class="pill warn">PENDIENTE</span>
       </div>
 
-      <div class="row" style="margin-top:10px">
-        <div>
+      <div class="row" style="margin-top:8px">
+        <!-- Columna izquierda: datos -->
+        <section>
           <div class="lbl">MÉDICO</div>
-          <div class="val"><span id="doctorNombre">—</span></div>
+          <div class="val break"><span id="doctorNombre">—</span></div>
           <div class="muted">Cédula: <span id="doctorCedula">—</span></div>
 
           <div class="lbl">PACIENTE</div>
-          <div class="val" id="pacienteNombre">—</div>
+          <div class="val break" id="pacienteNombre">—</div>
 
           <div class="lbl">MEDICAMENTOS</div>
           <div class="val">
@@ -51,48 +81,36 @@
           </div>
 
           <div class="lbl">OBSERVACIONES</div>
-          <div class="val" id="obsTexto">—</div>
+          <div class="val break" id="obsTexto">—</div>
 
           <div class="lbl">DIAGNÓSTICO</div>
-          <div class="val" id="diagTexto">—</div>
+          <div class="val break" id="diagTexto">—</div>
 
           <div class="lbl">ID / FECHA</div>
-          <div class="val"><span id="recetaId">ID: —</span> · <span id="fechaEmision">—</span></div>
-
-          <div class="actions">
-            <button class="btn" id="btnCopy">Copiar enlace</button>
-            <button class="btn" id="btnOpenBC">Abrir en Blockchain</button>
+          <div class="idline">
+            <span class="chip break" id="recetaId">ID: —</span>
+            <span class="chip" id="fechaEmision">—</span>
           </div>
-        </div>
+        </section>
 
-        <div>
-          <div class="lbl">QR (Receta)</div>
-          <div id="qrMain" class="qrbox" style="height:260px"></div>
-
-          <div class="lbl" style="margin-top:16px">QR (Blockchain)</div>
-          <div id="qrChain" class="qrbox" style="height:220px"></div>
-          <div class="muted" style="text-align:center;margin-top:6px">Bloque: <span id="blockNum">—</span></div>
-          <div class="muted" style="text-align:center;margin-top:4px" id="hashTexto">hash: —</div>
-        </div>
+        <!-- Columna derecha: puedes dejarla como “acerca de” u otra info -->
+        <aside>
+          <div class="lbl">Estado</div>
+          <p class="muted" style="margin:6px 0 0">
+            Esta es la vista pública de la receta. El sello de blockchain indica si ya fue anclada
+            en la cadena. Para más detalles, consulta al emisor.
+          </p>
+        </aside>
       </div>
-
-      <div class="foot">Creada con KodRx. Plataforma digital de recetas verificadas con trazabilidad tecnológica.</div>
     </div>
-  </div>
-
-  <!-- QRCode.js (clásico) -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  </main>
 
   <script>
   ;(async () => {
-    // ===== Config =====
-    const BC_BASE       = 'https://kodrx-blockchain.onrender.com';
-    const QR_RECETA_URL = 'https://kodrx.app/verificar.html'; // <- apunta aquí tu QR principal
-
-    // ===== Utils =====
-    const sleep = (ms)=>new Promise(r=>setTimeout(r,ms));
+    /* ===== Utils ===== */
     const $ = (id)=> document.getElementById(id);
     const set = (id, v)=> { const el=$(id); if(el) el.textContent = String(v ?? '—'); };
+    const showErr = (msg)=>{ const e=$('error'); e.textContent = '❌ ' + msg; e.style.display='block'; };
 
     function normalize(raw0){
       const raw = raw0 || {};
@@ -100,11 +118,11 @@
       const bloque = Number.isFinite(raw.bloque) ? raw.bloque : (bc.block ?? null);
       const hash   = bc.hash ?? raw.hash ?? null;
       const status = bc.status || (bloque ? 'ok' : (hash ? 'simulado' : 'pendiente'));
-      const nombrePaciente = raw.nombrePaciente ?? raw.pacienteNombre ?? raw.paciente?.nombre ?? raw.paciente ?? '—';
       const medico = raw.medico || {
         nombre: raw.medicoNombre, genero: raw.medicoGenero, cedula: raw.medicoCedula,
         especialidad: raw.medicoEspecialidad, telefono: raw.medicoTelefono, direccion: raw.medicoDomicilio
       };
+      const nombrePaciente = raw.nombrePaciente ?? raw.pacienteNombre ?? raw.paciente?.nombre ?? raw.paciente ?? '—';
       return {
         ...raw,
         nombrePaciente,
@@ -115,27 +133,13 @@
       };
     }
 
-    function badge(r){
+    function paintBadge(r){
       const bc=r.blockchain||{};
       const hasBlock = r.bloque!=null || bc.block!=null;
-      if (bc.status==='ok' || hasBlock) return {txt:'SELLADO EN BLOCKCHAIN', cls:'pill ok'};
-      if (bc.status==='simulado' || r.hash) return {txt:'SELLADO SIMULADO', cls:'pill warn'};
-      return {txt:'PENDIENTE', cls:'pill warn'};
-    }
-
-    async function ensureQRCode(){
-      if (window.QRCode) return;
-      await new Promise((res,rej)=>{
-        const s=document.createElement('script');
-        s.src='https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';
-        s.onload=res; s.onerror=rej; document.head.appendChild(s);
-      });
-    }
-
-    function makeQR(el, text, size){
-      if (!el) return;
-      el.innerHTML = '';
-      new QRCode(el, { text, width:size, height:size, correctLevel: QRCode.CorrectLevel.M });
+      const pill = $('badgeOrigen'); if (!pill) return;
+      if (bc.status==='ok' || hasBlock){ pill.textContent='SELLADO EN BLOCKCHAIN'; pill.className='pill ok'; }
+      else if (bc.status==='simulado' || r.hash){ pill.textContent='SELLADO SIMULADO'; pill.className='pill warn'; }
+      else { pill.textContent='PENDIENTE'; pill.className='pill warn'; }
     }
 
     async function hydrateById(id){
@@ -146,15 +150,25 @@
     }
 
     function paint(r){
-      // Médico / Paciente / Textos
       const pref = (n,g)=> (!n?'—': ((String(g||'').toLowerCase().startsWith('f')?'Dra. ':'Dr. ')+n));
       set('doctorNombre', pref(r.medico?.nombre ?? r.medicoNombre, r.medico?.genero ?? r.medicoGenero));
       set('doctorCedula', r.medico?.cedula ?? r.medicoCedula);
       set('pacienteNombre', r.paciente?.nombre ?? r.nombrePaciente);
+
+      const meds = Array.isArray(r.medicamentos) ? r.medicamentos : [];
+      const ul = $('medsUl');
+      if (ul){
+        ul.innerHTML = meds.length ? '' : '<li>—</li>';
+        meds.forEach(m => {
+          const li=document.createElement('li');
+          li.textContent = `${m.nombre} — Dosis: ${m.dosis} — Duración: ${m.duracion}`;
+          ul.appendChild(li);
+        });
+      }
+
       set('obsTexto', r.observaciones);
       set('diagTexto', r.diagnostico);
       set('recetaId', 'ID: ' + (r.id || '—'));
-
       try{
         let ts=r.timestamp;
         if (ts && typeof ts.toDate==='function') ts=ts.toDate();
@@ -163,70 +177,18 @@
         set('fechaEmision', ts ? ts.toLocaleString('es-MX',{year:'numeric',month:'long',day:'numeric',hour:'2-digit',minute:'2-digit'}) : '—');
       }catch{ set('fechaEmision','—'); }
 
-      // Lista de medicamentos
-      const ul = $('medsUl');
-      if (ul){
-        ul.innerHTML = '';
-        const meds = Array.isArray(r.medicamentos) ? r.medicamentos : [];
-        if (!meds.length) ul.innerHTML = '<li>—</li>';
-        else meds.forEach((m,i)=>{
-          const li=document.createElement('li');
-          li.textContent = `${m.nombre} — Dosis: ${m.dosis} — Duración: ${m.duracion}`;
-          ul.appendChild(li);
-        });
-      }
-
-      // Badge
-      const b = badge(r);
-      const pill = $('badgeOrigen'); if (pill){ pill.textContent=b.txt; pill.className = b.cls; }
-
-      // QRs
-      const recetaURL = `${QR_RECETA_URL}?id=${encodeURIComponent(r.id)}`;
-      makeQR($('qrMain'), recetaURL, 260);
-
-      const block = r.blockchain?.block ?? r.bloque ?? null;
-      if (block){
-        const chainURL = `${BC_BASE}/verificar.html?id=${encodeURIComponent(block)}`;
-        makeQR($('qrChain'), chainURL, 220);
-        set('blockNum', block);
-      } else {
-        $('qrChain')?.replaceChildren(document.createTextNode('—'));
-        set('blockNum', '—');
-      }
-      set('hashTexto', r.hash ? `hash (BC): ${r.hash}` : 'hash: —');
-
-      // Botones
-      $('btnCopy')?.addEventListener('click', async ()=>{
-        try{
-          await navigator.clipboard.writeText(location.href);
-          $('btnCopy').textContent='Copiado ✓'; setTimeout(()=>$('btnCopy').textContent='Copiar enlace', 1200);
-        }catch{}
-      });
-      $('btnOpenBC')?.addEventListener('click', ()=>{
-        const blk = r.blockchain?.block ?? r.bloque ?? '';
-        if (!blk) return alert('Esta receta aún no está sellada en blockchain.');
-        window.open(`${BC_BASE}/verificar.html?id=${encodeURIComponent(blk)}`,'_blank');
-      }, { once:true });
+      paintBadge(r);
     }
 
-    // ===== Boot =====
+    /* ===== Boot ===== */
     const id = new URLSearchParams(location.search).get('id');
-    if (!id){
-      $('error').style.display='block';
-      $('error').textContent = '❌ Falta id de receta en la URL.';
-      return;
-    }
+    if (!id) return showErr('Falta id de receta en la URL.');
 
     const raw = await hydrateById(id);
-    if (!raw){
-      $('error').style.display='block';
-      $('error').textContent = '❌ Receta no encontrada o no disponible.';
-      return;
-    }
+    if (!raw) return showErr('Receta no encontrada o no disponible.');
 
     const r = normalize(raw);
-    window.RECETA_ACTUAL = r; // por si necesitas desde consola
-    await ensureQRCode();
+    window.RECETA_ACTUAL = r;  // por si quieres inspeccionar en consola
     paint(r);
   })();
   </script>
