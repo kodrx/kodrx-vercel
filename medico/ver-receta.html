@@ -229,6 +229,22 @@ button{appearance:none;border:0;border-radius:12px;padding:10px 14px;font-weight
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script>
 ;(() => {
+  const DEBUG = false;                     // ← pon true si quieres ver todo de nuevo
+  if (!DEBUG) {
+    const DROP = ['[paint]','[panel]','[ver]','[bc]','[sanity]','[submit-fixer]','[panel][hotfix]'];
+    for (const m of ['log','info','debug','warn']) {
+      const orig = console[m];
+      console[m] = function(...args){
+        const s = typeof args[0] === 'string' ? args[0] : '';
+        if (DROP.some(p => s.startsWith(p))) return;  // silencia mensajes conocidos
+        return orig.apply(this, args);
+      };
+    }
+  }
+})();
+</script>
+<script>
+;(() => {
   'use strict';
 
   // ===== Config =====
