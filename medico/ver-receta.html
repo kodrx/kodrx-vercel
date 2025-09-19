@@ -425,10 +425,22 @@ const QR_RECETA_URL = (id) => `https://kodrx.app/verificar.html?id=${encodeURICo
   // ===== Render principal =====
   async function renderOnce(){
     for (let i=0;i<100;i++){ if (window.RECETA_ACTUAL) break; await sleep(60); }
+    
+window.RXPROG?.set(10,'Renderizando…');
+    
     await hydrateIfNeeded();
+
+ window.RXPROG?.step('Hidratando datos…', 25);    
+
+    
     const r0 = window.RECETA_ACTUAL; if (!r0) return;
     const r  = window.RECETA_ACTUAL = normalize(r0);
 
+     window.RXPROG?.step('Normalizando…', 45);
+
+    
+
+    
     // Médico
     setText('doctorNombre', r.medico?.nombre ? ((String(r.medico?.genero||'').toLowerCase().startsWith('f')?'Dra. ':'Dr. ')+r.medico.nombre) :
       (r.medicoNombre ? ((String(r.medicoGenero||'').toLowerCase().startsWith('f')?'Dra. ':'Dr. ')+r.medicoNombre) : '—'));
@@ -475,13 +487,18 @@ const QR_RECETA_URL = (id) => `https://kodrx.app/verificar.html?id=${encodeURICo
     updateBadgeFromReceta(r);
 
     // Libs + QRs
-    await ensureLibs();
 
+    window.RXPROG?.step('Cargando librerías…', 55);
+    
+    await ensureLibs();
+    
+window.RXPROG?.step('QR listo…', 70);
     // QR principal
     const host = document.getElementById('qrMain');
     if (host && !host.querySelector('canvas,img')){
     const verURL = QR_RECETA_URL(r.id);
       makeQR(host, verURL, 260);
+       window.RXPROG?.step('Códigos de receta…', 75);
     }
 
     // Código de barras
@@ -495,12 +512,14 @@ const QR_RECETA_URL = (id) => `https://kodrx.app/verificar.html?id=${encodeURICo
         const ctx=canvas.getContext('2d'); ctx.setTransform(dpr,0,0,dpr,0,0);
         JsBarcode(canvas, String(r.id||''), { format:'CODE128', width:2, height:40, margin:4, displayValue:false });
         if (label) label.textContent = r.id || '—';
+        window.RXPROG?.step('Código de barras…', 82);
       }catch(e){ if (label) label.textContent = r.id || '—'; }
     }
 
     // QR blockchain + leyenda
     const blk = r?.blockchain?.block ?? r?.bloque ?? null;
     if (blk) await setChainQR(blk);
+    window.RXPROG?.step('Blockchain…', 88);
     {
       const legendHolder = document.querySelector('.qr-legend .sub');
       const text='Para consultar bloque visitar kodrx.app';
@@ -515,6 +534,7 @@ const QR_RECETA_URL = (id) => `https://kodrx.app/verificar.html?id=${encodeURICo
     document.getElementById('verifyScope')?.remove();
 
     console.log('[ver] render ok');
+    window.RXPROG?.done();
   }
 
   // ===== PDF / Botones =====
