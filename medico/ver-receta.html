@@ -816,7 +816,117 @@ window.generarPDF = async function generarPDF(rIn, qrsIn, { mode = 'save' } = {}
       btnB.__b=true;
     }
   }
+if (window.RXPROG) return; // idempotente
+  const PR = {
+    pct: 0, el: null, bar: null, label: null, shown: false,
+    mount(){
+      if (this.el) return;
+      const box = document.createElement('div');
+      box.className = 'rx-progress';
+      box.innerHTML = `
+        <div class="rx-title">Cargando receta… <span class="rx-per">0%</span></div>
+        <div class="rx-bar"><i style="width:0%"></i></div>
+        <div class="rx-sub">Iniciando…</div>
+      `;
+      Object.assign(box.style, {
+        position:'fixed', top:'12px', right:'12px', zIndex:99999,
+        background:'rgba(17,24,39,.92)', color:'#fff', padding:'10px 12px',
+        borderRadius:'12px', width:'260px', boxShadow:'0 10px 25px rgba(0,0,0,.25)',
+        fontFamily:'system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif',
+        fontSize:'13px', lineHeight:'1.25'
+      });
+      const title = box.querySelector('.rx-title');
+      title.style.fontWeight='600';
+      const per = title.querySelector('.rx-per'); per.style.opacity='.85';
+      const bar = box.querySelector('.rx-bar');
+      Object.assign(bar.style, {height:'6px', background:'rgba(255,255,255,.15)', borderRadius:'999px', overflow:'hidden', marginTop:'8px'});
+      const fill = bar.querySelector('i');
+      Object.assign(fill.style, {
+        display:'block', height:'100%', width:'0%',
+        background:'linear-gradient(90deg,#60a5fa,#34d399)', transition:'width .25s ease'
+      });
+      const sub = box.querySelector('.rx-sub'); sub.style.opacity='.9'; sub.style.marginTop='6px';
+      this.el = box; this.bar = fill; this.label = sub; this.perEl = per;
+      document.body.appendChild(box);
+      box.hidden = true;
+    },
+    show(){ this.mount(); if (!this.shown){ this.el.hidden = false; this.shown = true; } },
+    hide(){ if (this.el){ this.el.hidden = true; this.shown = false; } },
+    set(p,label){
+      this.show();
+      this.pct = Math.max(0, Math.min(100, Math.round(p)));
+      if (this.bar) this.bar.style.width = this.pct + '%';
+      if (this.perEl) this.perEl.textContent = this.pct + '%';
+      if (label && this.label) this.label.textContent = label;
+    },
+    step(label, p){ this.set(p ?? (this.pct+5), label); },
+    done(){ this.set(100,'Listo'); setTimeout(()=>this.hide(), 700); },
+    error(msg){ this.set(this.pct||5, 'Error: '+(msg||'desconocido')); this.el && (this.el.style.background='#7f1d1d'); }
+  };
+  window.RXPROG = PR;
 
+  // ====== Instrumentación no intrusiva ======
+  function waitFor(name, cb, tries=60){
+    const id = setInterval(()=>{
+      const fn = window[name];
+      if (typeof fn === 'function' && !fn.__rxprog_wrapped){
+        clearInterval(id);
+        fn.__rxprog_wrapped = true;
+        cb(fn);
+      }
+      if (--tries<=0) clearInterval(id);
+    }, 150);
+  }
+  function hookAsync(name, label, pWhenCalled){
+    waitFor(name, (orig)=>{
+      window[name] = async function(...args){
+        PR.step(label, pWhenCalled);
+        try { return await orig.apply(this, args); }
+        catch(e){ PR.error(e?.message||name+' falló'); throw e; }
+      };
+    });
+  }
+  function hookSync(name, label, pWhenCalled){
+    waitFor(name, (orig)=>{
+      window[name] = function(...args){
+        PR.step(label, pWhenCalled);
+        try { return orig.apply(this, args); }
+        catch(e){ PR.error(e?.message||name+' falló'); throw e; }
+      };
+    });
+  }
+
+  // Mapa de pasos (ajusta % si quieres)
+  hookAsync('hydrateIfNeeded',    'Hidratando datos…',        25);
+  hookSync ('normalize',          'Normalizando…',            45);
+  hookAsync('ensureLibs',         'Cargando librerías…',      60);
+  hookAsync('ensureQRCode',       'QR listo…',                70);
+  hookAsync('setChainQR',         'QR blockchain…',           88);
+  hookAsync('sellIfPending',      'Sellando en blockchain…',  92);
+  hookSync ('updateBadgeFromReceta','Actualizando estado…',   96);
+
+  // Envolver renderOnce/pintado para arrancar y cerrar
+  waitFor('renderOnce', (orig)=>{
+    window.renderOnce = async function(...a){
+      PR.set(Math.max(PR.pct, 10), 'Renderizando…');
+      const out = await orig.apply(this,a);
+      PR.step('Campos listos', 55);
+      return out;
+    };
+    // por si tu flujo llama renderOnce tarde:
+    PR.set(5, 'Iniciando…');
+  });
+  waitFor('paint', (orig)=>{
+    window.paint = function(...a){
+      const out = orig.apply(this,a);
+      PR.step('Finalizando…', 98);
+      setTimeout(()=>PR.done(), 500);
+      return out;
+    };
+  });
+
+  // Failsafe: si en 5s ya hay receta pero no cerró, cierra.
+  setTimeout(()=>{ if (window.RECETA_ACTUAL && PR.pct<90) PR.done(); }, 5000);
 // ===== Boot =====
   function start(){
     try{ typeof renderOnce==='function' && renderOnce().catch?.(console.error); }catch(e){}
