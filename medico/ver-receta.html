@@ -240,7 +240,7 @@ button{appearance:none;border:0;border-radius:12px;padding:10px 14px;font-weight
     const el = typeof selOrEl==='string' ? document.querySelector(selOrEl) : selOrEl;
     if (!el) return; el.textContent = (val ?? '—');
   };
-
+const QR_RECETA_URL = (id) => `https://kodrx.app/verificar.html?id=${encodeURIComponent(id)}`;
   // Normaliza la receta (soporta legacy)
   window.normalize = function normalize(raw0){
   const raw = raw0 || {};
