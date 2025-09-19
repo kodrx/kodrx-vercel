@@ -934,7 +934,7 @@ if (window.RXPROG) return; // idempotente
 
   // Mapa de pasos (ajusta % si quieres)
   hookAsync('hydrateIfNeeded',    'Hidratando datos…',        25);
-  hookSync ('normalize',          'Normalizando…',            45);
+  hookSync ('normalized',          'Normalizando…',            45);
   hookAsync('ensureLibs',         'Cargando librerías…',      60);
   hookAsync('ensureQRCode',       'QR listo…',                70);
   hookAsync('setChainQR',         'QR blockchain…',           88);
