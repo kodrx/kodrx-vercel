@@ -502,39 +502,296 @@ button{appearance:none;border:0;border-radius:12px;padding:10px 14px;font-weight
   }
 
   // ===== PDF / Botones =====
-  async function generarPDF(r, qrs, {mode='save'}={}){
-    const jsPDF = await ensureJsPDF();
-    const { jsPDF:Cls } = window.jspdf;
-    const doc = new Cls({ unit:'pt', format:'letter' });
-    const W = doc.internal.pageSize.getWidth();
-    let y=50;
-    doc.setFont('helvetica','bold'); doc.setFontSize(14);
-    doc.text('KodRx — Receta médica digital', 40, y); y+=22;
-    doc.setFont('helvetica','normal'); doc.setFontSize(11);
-    doc.text(`Paciente: ${r.nombrePaciente||'—'}`, 40, y); y+=16;
-    doc.text(`ID: ${r.id||'—'}`, 40, y); y+=16;
-    doc.text(`Médico: ${r.medico?.nombre||r.medicoNombre||'—'}`, 40, y); y+=16;
-    doc.text(`Cédula: ${r.medico?.cedula||r.medicoCedula||'—'}`, 40, y); y+=20;
-    const wrap=(t,w)=>doc.splitTextToSize(String(t??'—'),w);
-    doc.setFont('helvetica','bold'); doc.text('Observaciones:', 40, y); y+=14;
-    doc.setFont('helvetica','normal'); doc.text(wrap(r.observaciones, W-80), 40, y); y+=40;
-    doc.setFont('helvetica','bold'); doc.text('Diagnóstico:', 40, y); y+=14;
-    doc.setFont('helvetica','normal'); doc.text(wrap(r.diagnostico, W-80), 40, y); y+=40;
-    const meds = Array.isArray(r.medicamentos)?r.medicamentos:[];
-    doc.setFont('helvetica','bold'); doc.text('Medicamentos:', 40, y); y+=14;
-    doc.setFont('helvetica','normal');
-    const medsText = meds.length ? meds.map((m,i)=>`${i+1}. ${m.nombre} — ${m.dosis} — ${m.duracion}`).join('\n') : '—';
-    doc.text(wrap(medsText, W-80), 40, y); y+=60;
-    if (qrs?.main){ try{ doc.addImage(qrs.main,'PNG', W-40-160, 80, 160,160, undefined,'FAST'); }catch{} }
-    if (qrs?.chain){ try{ doc.addImage(qrs.chain,'PNG', W-40-120, 260,120,120, undefined,'FAST'); }catch{} }
-    doc.setFont('helvetica','bold'); doc.setFontSize(10);
-    doc.text('Creada con KodRx. Tecnología que verifica, salud que protege.', W/2, 780, {align:'center'});
-    const filename=`receta_${r.id||'sin-id'}.pdf`;
-    if (mode==='print'){ try{ doc.autoPrint(); doc.output('dataurlnewwindow'); } catch{ doc.save(filename); } }
-    else if (mode==='open'){ const url=doc.output('bloburl'); window.open(url,'_blank'); }
-    else { doc.save(filename); }
+window.generarPDF = async function generarPDF(rIn, qrsIn, { mode = 'save' } = {}) {
+  // 1) jsPDF
+  const jsPDF = await (window.ensureJsPDF
+    ? window.ensureJsPDF()
+    : (async () => {
+        if (window.jspdf?.jsPDF) return window.jspdf.jsPDF;
+        await new Promise((res, rej) => {
+          const s = document.createElement('script');
+          s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+          s.onload = res; s.onerror = rej; document.head.appendChild(s);
+        });
+        return window.jspdf.jsPDF;
+      })()
+  );
+  const { jsPDF: Cls } = window.jspdf || {};
+  if (!Cls) { alert('No se pudo cargar jsPDF'); return; }
+
+  // 2) Adaptador (mapea tu objeto a una forma común)
+  const adapt = (x={}) => {
+    const medico = {
+      nombre:       x.medico?.nombre ?? x.medicoNombre ?? '—',
+      genero:       x.medico?.genero ?? x.medicoGenero ?? '',
+      cedula:       x.medico?.cedula ?? x.medicoCedula ?? '—',
+      especialidad: x.medico?.especialidad ?? x.medicoEspecialidad ?? 'General',
+      telefono:     x.medico?.telefono ?? x.medicoTelefono ?? '',
+      direccion:    x.medico?.direccion ?? x.medicoDomicilio ?? ''
+    };
+    const paciente = {
+      nombre: x.paciente?.nombre ?? x.nombrePaciente ?? x.pacienteNombre ?? '—',
+      edad:   x.paciente?.edad   ?? x.edad ?? '—',
+      sexo:   x.paciente?.sexo   ?? x.sexo ?? '—',
+      peso:   x.paciente?.peso   ?? x.peso ?? '—',
+      talla:  x.paciente?.talla  ?? x.talla ?? '—',
+      temperatura: x.paciente?.temperatura ?? x.temperatura ?? '—',
+      presion:     x.paciente?.presion     ?? x.presion ?? '—',
+      imc:         x.paciente?.imc         ?? x.imc ?? '—',
+    };
+    const bloque = (x.blockchain?.block ?? x.bloque ?? null);
+    const hash   = x.hash ?? x.blockchain?.hash ?? null;
+    return { ...x, medico, paciente, bloque, hash };
+  };
+  const r = adapt(rIn || {});
+
+  // 3) QRs: usa los que ya existen o regénéralos si faltan
+  const qrs = (qrsIn && (qrsIn.main || qrsIn.chain))
+    ? qrsIn
+    : (window.QRS || (window.getQRSources ? await window.getQRSources(r) : {}));
+
+  // 4) Doc y layout base
+  const doc = new Cls({ unit: 'pt', format: 'letter', compress: true }); // 612 x 792
+  const W = doc.internal.pageSize.getWidth();
+  const H = doc.internal.pageSize.getHeight();
+
+  const Mx = 40, gutter = 16, CW = W - 2*Mx, colW = (CW - gutter)/2;
+  const leftX = Mx, rightX = Mx + colW + gutter;
+  const footerH = 52, My = 50, availYMax = H - My - footerH - 10;
+
+  const COLORS = {
+    panelFill:   [248,250,252],
+    panelStroke: [224,231,240],
+    text:        [17,24,39],
+    sub:         [55,65,81],
+    label:       [107,114,128],
+    brand:       [11,91,211]
+  };
+  const FONT = 'helvetica';
+  doc.setFont(FONT, 'normal');
+
+  // 5) Utils de dibujo
+  const prefixMed = (nombre, genero) => {
+    if (!nombre) return '—';
+    const g = String(genero||'').toLowerCase();
+    return (g.startsWith('f') ? 'Dra. ' : 'Dr. ') + nombre;
+  };
+  const wrap  = (txt, w) => doc.splitTextToSize(String(txt ?? '—'), w);
+  const linesH = 11;
+
+  function header() {
+    const headY = 18, headH = 50;
+    doc.setFillColor(240,245,255);
+    doc.roundedRect(18, headY, W-36, headH, 9, 9, 'F');
+    doc.setTextColor(11,27,43); doc.setFont(FONT,'bold'); doc.setFontSize(13);
+    doc.text('KodRx — Receta médica digital', Mx, headY+30);
+    doc.setFont(FONT, 'normal');
+    return headY + headH + 12;
+  }
+  function footer() {
+    doc.setFillColor(...COLORS.brand);
+    doc.rect(18, H-18-footerH, W-36, footerH, 'F');
+    doc.setTextColor(255,255,255);
+    doc.setFont(FONT, 'bold'); doc.setFontSize(10.5);
+    doc.text('Creada con KodRx. Tecnología que verifica, salud que protege.', W/2, H-22, { align: 'center' });
+  }
+  function sectionBox(x, y, w, contentH, title) {
+    const padX = 10, padY = 10, titleH = 18, boxH = contentH + padY*2 + titleH;
+    const yClamped = Math.min(y, availYMax - boxH);
+    doc.setFillColor(...COLORS.panelFill);
+    doc.setDrawColor(...COLORS.panelStroke); doc.setLineWidth(0.8);
+    doc.roundedRect(x, yClamped, w, boxH, 8, 8, 'FD');
+    doc.setTextColor(...COLORS.label); doc.setFont(FONT,'bold'); doc.setFontSize(10);
+    doc.text(title, x + padX, yClamped + 14);
+    doc.setFont(FONT,'normal'); doc.setFontSize(9.5); doc.setTextColor(...COLORS.text);
+    return { cx: x+padX, cy: yClamped + 14 + padY, ny: yClamped + boxH + 10, innerH: contentH };
+  }
+  function drawClamp(x, y, maxW, maxH, text, lineH = linesH) {
+    const lines = wrap(text, maxW);
+    let used = 0, lastY = y;
+    for (let i = 0; i < lines.length; i++) {
+      if (used + lineH > maxH) {
+        if (i > 0) {
+          const prev = lines[i-1];
+          doc.text(prev.length > 1 ? prev.slice(0, prev.length - 1) + '…' : prev + '…', x, lastY);
+        }
+        return;
+      }
+      lastY = y + used + lineH;
+      doc.text(lines[i], x, lastY);
+      used += lineH;
+    }
+  }
+  function fechaStr(ts) {
+    try {
+      if (ts && typeof ts.toDate === 'function') ts = ts.toDate();
+      else if (ts && typeof ts.seconds === 'number') ts = new Date(ts.seconds*1000 + Math.floor((ts.nanoseconds||0)/1e6));
+      else if (!(ts instanceof Date)) ts = new Date(ts);
+      return ts.toLocaleString('es-MX', { year:'numeric', month:'long', day:'numeric', hour:'2-digit', minute:'2-digit' });
+    } catch { return ''; }
+  }
+  const medsText = (list) =>
+    (Array.isArray(list) && list.length)
+      ? list.map((m,i)=>`${i+1}. ${m.nombre}\n   Dosis: ${m.dosis}\n   Duración: ${m.duracion}`).join('\n\n')
+      : '—';
+  const blockNumber = (x) => {
+    if (x?.bloque != null) return String(x.bloque);
+    if (x?.blockchain?.block != null) return String(x.blockchain.block);
+    try {
+      const u = new URL(x.urlBlockchain);
+      return u.searchParams.get('id') || u.searchParams.get('block') || '—';
+    } catch { return '—'; }
+  };
+
+  // 6) Composición
+  const startY = header();
+  let yL = startY, yR = startY;
+
+  // MÉDICO
+  { const Hfixed = 90; const s = sectionBox(leftX, yL, colW, Hfixed, 'MÉDICO');
+    doc.setFont(FONT,'bold'); doc.setFontSize(11.5);
+    drawClamp(s.cx, s.cy, colW-16, 26, prefixMed(r.medico.nombre, r.medico.genero), 13);
+    let cy = s.cy + 26 + 6;
+    doc.setFont(FONT,'normal'); doc.setFontSize(9.5); doc.setTextColor(...COLORS.sub);
+    const info =
+      `Cédula: ${r.medico.cedula || '—'}    Especialidad: ${r.medico.especialidad || '—'}\n` +
+      `Tel: ${r.medico.telefono || '—'}\n` +
+      `Dirección: ${r.medico.direccion || '—'}`;
+    drawClamp(s.cx, cy, colW-16, Hfixed - (cy - s.cy), info, 13);
+    yL = s.ny;
   }
 
+  // PACIENTE
+  { const Hfixed = 100; const s = sectionBox(leftX, yL, colW, Hfixed, 'PACIENTE');
+    doc.setFont(FONT,'bold'); doc.setFontSize(11.5);
+    drawClamp(s.cx, s.cy, colW-16, 26, String(r.paciente.nombre || '—'), 13);
+    let cy = s.cy + 26 + 6;
+    doc.setFont(FONT,'normal'); doc.setFontSize(9.5); doc.setTextColor(...COLORS.sub);
+    doc.text(fechaStr(r.timestamp), s.cx, cy); cy += 13;
+    doc.text(`ID: ${r.id || '—'}`, s.cx, cy); cy += 16;
+    const lv = (x,y,lbl,val)=>{ doc.setFont(FONT,'bold'); doc.setTextColor(...COLORS.sub); doc.text(lbl, x, y);
+      const w = doc.getTextWidth(lbl); doc.setFont(FONT,'normal'); doc.setTextColor(...COLORS.text); doc.text(String(val ?? '—'), x+w+4, y); };
+    lv(s.cx, cy, 'Edad:', r.paciente.edad);   lv(s.cx+120, cy, 'Sexo:', r.paciente.sexo);   cy += 13;
+    lv(s.cx, cy, 'Peso:', r.paciente.peso);   lv(s.cx+120, cy, 'Talla:', r.paciente.talla); cy += 13;
+    lv(s.cx, cy, 'Temp:', r.paciente.temperatura); lv(s.cx+120, cy, 'PA:', r.paciente.presion); cy += 13;
+    lv(s.cx, cy, 'IMC:',  r.paciente.imc);
+    yL = s.ny;
+  }
+
+  // OBSERVACIONES + DIAGNÓSTICO (con separador)
+  { const lineH = linesH, SEP = 35, MIN_OBS = 60, MIN_DX = 60;
+    const leftSpace   = Math.max(0, availYMax - yL);
+    const obsWrapped  = doc.splitTextToSize(String(r.observaciones ?? '—'), colW-16);
+    const idealObsH   = Math.max(MIN_OBS, obsWrapped.length*lineH + 6);
+    const obsMaxH     = Math.max(MIN_OBS, leftSpace - (SEP + MIN_DX));
+    const obsH        = Math.min(idealObsH, obsMaxH);
+
+    const sObs = sectionBox(leftX, yL, colW, obsH, 'OBSERVACIONES');
+    doc.setFont(FONT,'normal'); doc.setFontSize(9.5); doc.setTextColor(...COLORS.text);
+    drawClamp(sObs.cx, sObs.cy, colW-16, sObs.innerH, r.observaciones, lineH);
+
+    const gapY = sObs.ny - 2, midY = gapY + SEP/2;
+    doc.setFillColor(255,255,255); doc.setDrawColor(255,255,255);
+    doc.rect(leftX, gapY, colW, SEP, 'F');
+    doc.setDrawColor(...COLORS.panelStroke); doc.setLineWidth(0.8);
+    doc.line(leftX+6, midY, leftX+colW-6, midY);
+    yL = gapY + SEP + 6;
+
+    const dxH  = Math.max(MIN_DX, availYMax - yL);
+    const sDx = sectionBox(leftX, yL, colW, dxH, 'DIAGNÓSTICO');
+    drawClamp(sDx.cx, sDx.cy, colW-16, sDx.innerH, r.diagnostico, lineH);
+    yL = sDx.ny;
+  }
+
+  // DERECHA: MEDICAMENTOS
+  { const lineH = linesH;
+    const medsTxt = medsText(r.medicamentos);
+    const tmp = wrap(medsTxt, colW-16);
+    const need = Math.max(90, tmp.length * lineH + 6);
+    const s = sectionBox(rightX, yR, colW, need, 'MEDICAMENTOS');
+    drawClamp(s.cx, s.cy, colW-16, s.innerH, medsTxt, lineH);
+    yR = s.ny;
+  }
+
+  // QR de Receta (tarjeta centrada)
+  { const box=120, pad=10; let y = yR; const yMax = availYMax - (box + 20);
+    y = Math.min(Math.max(y, startY), yMax);
+    const xQR = rightX + (colW - box)/2;
+    if (qrs?.main) {
+      doc.setDrawColor(...COLORS.brand); doc.setLineWidth(2.2);
+      doc.roundedRect(xQR, y, box, box, 10, 10, 'S');
+      doc.addImage(qrs.main, 'PNG', xQR+pad, y+pad, box-2*pad, box-2*pad, undefined, 'FAST');
+      doc.setTextColor(...COLORS.brand); doc.setFont(FONT,'bold'); doc.setFontSize(9.5);
+      doc.text('Receta', xQR + box/2, y + box + 12, { align: 'center' });
+      yR = y + box + 20;
+    }
+  }
+
+  // Código de barras (ID)
+  { await (window.ensureJsBarcode ? window.ensureJsBarcode() : (async () => {
+      if (window.JsBarcode) return;
+      await new Promise((res, rej) => {
+        const s = document.createElement('script');
+        s.src = 'https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js';
+        s.onload = res; s.onerror = rej; document.head.appendChild(s);
+      });
+    })());
+    if (window.JsBarcode) {
+      const canvas = document.createElement('canvas'); canvas.width = 300; canvas.height = 40;
+      if (r.id) window.JsBarcode(canvas, String(r.id), { format:'CODE128', width:2, height:32, margin:4, displayValue:false });
+      const barUrl = canvas.toDataURL('image/png');
+
+      let imgW = Math.min(colW-20, 300), imgH = 40*(imgW/300);
+      let x = rightX + (colW - imgW)/2; let y = yR + 6; let boxH = imgH + 26;
+      for (const f of [0.95, 0.9, 0.85]) { if (y + boxH <= availYMax) break; imgW *= f; imgH *= f; boxH = imgH + 26; x = rightX + (colW-imgW)/2; }
+      if (y + boxH <= availYMax) {
+        doc.setFillColor(248,250,252); doc.setDrawColor(224,231,240); doc.setLineWidth(0.8);
+        doc.roundedRect(rightX, y, colW, boxH, 8, 8, 'FD');
+        doc.addImage(barUrl, 'PNG', x, y+8, imgW, imgH, undefined, 'FAST');
+        doc.setFont(FONT,'bold'); doc.setFontSize(9); doc.setTextColor(55,65,81);
+        doc.text('Código de barras (ID)', rightX + colW/2, y + imgH + 20, { align:'center' });
+        yR = y + boxH + 10;
+      }
+    }
+  }
+
+  // HASH (real o simulado)
+  { const s = sectionBox(rightX, yR, colW, 50, 'HASH');
+    doc.setFont(FONT,'normal'); doc.setFontSize(9.5); doc.setTextColor(...COLORS.sub);
+    const hashLabel = r.hash ? `hash (BC): ${r.hash}` : 'hash (local): —';
+    drawClamp(s.cx, s.cy, colW-16, s.innerH, hashLabel, 11);
+    yR = s.ny;
+  }
+
+  // QR Blockchain mini + bloque
+  { const mini = 90, rectW = mini, rectH = mini; const qrX = rightX + colW - rectW;
+    let qrY = Math.max(yL, yR) + 6; if (qrY + rectH + 38 > availYMax) qrY = availYMax - rectH - 38;
+    if (qrs?.chain) {
+      doc.setDrawColor(...COLORS.brand); doc.setLineWidth(2.0);
+      doc.roundedRect(qrX, qrY, rectW, rectH, 8, 8, 'S');
+      doc.addImage(qrs.chain, 'PNG', qrX+8, qrY+8, rectW-16, rectH-16, undefined, 'FAST');
+      doc.setTextColor(...COLORS.brand); doc.setFont(FONT,'bold'); doc.setFontSize(9);
+      doc.text('Blockchain', qrX + rectW/2, qrY + rectH + 12, { align:'center' });
+      const bn = blockNumber(r);
+      doc.setTextColor(...COLORS.text); doc.setFont(FONT,'bold'); doc.setFontSize(10);
+      doc.text('Bloque: ' + (bn || '—'), qrX + rectW/2, qrY + rectH + 26, { align:'center' });
+      doc.setTextColor(...COLORS.sub); doc.setFont(FONT,'normal'); doc.setFontSize(8.5);
+      doc.text('Para consultar bloque visitar kodrx.app', qrX + rectW/2, qrY + rectH + 38, { align:'center' });
+    }
+  }
+
+  footer();
+
+  // 7) Output
+  const filename = `receta_${r.id || 'sin-id'}.pdf`;
+  if (mode === 'print') {
+    try { doc.autoPrint(); doc.output('dataurlnewwindow'); } catch { doc.save(filename); }
+  } else if (mode === 'open') {
+    const url = doc.output('bloburl'); window.open(url, '_blank');
+  } else {
+    doc.save(filename);
+  }
+};
     function bindButtons(){
     const btnD = document.getElementById('btnDescargar');
     const btnP = document.getElementById('btnImprimir');
