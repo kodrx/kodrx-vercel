@@ -384,7 +384,7 @@ button{appearance:none;border:0;border-radius:12px;padding:10px 14px;font-weight
     if (mainNode)  out.main  = mainNode.tagName==='IMG' ? mainNode.src  : mainNode.toDataURL('image/png');
     if (chainNode) out.chain = chainNode.tagName==='IMG'? chainNode.src : chainNode.toDataURL('image/png');
     if (!out.main){
-      const verURL = `${location.origin}${location.pathname}?id=${encodeURIComponent(receta.id)}`;
+      const verURL = QR_RECETA_URL(r.id);
       out.main = await makeQRDataURLCompat(verURL, 220);
     }
     if (!out.chain){
@@ -464,7 +464,7 @@ button{appearance:none;border:0;border-radius:12px;padding:10px 14px;font-weight
     // QR principal
     const host = document.getElementById('qrMain');
     if (host && !host.querySelector('canvas,img')){
-      const verURL = `${location.origin}${location.pathname}?id=${encodeURIComponent(r.id)}`;
+    const verURL = QR_RECETA_URL(r.id);
       makeQR(host, verURL, 260);
     }
 
