@@ -131,27 +131,54 @@ async function buildQuery({ pageStart=null } = {}){
 async function cargar({ append=false } = {}){
   if (!_uid) return;
 
-  let res;
+  const VISIBLE_EMPTY = `<div class="empty" style="text-align:center; color:#6b7280; padding:1rem; background:#fff; border:1px dashed #cfd6e3; border-radius:10px">Sin resultados para este médico.</div>`;
+
+  let res, usedFallback = false;
+
   try{
+    console.info("[HIST] uid=", _uid, "OWNER_FIELD=medicoUid");
     res = await getDocs(await buildQuery({ pageStart:_lastSnap }));
+    console.info("[HIST] query (medicoUid + orderBy createdAt) → docs:", res.size);
   }catch(e){
-    console.warn("[HIST] Fallback sin índice:", e?.message || e);
-    // Fallback: sin orderBy (ordenamos en cliente). Útil si aún no creas el índice compuesto.
+    console.warn("[HIST] getDocs falló (prob. índice). Activando fallback sin orderBy:", e?.message||e);
+    // Fallback: sin orderBy (ordenaremos en cliente)
     const q0 = query(collection(db, "recetas"), where(OWNER_FIELD, "==", _uid), limit(PAGE));
     res = await getDocs(q0);
+    usedFallback = true;
   }
 
   if (!append) UI.lista.innerHTML = "";
   let count = 0;
 
-  // Si vino del fallback, ordenamos en cliente
-  const docs = res.docs.slice().sort((a,b)=>{
+  // Si no trajo nada, haz un "sondeo" (sin where) para ayudarnos a ver si hay docs y cómo vienen
+  if (res.empty){
+    console.warn("[HIST] 0 docs para medicoUid == uid. Ejecutando SONDEO (sin filtro) limit 3…");
+    try{
+      const s = await getDocs(query(collection(db, "recetas"), limit(3)));
+      console.info("[HIST] SONDEO size:", s.size);
+      s.forEach((d,i)=> console.info(`[HIST] SONDEO[${i}] id=${d.id}`, d.data()));
+      if (!append) UI.lista.innerHTML = VISIBLE_EMPTY;
+      UI.btnMas.style.display = "none";
+      _lastSnap = null;
+      return;
+    }catch(e2){
+      console.error("[HIST] SONDEO falló:", e2?.message||e2);
+      if (!append) UI.lista.innerHTML = VISIBLE_EMPTY;
+      UI.btnMas.style.display = "none";
+      _lastSnap = null;
+      return;
+    }
+  }
+
+  // Ordenamos en cliente si venimos del fallback
+  const docs = (usedFallback ? res.docs.slice().sort((a,b)=>{
     const A = a.data()?.createdAt, B = b.data()?.createdAt;
     const ta = A?.toDate ? A.toDate().getTime() : (A?.seconds ? A.seconds*1000 : 0);
     const tb = B?.toDate ? B.toDate().getTime() : (B?.seconds ? B.seconds*1000 : 0);
     return tb - ta;
-  });
+  }) : res.docs);
 
+  // Pinta tarjetas
   docs.forEach(d=>{
     if (matchLocalFilters(d)){
       UI.lista.appendChild(renderCard(d));
@@ -159,6 +186,7 @@ async function cargar({ append=false } = {}){
     }
   });
 
+  // Paginación
   if (res.docs.length === PAGE){
     _lastSnap = res.docs[res.docs.length-1];
     UI.btnMas.style.display = "inline-block";
@@ -168,7 +196,7 @@ async function cargar({ append=false } = {}){
   }
 
   if (!append && count === 0){
-    UI.lista.innerHTML = `<div class="empty" style="text-align:center; color:#6b7280; padding:1rem">Sin resultados.</div>`;
+    UI.lista.innerHTML = VISIBLE_EMPTY;
   }
 }
 
