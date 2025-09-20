@@ -6,51 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <script src="/componentes/header.js" defer></script>
 
- <style>
-  /* ===== Solo aplica en verificar.html ===== */
-  body[data-page="verificar"]{
-    --vh-header-min:56px;
-    --vh-pad-x:12px;
-    --vh-logo-h:28px;
-    --vh-font: 16px/1.4 system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-  }
-  body[data-page="verificar"] html,
-  body[data-page="verificar"] body{
-    margin:0 !important; padding:0 !important; font: var(--vh-font) !important;
-  }
-
-  /* Header compacto (mata tamaños hero y posiciones raras) */
-  body[data-page="verificar"] :is(header,.site-header,.navbar){
-    position: static !important;
-    top:auto !important;
-    height:auto !important; min-height: var(--vh-header-min) !important;
-    padding: 8px var(--vh-pad-x) !important;
-    box-shadow: none !important;
-    background: #fff !important;
-  }
-  body[data-page="verificar"] :is(header img, header svg, .site-header img, .site-header svg){
-    height: var(--vh-logo-h) !important; width:auto !important; max-width: 160px !important;
-  }
-  body[data-page="verificar"] :is(header h1, .brand, .brand-title){
-    font-size: 18px !important; line-height:1.2 !important; margin: 0 !important;
-    color:#111827 !important; font-weight:600 !important;
-  }
-
-  /* Apaga “hero/jumbotron” típicos del header landing si existieran */
-  body[data-page="verificar"] :is(.landing-hero,.hero,.hero-wrap,.mega-hero,.portada,.cover,.splash){
-    display:none !important;
-  }
-
-  /* Contenedor de la tarjeta de verificación */
-  body[data-page="verificar"] .verify-wrap{
-    max-width: 920px; margin: 16px auto; padding: 0 var(--vh-pad-x);
-  }
-
-  /* (Opcional) Ocultar QR y hash en la pública, dejando solo el badge */
-  body[data-page="verificar"] :is(#qrMain,#qrChain,#barcodeCanvas,.qr-legend,#hashTexto){
-    display:none !important;
-  }
-</style>
+<link rel="stylesheet" href="/estilos/global.css" />
 
 </head>
 <body>
