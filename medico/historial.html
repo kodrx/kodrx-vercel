@@ -91,33 +91,7 @@
   <div class="contenedor" id="historial"></div>
 
 
-<script>
-document.addEventListener('DOMContentLoaded', ()=>{
-  // Buscar – navega a resultados.html?q=...
-  const q = document.getElementById('buscador');
-  const b = document.getElementById('btnBuscar');
-  if (q && b) {
-    const go = ()=>{
-      const v = q.value.trim();
-      if (!v){ q.focus(); return; }
-      const u = new URL('/medico/resultados.html', location.origin);
-      u.searchParams.set('q', v);
-      location.href = u.href;
-    };
-    q.addEventListener('keydown', e => { if(e.key === 'Enter') go(); });
-    b.addEventListener('click', go);
-  }
 
-  // Regresar – back o panel
-  const volver = document.getElementById('btnVolver');
-  if (volver) {
-    volver.addEventListener('click', ()=>{
-      if (history.length > 1) history.back();
-      else window.location.href = '/medico/panel.html';
-    });
-  }
-});
-</script>
 <script>console.log('[BOOT] inline clásico OK @', location.href);</script>
 
 <script type="module">
