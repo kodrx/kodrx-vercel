@@ -255,26 +255,35 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.2.1/fi
 
       // 4) Documento de receta
       const recetaData = {
-        nombrePaciente, edad, sexo, peso, talla, imc, temperatura, presion,
-        observaciones, diagnostico,
-        medicamentos, medsIniciales,
+ 
+  nombrePaciente,                     // tu campo actual
+  pacienteNombre: nombrePaciente,     // alias para el historial
 
-        medicoNombre: m.nombre || usr.displayName || '',
-        medicoGenero: m.genero || '',
-        medicoCedula: m.cedula || '',
-        medicoEspecialidad: m.especialidad || 'General',
-        medicoTelefono: m.telefono || '',
-        medicoDomicilio,
+  edad, sexo, peso, talla, imc, temperatura, presion,
+  observaciones, diagnostico,
+  medicamentos, medsIniciales,
 
-        medicoUid: usr.uid,
-        medicoEmail: usr.email || '',
-        correo: usr.email || '',
+  medicoNombre: m.nombre || usr.displayName || '',
+  medicoGenero: m.genero || '',
+  medicoCedula: m.cedula || '',
+  medicoEspecialidad: m.especialidad || 'General',
+  medicoTelefono: m.telefono || '',
+  medicoDomicilio,
 
-        timestamp: (Timestamp?.now?.() ?? new Date()),
-        blockchain: { status:'pendiente' },
-        hash: null, bloque: null
-      };
+  medicoUid: usr.uid,
+  medicoEmail: usr.email || '',
+  correo: usr.email || '',
 
+ 
+  createdAt: serverTimestamp(),
+
+
+  timestamp: (Timestamp?.now?.() ?? new Date()),
+
+  blockchain: { status:'pendiente' },
+  hash: null, 
+  bloque: null
+};
       const ref = await addDoc(collection(window.db, 'recetas'), recetaData);
       console.log('[panel] receta creada:', ref.id);
 
