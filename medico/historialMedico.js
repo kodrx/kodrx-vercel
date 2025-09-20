@@ -103,80 +103,83 @@ function renderCard(doc) {
   return card;
 }
 
+const OWNER_FIELD = "medicoUid";
+const PAGE = 15;
+
 async function buildQuery({ pageStart = null } = {}) {
-  // Base: recetas del médico autenticado
-  // Ajusta el campo según tu esquema: medicoUid | doctorUid | createdBy
-  let qBase = query(
-    collection(db, "recetas"),
-    where("medicoUid", "==", _uid),
-    orderBy("createdAt", "desc"),
-    limit(PAGE)
-  );
-
-  // Paginación
-  if (pageStart) {
-    qBase = query(
+  // Query normal con orderBy createdAt
+  try {
+    const base = [
       collection(db, "recetas"),
-      where("medicoUid", "==", _uid),
+      where(OWNER_FIELD, "==", _uid),
       orderBy("createdAt", "desc"),
-      startAfter(pageStart),
-      limit(PAGE)
-    );
+      limit(PAGE),
+    ];
+    if (pageStart) base.splice(3, 0, startAfter(pageStart)); // before limit
+    return query(...base);
+  } catch (e) {
+    // (raro que truene aquí; normalmente truena al getDocs)
+    return query(collection(db, "recetas"), where(OWNER_FIELD, "==", _uid), limit(PAGE));
   }
-
-  return qBase;
-}
-
-function matchLocalFilters(docSnap) {
-  // Filtro por nombre (cliente) y fecha exacta (YYYY-MM-DD)
-  const r = docSnap.data() || {};
-  const paciente = (r.pacienteNombre || r.paciente || r.nombrePaciente || "").toString().toLowerCase();
-  const fecha = r.createdAt || r.fechaCreacion || r.fecha || null;
-  const iso = (() => {
-    try {
-      let d = fecha;
-      if (d?.toDate) d = d.toDate();
-      else if (typeof d?.seconds === "number") d = new Date(d.seconds * 1000 + Math.floor((d.nanoseconds || 0) / 1e6));
-      else if (!(d instanceof Date)) d = new Date(d);
-      return d.toISOString().slice(0, 10);
-    } catch { return ""; }
-  })();
-
-  const okNombre = _filters.nombre ? paciente.includes(_filters.nombre) : true;
-  const okFecha = _filters.fechaISO ? (iso === _filters.fechaISO) : true;
-
-  return okNombre && okFecha;
 }
 
 async function cargar({ append = false } = {}) {
   if (!_uid) return;
+  let qRef = await buildQuery({ pageStart: _lastSnap });
 
-  // 1) Query base (paginada)
-  const qRef = await buildQuery({ pageStart: _lastSnap });
-  const res = await getDocs(qRef);
+  try {
+    const res = await getDocs(qRef);
 
-  // 2) Render
-  if (!append) UI.lista.innerHTML = "";
-  let count = 0;
+    // Render normal
+    if (!append) UI.lista.innerHTML = "";
+    let count = 0;
+    res.docs.forEach(d => {
+      if (matchLocalFilters(d)) {
+        UI.lista.appendChild(renderCard(d));
+        count++;
+      }
+    });
 
-  res.docs.forEach(d => {
-    if (matchLocalFilters(d)) {
-      UI.lista.appendChild(renderCard(d));
-      count++;
+    if (res.docs.length === PAGE) {
+      _lastSnap = res.docs[res.docs.length - 1];
+      UI.btnMas.style.display = "inline-block";
+    } else {
+      _lastSnap = null;
+      UI.btnMas.style.display = "none";
     }
-  });
 
-  // 3) Control “Ver más”
-  if (res.docs.length === PAGE) {
-    _lastSnap = res.docs[res.docs.length - 1];
-    UI.btnMas.style.display = "inline-block";
-  } else {
-    _lastSnap = null;
+    if (!append && count === 0) {
+      UI.lista.innerHTML = `<div class="empty" style="text-align:center; color:#6b7280; padding:1rem">Sin resultados.</div>`;
+    }
+  } catch (e) {
+    // Probable índice faltante por orderBy createdAt => fallback: sin orderBy y ordenamos en cliente
+    console.warn("[HIST] Fallback sin índice:", e?.message || e);
+    const res = await getDocs(query(collection(db, "recetas"), where(OWNER_FIELD, "==", _uid), limit(PAGE)));
+
+    // Ordenar en cliente por createdAt desc
+    const docs = res.docs.sort((a, b) => {
+      const A = a.data()?.createdAt, B = b.data()?.createdAt;
+      const ta = A?.toDate ? A.toDate().getTime() : (A?.seconds ? A.seconds*1000 : 0);
+      const tb = B?.toDate ? B.toDate().getTime() : (B?.seconds ? B.seconds*1000 : 0);
+      return tb - ta;
+    });
+
+    if (!append) UI.lista.innerHTML = "";
+    let count = 0;
+    docs.forEach(d => {
+      if (matchLocalFilters(d)) {
+        UI.lista.appendChild(renderCard(d));
+        count++;
+      }
+    });
+
+    // En este fallback, deshabilito “Ver más” para no complicar la paginación
     UI.btnMas.style.display = "none";
-  }
+    _lastSnap = null;
 
-  if (!append && count === 0) {
-    UI.lista.innerHTML = `<div class="empty" style="text-align:center; color:#6b7280; padding:1rem">Sin resultados.</div>`;
+    if (!append && count === 0) {
+      UI.lista.innerHTML = `<div class="empty" style="text-align:center; color:#6b7280; padding:1rem">Sin resultados.</div>`;
+    }
   }
 }
 
