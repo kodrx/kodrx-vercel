@@ -1,0 +1,30 @@
+<!-- 1) Botón de prueba -->
+<button id="btnRecetaDemo" type="button">Crear receta DEMO</button>
+
+<!-- 2) Script (SDK 12.2.1) -->
+<script type="module">
+  import { auth, db } from "/firebase-init.js";
+  import { addDoc, collection, serverTimestamp } 
+    from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
+
+  document.getElementById("btnRecetaDemo")?.addEventListener("click", async () => {
+    const uid = auth.currentUser?.uid;
+    if (!uid) { alert("Inicia sesión como médico"); return; }
+
+    try {
+      const ref = await addDoc(collection(db, "recetas"), {
+        medicoUid: uid,                    // 👈 clave para que aparezca en historial
+        createdAt: serverTimestamp(),      // 👈 orden correcto
+        pacienteNombre: "Juan Pérez (DEMO)",
+        diagnostico: "Gastritis aguda (DEMO)",
+        medicamentos: [
+          { nombre: "Omeprazol 20 mg", dosis: "1 c/24 h", duracion: "14 días" },
+          { nombre: "Almagato", dosis: "10 ml c/8 h", duracion: "7 días" }
+        ]
+      });
+      alert(`Receta creada: ${ref.id}\nAbre el Historial para verla.`);
+    } catch (e) {
+      alert("Error al crear receta DEMO: " + (e?.message || e));
+    }
+  });
+</script>
