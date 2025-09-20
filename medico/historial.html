@@ -95,11 +95,10 @@
 <script>console.log('[BOOT] inline clásico OK @', location.href);</script>
 
 <script type="module">
-console.log('[BOOT] inline module OK');
-const cand = [
-  './historialMedico.js?v=20250905b',      // relativo -> /medico/historialMedico.js
-  '/medico/historialMedico.js?v=20250905b' // absoluto
-];
+  const cand = [
+    './historialMedico.js?v=20250919a',
+    '/medico/historialMedico.js?v=20250919a'
+;
 
 async function probe(url){
   try{
