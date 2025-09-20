@@ -1,0 +1,163 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>KodRx · Migrar historial</title>
+<style>
+  body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; padding: 20px; background: #f6f8fb; }
+  h1 { margin: 0 0 12px; }
+  .row { display:flex; gap:12px; margin-bottom:12px; flex-wrap:wrap; }
+  button { padding:10px 14px; border-radius:10px; border:1px solid #d9dee8; background:#fff; cursor:pointer; font-weight:600; }
+  button.pri { background:#0a59ff; color:#fff; border-color:#0a59ff; }
+  pre { background:#0b1020; color:#e6edf3; padding:12px; border-radius:10px; max-height:55vh; overflow:auto; }
+  label { display:flex; gap:8px; align-items:center; }
+</style>
+
+<h1>Migrar historial de recetas</h1>
+<div class="row">
+  <label><input type="checkbox" id="dry" checked> Simulación (dry-run)</label>
+  <label><input type="checkbox" id="reassign" checked> Reasignar recetas legacy al usuario actual</label>
+  <label>Cap máx docs: <input id="cap" type="number" value="1000" min="50" style="width:100px"></label>
+</div>
+<div class="row">
+  <button id="scan">Escanear</button>
+  <button id="run" class="pri">Migrar</button>
+</div>
+<pre id="log">Listo para escanear…</pre>
+
+<script type="module">
+import { auth, db } from "/firebase-init.js";
+import {
+  collection, getDocs, query, limit, writeBatch, doc,
+  serverTimestamp, Timestamp
+} from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
+
+// ⚙️ Config editable
+const LEGACY_UIDS = ["Fg7uSl2E7QhSpCy4WuYJmQpfair2"]; // añade otros si detectas más en tu SONDEO
+
+const $ = (s)=>document.querySelector(s);
+const logEl = $("#log");
+const btnScan = $("#scan");
+const btnRun = $("#run");
+const chkDry = $("#dry");
+const chkReassign = $("#reassign");
+const capEl = $("#cap");
+
+function log(...a){ logEl.textContent += "\n" + a.map(v=>typeof v==="string"?v:JSON.stringify(v)).join(" "); logEl.scrollTop = logEl.scrollHeight; }
+
+function asTimestampMaybe(v){
+  try{
+    if (!v) return null;
+    if (v?.toDate)   return v; // ya es Timestamp
+    if (typeof v?.seconds === "number") return new Timestamp(v.seconds, v.nanoseconds||0);
+    if (typeof v === "number") return Timestamp.fromMillis(v>1e12? v : v*1000);
+    if (typeof v === "string"){
+      const t = Date.parse(v);
+      if (!Number.isNaN(t)) return Timestamp.fromMillis(t);
+    }
+    return null;
+  }catch{ return null; }
+}
+
+async function fetchAllRecetas(cap){
+  // Escaneo simple (colecciones pequeñas/medianas). Si tienes > 1000, hacemos paginado fino.
+  const s = await getDocs(query(collection(db,"recetas"), limit(cap)));
+  return s.docs;
+}
+
+function planFor(docSnap, currentUid, reassign){
+  const d = docSnap.data()||{};
+  const updates = {};
+  const report  = [];
+
+  // 1) medicoUid
+  const ownerNow = d.medicoUid || d.uid || null;
+  if (!ownerNow){
+    updates.medicoUid = reassign ? currentUid : currentUid; // si no existe, lo asignamos al actual
+    report.push(`+medicoUid=${updates.medicoUid} (faltaba)`);
+  } else {
+    if (reassign && ownerNow !== currentUid){
+      updates.medicoUid = currentUid;
+      report.push(`~medicoUid: ${ownerNow} → ${currentUid} (reasignado)`);
+    }
+  }
+
+  // 2) createdAt
+  let createdAt = d.createdAt || d.fechaCreacion || d.timestamp || d?.blockchain?.at || null;
+  const ts = asTimestampMaybe(createdAt);
+  if (!ts){
+    updates.createdAt = serverTimestamp();
+    report.push(`+createdAt=serverTimestamp()`);
+  } else if (!d.createdAt){
+    updates.createdAt = ts;
+    report.push(`+createdAt (desde campo alterno)`);
+  }
+
+  // 3) pacienteNombre alias
+  if (!d.pacienteNombre && d.nombrePaciente){
+    updates.pacienteNombre = d.nombrePaciente;
+    report.push(`+pacienteNombre (alias de nombrePaciente)`);
+  }
+
+  // (otros alias opcionales)
+  // if (!d.diagnostico && d.observaciones) { updates.diagnostico = d.observaciones; report.push(`+diagnostico desde observaciones`); }
+
+  return { updates, report };
+}
+
+async function runMigration({ dryRun, reassign, cap }){
+  const user = auth.currentUser;
+  if (!user){ log("❌ No hay sesión"); return; }
+  const currentUid = user.uid;
+
+  log(`Usuario actual: ${currentUid}`);
+  log(`Reasignar legacy a actual: ${reassign ? "Sí" : "No"}`);
+  log(`Cap de docs: ${cap}`);
+
+  const docs = await fetchAllRecetas(cap);
+  log(`Escaneadas ${docs.length} recetas (máx ${cap})`);
+
+  let toFix = [];
+  for (const d of docs){
+    const p = planFor(d, currentUid, reassign);
+    if (Object.keys(p.updates).length){
+      toFix.push({ id:d.id, updates:p.updates, notes:p.report });
+    }
+  }
+
+  log(`Detectadas ${toFix.length} recetas a normalizar.`);
+  toFix.slice(0,10).forEach((x,i)=>log(`· [muestra ${i+1}] ${x.id} :: ${x.notes.join("; ")}`));
+  if (toFix.length>10) log(`… y ${toFix.length-10} más`);
+
+  if (dryRun){
+    log("🧪 DRY-RUN activo: no se escribió nada.");
+    return;
+  }
+
+  // Escribir por lotes (máx 500 por batch; usamos 450 por seguridad)
+  let written = 0;
+  for (let i=0; i<toFix.length; i+=450){
+    const slice = toFix.slice(i, i+450);
+    const batch = writeBatch(db);
+    slice.forEach(({id, updates})=>{
+      batch.update(doc(db,"recetas",id), updates);
+    });
+    await batch.commit();
+    written += slice.length;
+    log(`✔ Batch aplicado: +${slice.length} (acumulado ${written})`);
+  }
+
+  log(`✅ Migración terminada. Total documentos actualizados: ${written}`);
+  log(`Sugerencia: crea/verifica índice compuesto (medicoUid asc, createdAt desc) en 'recetas'.`);
+}
+
+btnScan.addEventListener("click", ()=> runMigration({
+  dryRun: true,
+  reassign: chkReassign.checked,
+  cap: Math.max(50, Number(capEl.value)||1000)
+}));
+
+btnRun.addEventListener("click", ()=> runMigration({
+  dryRun: chkDry.checked, // si la casilla está marcada, sigue en simulación
+  reassign: chkReassign.checked,
+  cap: Math.max(50, Number(capEl.value)||1000)
+}));
+</script>
