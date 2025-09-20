@@ -1,0 +1,90 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>KodRx · Reasignar por email</title>
+<style>
+  body{font-family:system-ui, -apple-system, Segoe UI, Roboto, sans-serif; padding:20px; background:#f6f8fb}
+  input{padding:8px 10px; border:1px solid #d9dee8; border-radius:8px; width:360px}
+  button{padding:10px 14px; border-radius:10px; border:1px solid #d9dee8; background:#fff; cursor:pointer; font-weight:600}
+  button.pri{background:#0a59ff;color:#fff;border-color:#0a59ff}
+  .row{display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-bottom:12px}
+  pre{background:#0b1020;color:#e6edf3;padding:12px;border-radius:10px;max-height:55vh;overflow:auto}
+</style>
+
+<h1>Reasignar recetas por correo de médico → medicoUid</h1>
+
+<div class="row">
+  <label>Email del médico: <input id="email" placeholder="dr@ejemplo.com"></label>
+</div>
+<div class="row">
+  <label>Nuevo UID (médico): <input id="uid" placeholder="pega aquí el UID del médico"></label>
+</div>
+<div class="row">
+  <label>Cap máx: <input id="cap" type="number" value="1000" style="width:120px"></label>
+  <label><input id="dry" type="checkbox" checked> Simulación (dry-run)</label>
+</div>
+<div class="row">
+  <button id="scan">Escanear</button>
+  <button class="pri" id="run">Reasignar</button>
+</div>
+
+<pre id="log">Listo…</pre>
+
+<script type="module">
+import { auth, db } from "/firebase-init.js";
+import {
+  collection, query, where, limit, getDocs, writeBatch, doc, serverTimestamp
+} from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
+
+const $ = s=>document.querySelector(s);
+const log = (...a)=>{ const el=$("#log"); el.textContent+="\n"+a.join(" "); el.scrollTop=el.scrollHeight; };
+
+async function fetchByEmail(email, cap){
+  const snap = await getDocs(query(collection(db,"recetas"), where("medicoEmail","==",email), limit(cap)));
+  return snap.docs;
+}
+
+async function run({email, targetUid, cap, dry}) {
+  if (!auth.currentUser) return log("❌ No hay sesión.");
+  if (!email || !targetUid) return log("❌ Falta email o UID.");
+
+  log("Buscando por email:", email, "→ nuevo UID:", targetUid);
+  const docs = await fetchByEmail(email, cap);
+  log("Encontradas", docs.length, "recetas.");
+
+  const toFix = [];
+  docs.forEach(d=>{
+    const data = d.data()||{};
+    const updates = {};
+    if (data.medicoUid !== targetUid) updates.medicoUid = targetUid;
+    if (!data.createdAt) updates.createdAt = serverTimestamp(); // asegurar orden
+    if (!data.pacienteNombre && data.nombrePaciente) updates.pacienteNombre = data.nombrePaciente;
+    if (Object.keys(updates).length) toFix.push({id:d.id, updates});
+  });
+
+  log("A actualizar:", toFix.length);
+  toFix.slice(0,10).forEach((x,i)=>log(`· [${i+1}] ${x.id} :: ${Object.keys(x.updates).join(", ")}`));
+  if (dry) return log("🧪 DRY-RUN activo. No se escribió nada.");
+
+  // batches de hasta 450
+  for (let i=0; i<toFix.length; i+=450){
+    const batch = writeBatch(db);
+    toFix.slice(i, i+450).forEach(({id, updates})=> batch.update(doc(db,"recetas",id), updates));
+    await batch.commit();
+    log("✔ Batch aplicado:", Math.min(450, toFix.length - i));
+  }
+  log("✅ Listo. Revisa el historial con ese médico.");
+}
+
+$("#scan").onclick = ()=> run({
+  email: ($("#email").value||"").trim().toLowerCase(),
+  targetUid: ($("#uid").value||"").trim(),
+  cap: Math.max(50, Number($("#cap").value)||1000),
+  dry: true
+});
+$("#run").onclick = ()=> run({
+  email: ($("#email").value||"").trim().toLowerCase(),
+  targetUid: ($("#uid").value||"").trim(),
+  cap: Math.max(50, Number($("#cap").value)||1000),
+  dry: $("#dry").checked
+});
+</script>
