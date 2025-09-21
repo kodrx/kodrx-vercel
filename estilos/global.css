@@ -303,14 +303,15 @@ details.lab-card div {
   margin-bottom: 1rem;
 }
 /* Historial agrupado */
+/* Agrupadores del historial (colapsables por día) */
 .hist-group { margin: 14px 0 18px; }
 .hist-group__h {
-  margin: 8px 0 10px;
-  font-weight: 800; font-size: 14px;
-  color: #374151; letter-spacing: .2px;
-  text-transform: capitalize;
-  display: flex; align-items: center; gap: 8px;
+  margin: 8px 0 10px; font-weight: 800; font-size: 14px;
+  color: #374151; text-transform: capitalize;
+  display:flex; align-items:center; gap:8px; cursor: pointer; user-select: none;
 }
-.hist-group__h::before {
-  content:""; width:10px; height:10px; border-radius:999px; background:#a5b4fc; /* puntito */
-}
+.hg-dot { width:10px; height:10px; border-radius:999px; background:#a5b4fc; display:inline-block; }
+.hg-count { color:#6b7280; font-weight:600; }
+.hg-caret { margin-left:auto; transition: transform .2s ease; }
+.hist-group.collapsed .hist-group__body { display:none; }
+.hist-group.collapsed .hg-caret { transform: rotate(-90deg); }
