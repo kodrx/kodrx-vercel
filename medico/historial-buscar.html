@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="es-MX">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>KodRx · Buscar en historial</title>
+  <link rel="stylesheet" href="/estilos/global.css" />
+  <style>
+    .wrap { max-width: 980px; margin: 18px auto 56px; padding: 0 16px; }
+    .h1 { font-weight: 800; font-size: clamp(20px, 3vw, 26px); margin: 8px 0 2px; }
+    .muted { color:#6b7280; }
+    .topbar { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin: 8px 0 14px; }
+    .input { border:1px solid #d9dee8; border-radius:12px; padding:10px 12px; }
+    .btn { padding:10px 14px; border-radius:12px; border:1px solid #d9dee8; background:#fff; cursor:pointer; font-weight:600; }
+    .btn--pri { background:#0a59ff; border-color:#0a59ff; color:#fff; }
+    .results-count { margin-left:auto; }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <div class="h1">Resultados de búsqueda</div>
+    <div class="muted" id="queryTxt">—</div>
+
+    <div class="topbar">
+      <input id="buscarNombre" class="input" placeholder="Buscar de nuevo por paciente…" />
+      <button id="btnBuscar" class="btn">Buscar</button>
+      <button class="btn" onclick="history.back()">← Volver</button>
+      <span class="results-count muted" id="countTxt"></span>
+    </div>
+
+    <section id="lista"></section>
+  </main>
+
+  <script type="module" src="/firebase-init.js"></script>
+  <script type="module" src="/medico/historialBuscar.js?v=20250920a"></script>
+</body>
+</html>
