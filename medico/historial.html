@@ -95,47 +95,35 @@
 <script>console.log('[BOOT] inline clásico OK @', location.href);</script>
 
 <script type="module">
-  const cand = [
-    './historialMedico.js?v=20250919a',
-    '/medico/historialMedico.js?v=20250919a'
-];
-
-async function probe(url){
-  try{
-    const res = await fetch(url, { cache:'no-store' });
-    console.log(`[PROBE] ${url} -> status:`, res.status, 'ct:', res.headers.get('content-type'));
-    const text = await res.text();
-    console.log(`[PROBE] head(${url}):`, text.slice(0,180).replace(/\n/g,'⏎'));
-    return { ok: res.ok, ct: res.headers.get('content-type') || '', url };
-  }catch(e){
-    console.error(`[PROBE] ${url} -> fetch error`, e);
-    return { ok:false, ct:'', url, error:e };
-  }
-}
-
-(async ()=>{
-  // 1) Fetch probes
-  for (const u of cand){
-    const r = await probe(u);
-    // MIME correcto para módulos: application/javascript (o text/javascript en algunos hosts)
-    if (r.ok && /javascript/i.test(r.ct)) {
-      try{
-        const m = await import(u);
-        console.log('[BOOT] import OK:', u, m);
-        return; // listo
-      }catch(e){
-        console.error('[BOOT] import FALLÓ:', u, e);
-        alert('Falló import de historialMedico.js (ver consola). Posible SyntaxError o import interno roto.');
-        return;
+  (async () => {
+    console.log("[HIST/BOOT] start");
+    const candidates = [
+      "/medico/historialMedico.js?v=20250920b",
+      "./historialMedico.js?v=20250920b"
+    ];
+    let ok = false, lastErr = null;
+    for (const href of candidates) {
+      try {
+        const mod = await import(href);
+        console.log("[HIST/BOOT] import OK:", href, mod);
+        ok = true;
+        break;
+      } catch (e) {
+        console.warn("[HIST/BOOT] import FAIL:", href, e);
+        lastErr = e;
       }
-    } else if (r.ok && /text\/html/i.test(r.ct)) {
-      console.warn('⚠️ Ese URL está devolviendo HTML (probable 404 con página HTML o rewrite). Revisa la ruta y el deploy.');
     }
-  }
-
-  alert('No pude cargar /medico/historialMedico.js. Ver consola [PROBE] para status/MIME.');
-})();
+    if (!ok) {
+      const el = document.getElementById("historialLista") || document.body;
+      el.insertAdjacentHTML("beforeend",
+        `<div class="empty" style="text-align:center;color:#6b7280;padding:1rem">
+          No se pudo cargar <code>historialMedico.js</code>. Revisa la ruta/versión.<br>
+          <small>${(lastErr && (lastErr.message || lastErr)) || ""}</small>
+        </div>`);
+    }
+  })();
 </script>
+
 
 <script>
 window.addEventListener('error', e => console.error('[GLOBAL ERROR]', e.error || e.message || e));
