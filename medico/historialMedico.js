@@ -30,6 +30,43 @@ function fmtFecha(ts){
   }catch{ return "—"; }
 }
 
+// Formato "sábado 20 de septiembre de 2025"
+function fmtDiaLargo(d){
+  try{
+    return d.toLocaleDateString("es-MX", { weekday:"long", year:"numeric", month:"long", day:"numeric" });
+  }catch{ return ""; }
+}
+
+// Agrupa docs por día YYYY-MM-DD (tz local)
+function groupByDay(docSnaps){
+  const out = new Map();
+  for(const d of docSnaps){
+    const r = d.data() || {};
+    let t = r.createdAt || r.fechaCreacion || r.fecha || r.timestamp || null;
+    try{
+      if (t?.toDate) t = t.toDate();
+      else if (typeof t?.seconds === "number") t = new Date(t.seconds*1000 + Math.floor((t.nanoseconds||0)/1e6));
+      else if (!(t instanceof Date)) t = new Date(t);
+    }catch{ t = new Date(0); }
+    const key = t.toISOString().slice(0,10); // YYYY-MM-DD
+    if (!out.has(key)) out.set(key, []);
+    out.get(key).push({snap:d, date:t});
+  }
+  // Orden descendente por día
+  return [...out.entries()].sort((a,b)=> (a[0] < b[0] ? 1 : -1));
+}
+
+function renderGroup(keyISO, items){
+  const sect = document.createElement("section");
+  sect.className = "hist-group";
+  const d = (()=>{ try{ return new Date(keyISO+"T00:00:00"); }catch{ return new Date(); } })();
+  sect.innerHTML = `<h3 class="hist-group__h">${fmtDiaLargo(d)}</h3>`;
+  items
+    .sort((a,b)=> b.date - a.date) // dentro del día, más recientes primero
+    .forEach(({snap}) => sect.appendChild(renderCard(snap)));
+  return sect;
+}
+
 function pill(text){ return `<span class="pill">${text}</span>`; }
 
 function renderCard(docSnap){
@@ -131,96 +168,71 @@ async function buildQuery({ pageStart=null } = {}){
 async function cargar({ append=false } = {}){
   if (!_uid) return;
 
-  const VISIBLE_EMPTY = `<div class="empty" style="text-align:center; color:#6b7280; padding:1rem; background:#fff; border:1px dashed #cfd6e3; border-radius:10px">Sin resultados para este médico.</div>`;
-
-  let res, usedFallback = false;
-
+  let res;
   try{
-    console.info("[HIST] uid=", _uid, "OWNER_FIELD=medicoUid");
     res = await getDocs(await buildQuery({ pageStart:_lastSnap }));
-    console.info("[HIST] query (medicoUid + orderBy createdAt) → docs:", res.size);
   }catch(e){
-    console.warn("[HIST] getDocs falló (prob. índice). Activando fallback sin orderBy:", e?.message||e);
-    // Fallback: sin orderBy (ordenaremos en cliente)
+    console.warn("[HIST] Fallback sin índice:", e?.message || e);
     const q0 = query(collection(db, "recetas"), where(OWNER_FIELD, "==", _uid), limit(PAGE));
     res = await getDocs(q0);
-    usedFallback = true;
   }
 
-  if (!append) UI.lista.innerHTML = "";
-  let count = 0;
-
-  // Si no trajo nada, haz un "sondeo" (sin where) para ayudarnos a ver si hay docs y cómo vienen
-  if (res.empty){
-    console.warn("[HIST] 0 docs para medicoUid == uid. Ejecutando SONDEO (sin filtro) limit 3…");
-    try{
-      const s = await getDocs(query(collection(db, "recetas"), limit(3)));
-      console.info("[HIST] SONDEO size:", s.size);
-      s.forEach((d,i)=> console.info(`[HIST] SONDEO[${i}] id=${d.id}`, d.data()));
-      if (!append) UI.lista.innerHTML = VISIBLE_EMPTY;
-      UI.btnMas.style.display = "none";
-      _lastSnap = null;
-      return;
-    }catch(e2){
-      console.error("[HIST] SONDEO falló:", e2?.message||e2);
-      if (!append) UI.lista.innerHTML = VISIBLE_EMPTY;
-      UI.btnMas.style.display = "none";
-      _lastSnap = null;
-      return;
-    }
-  }
-
-  // Ordenamos en cliente si venimos del fallback
-  const docs = (usedFallback ? res.docs.slice().sort((a,b)=>{
+  // Ordenar y filtrar en cliente (ya lo hacíamos)
+  const docs = res.docs.slice().sort((a,b)=>{
     const A = a.data()?.createdAt, B = b.data()?.createdAt;
     const ta = A?.toDate ? A.toDate().getTime() : (A?.seconds ? A.seconds*1000 : 0);
     const tb = B?.toDate ? B.toDate().getTime() : (B?.seconds ? B.seconds*1000 : 0);
     return tb - ta;
-  }) : res.docs);
-
-  // Pinta tarjetas
-  docs.forEach(d=>{
-    if (matchLocalFilters(d)){
-      UI.lista.appendChild(renderCard(d));
-      count++;
-    }
   });
 
-  // Paginación
+  // 🔹 Agrupar por día
+  const groups = groupByDay(docs.filter(d => matchLocalFilters(d)));
+
+  if (!append) UI.lista.innerHTML = "";
+  let totalRendered = 0;
+  groups.forEach(([dayKey, items])=>{
+    const groupEl = renderGroup(dayKey, items);
+    UI.lista.appendChild(groupEl);
+    totalRendered += items.length;
+  });
+
+  // Paginación server como antes
   if (res.docs.length === PAGE){
     _lastSnap = res.docs[res.docs.length-1];
     UI.btnMas.style.display = "inline-block";
-  }else{
+  } else {
     _lastSnap = null;
     UI.btnMas.style.display = "none";
   }
 
-  if (!append && count === 0){
-    UI.lista.innerHTML = VISIBLE_EMPTY;
+  if (!append && totalRendered === 0){
+    UI.lista.innerHTML = `<div class="empty" style="text-align:center; color:#6b7280; padding:1rem">Sin resultados.</div>`;
   }
 }
 
+
 function bindUI(){
-  UI.qNombre?.addEventListener("input", ()=>{
-    state.nombre = (UI.qNombre.value||"").trim().toLowerCase();
-    _lastSnap = null; cargar({ append:false });
+  // Buscar por nombre → abre nueva vista
+  UI.qNombre?.addEventListener("keydown", (e)=>{
+    if (e.key === "Enter"){
+      const q = (UI.qNombre.value||"").trim();
+      if (q) location.href = `/medico/historial-buscar.html?nombre=${encodeURIComponent(q)}`;
+    }
   });
+
+  // Si tienes botón de buscar, lo soportamos también
+  document.getElementById("btnBuscar")?.addEventListener("click", ()=>{
+    const q = (UI.qNombre.value||"").trim();
+    if (q) location.href = `/medico/historial-buscar.html?nombre=${encodeURIComponent(q)}`;
+  });
+
+  // Filtro de FECHA se queda en la página principal
   UI.qFecha?.addEventListener("change", ()=>{
     state.fechaISO = (UI.qFecha.value||"").trim();
     _lastSnap = null; cargar({ append:false });
   });
+
   UI.btnMas?.addEventListener("click", ()=>{
     if (_lastSnap) cargar({ append:true });
   });
 }
-
-onAuthStateChanged(auth, (user)=>{
-  if (!user){
-    window.location.href = "/acceso?role=medico&return=/medico/historial.html";
-    return;
-  }
-  _uid = user.uid;
-  bindUI();
-  cargar();
-});
-
