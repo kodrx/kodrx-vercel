@@ -220,11 +220,12 @@ function bindUI(){
     UI.btnBuscar = btn;
   }
 
-  const openSearch = ()=>{
-    const q = (UI.qNombre?.value || "").trim();
-    if (!q) { UI.qNombre?.focus(); return; }
-    window.open(`${SEARCH_PATH}?nombre=${encodeURIComponent(q)}`, "_blank", "noopener");
-  };
+const openSearch = ()=>{
+  const q = (UI.qNombre?.value || "").trim();
+  if (!q) { UI.qNombre?.focus(); return; }
+  location.href = `${SEARCH_PATH}?nombre=${encodeURIComponent(q)}`;
+};
+  
   UI.qNombre?.addEventListener("keydown", (e)=>{ if (e.key === "Enter") openSearch(); });
   UI.btnBuscar?.addEventListener("click", openSearch);
 
