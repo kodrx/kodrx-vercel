@@ -1,4 +1,4 @@
-// /medico/historialMedico.js — SAFE BASE v20250920b (SDK 12.2.1)
+// /medico/historialMedico.js — agrupado + buscador en nueva ventana (SDK 12.2.1)
 import { auth, db } from "/firebase-init.js";
 import {
   collection, query, where, orderBy, limit,
@@ -6,40 +6,51 @@ import {
 } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js";
 
-console.log("[HIST] file loaded v20250920b");
-
 const UI = {
   lista: document.getElementById("historialLista"),
   btnMas: document.getElementById("btnMas"),
   qNombre: document.getElementById("buscarNombre"),
   qFecha: document.getElementById("filtrarFecha"),
+  btnBuscar: document.getElementById("btnBuscar") || document.querySelector("[data-buscar]")
 };
-
-// Si falta el contenedor, creamos uno para no morir en null
-if (!UI.lista) {
-  const wrap = document.createElement("section");
-  wrap.id = "historialLista";
-  document.body.appendChild(wrap);
-  UI.lista = wrap;
-  console.warn("[HIST] historialLista no existía; se creó de emergencia.");
-}
 
 let _lastSnap = null;
 let _uid = null;
 const OWNER_FIELD = "medicoUid";
 const PAGE = 15;
+const SEARCH_PATH = "/medico/historial-buscar.html"; // abre en nueva ventana
 
-const state = { nombre: "", fechaISO: "" };
+const state = { fechaISO: "" };
 
-function fmtFecha(ts){
+// Helpers fecha
+function toDate(ts){
+  let d = ts;
   try{
-    let d = ts;
     if (d?.toDate) d = d.toDate();
     else if (typeof d?.seconds === "number") d = new Date(d.seconds*1000 + Math.floor((d.nanoseconds||0)/1e6));
     else if (!(d instanceof Date)) d = new Date(d);
-    return d.toLocaleString("es-MX",{year:"numeric", month:"long", day:"numeric", hour:"2-digit", minute:"2-digit"});
-  }catch{ return "—"; }
+  }catch{ d = new Date(0); }
+  return d;
 }
+function fmtFecha(ts){
+  const d = toDate(ts);
+  return d.toLocaleString("es-MX",{year:"numeric", month:"long", day:"numeric", hour:"2-digit", minute:"2-digit"});
+}
+function diaKey(ts){
+  const d = toDate(ts);
+  const y = d.getFullYear(), m = (d.getMonth()+1+"").padStart(2,"0"), day = (d.getDate()+"").padStart(2,"0");
+  return `${y}-${m}-${day}`; // YYYY-MM-DD
+}
+function tituloDia(key){
+  // key: YYYY-MM-DD → Hoy / Ayer / fecha larga
+  const today = new Date(); today.setHours(0,0,0,0);
+  const d = new Date(key+"T00:00:00");
+  const diff = Math.round((today - d)/86400000);
+  if (diff === 0) return "Hoy";
+  if (diff === 1) return "Ayer";
+  return d.toLocaleDateString("es-MX",{ weekday:"long", year:"numeric", month:"long", day:"numeric" });
+}
+
 function pill(text){ return `<span class="pill">${text}</span>`; }
 
 function renderCard(docSnap){
@@ -88,23 +99,20 @@ function renderCard(docSnap){
   return el;
 }
 
-function matchLocalFilters(docSnap){
-  const r = docSnap.data() || {};
-  const paciente = (r.pacienteNombre || r.paciente || r.nombrePaciente || "").toString().toLowerCase();
-  const fecha = r.createdAt || r.fechaCreacion || r.fecha || r.timestamp || null;
-  const iso = (() => {
-    try{
-      let d = fecha;
-      if (d?.toDate) d = d.toDate();
-      else if (typeof d?.seconds === "number") d = new Date(d.seconds*1000 + Math.floor((d.nanoseconds||0)/1e6));
-      else if (!(d instanceof Date)) d = new Date(d);
-      return d.toISOString().slice(0,10);
-    }catch{ return ""; }
-  })();
+function renderGroup(keyISO, items){
+  const sect = document.createElement("section");
+  sect.className = "hist-group";
+  sect.innerHTML = `<h3 class="hist-group__h">${tituloDia(keyISO)}</h3>`;
+  items.sort((a,b)=> toDate(b.fecha)-toDate(a.fecha))
+       .forEach(({snap}) => sect.appendChild(renderCard(snap)));
+  return sect;
+}
 
-  const okNombre = state.nombre ? paciente.includes(state.nombre) : true;
-  const okFecha  = state.fechaISO ? (iso === state.fechaISO) : true;
-  return okNombre && okFecha;
+function matchDateFilter(docSnap){
+  if (!state.fechaISO) return true;
+  const r = docSnap.data() || {};
+  const f = r.createdAt || r.fechaCreacion || r.fecha || r.timestamp || null;
+  return diaKey(f) === state.fechaISO;
 }
 
 async function buildQuery({ pageStart=null } = {}){
@@ -120,70 +128,80 @@ async function buildQuery({ pageStart=null } = {}){
 
 async function cargar({ append=false } = {}){
   if (!_uid) return;
-  console.log("[HIST] cargar… uid=", _uid);
 
   let res;
   try{
     res = await getDocs(await buildQuery({ pageStart:_lastSnap }));
-    console.log("[HIST] query docs=", res.size);
-  }catch(e){
-    console.warn("[HIST] fallback sin índice:", e?.message||e);
-    const q0 = query(collection(db,"recetas"), where(OWNER_FIELD,"==",_uid), limit(PAGE));
+  }catch{
+    const q0 = query(collection(db, "recetas"), where(OWNER_FIELD, "==", _uid), limit(PAGE));
     res = await getDocs(q0);
   }
 
-  // Ordenar/filtrar cliente
   const docs = res.docs.slice().sort((a,b)=>{
-    const A = a.data()?.createdAt, B = b.data()?.createdAt;
-    const ta = A?.toDate ? A.toDate().getTime() : (A?.seconds ? A.seconds*1000 : 0);
-    const tb = B?.toDate ? B.toDate().getTime() : (B?.seconds ? B.seconds*1000 : 0);
+    const ta = toDate(a.data()?.createdAt).getTime();
+    const tb = toDate(b.data()?.createdAt).getTime();
     return tb - ta;
   });
 
-  if (!append) UI.lista.innerHTML = "";
-  let count = 0;
-  docs.forEach(d=>{
-    if (matchLocalFilters(d)){
-      UI.lista.appendChild(renderCard(d));
-      count++;
-    }
+  // Agrupar por día (filtrando por fecha si aplica)
+  const buckets = new Map(); // key: YYYY-MM-DD -> [{snap, fecha}]
+  docs.forEach(s=>{
+    if (!matchDateFilter(s)) return;
+    const r = s.data() || {};
+    const f = r.createdAt || r.fechaCreacion || r.fecha || r.timestamp || null;
+    const key = diaKey(f);
+    if (!buckets.has(key)) buckets.set(key, []);
+    buckets.get(key).push({ snap:s, fecha:f });
   });
 
+  // Render
+  if (!append) UI.lista.innerHTML = "";
+  const orderedKeys = [...buckets.keys()].sort((a,b)=> a<b?1:-1);
+  let total = 0;
+  orderedKeys.forEach(k=>{
+    const el = renderGroup(k, buckets.get(k));
+    UI.lista.appendChild(el);
+    total += buckets.get(k).length;
+  });
+
+  // Paginación
   if (res.docs.length === PAGE){
     _lastSnap = res.docs[res.docs.length-1];
-    UI.btnMas && (UI.btnMas.style.display = "inline-block");
+    UI.btnMas?.style && (UI.btnMas.style.display = "inline-block");
   } else {
     _lastSnap = null;
-    UI.btnMas && (UI.btnMas.style.display = "none");
+    UI.btnMas?.style && (UI.btnMas.style.display = "none");
   }
 
-  if (!append && count === 0){
+  if (!append && total === 0){
     UI.lista.innerHTML = `<div class="empty" style="text-align:center; color:#6b7280; padding:1rem">Sin resultados.</div>`;
   }
 }
 
 function bindUI(){
+  // Buscar por nombre → ABRE OTRA VENTANA
+  const launchSearch = ()=>{
+    const q = (UI.qNombre?.value || "").trim();
+    if (!q) return;
+    const url = `${SEARCH_PATH}?nombre=${encodeURIComponent(q)}`;
+    window.open(url, "_blank", "noopener"); // << otra pestaña
+  };
   UI.qNombre?.addEventListener("keydown", (e)=>{
-    if (e.key === "Enter"){
-      const q = (UI.qNombre.value||"").trim();
-      if (q) location.href = `/medico/historial-buscar.html?nombre=${encodeURIComponent(q)}`;
-    }
+    if (e.key === "Enter") launchSearch();
   });
-  document.getElementById("btnBuscar")?.addEventListener("click", ()=>{
-    const q = (UI.qNombre.value||"").trim();
-    if (q) location.href = `/medico/historial-buscar.html?nombre=${encodeURIComponent(q)}`;
-  });
+  UI.btnBuscar?.addEventListener("click", launchSearch);
+
+  // Filtro de FECHA se queda local
   UI.qFecha?.addEventListener("change", ()=>{
-    state.fechaISO = (UI.qFecha.value||"").trim();
-    _lastSnap = null; cargar({ append:false });
+    state.fechaISO = (UI.qFecha.value || "").trim();
+    _lastSnap = null;
+    cargar({ append:false });
   });
-  UI.btnMas?.addEventListener("click", ()=>{
-    if (_lastSnap) cargar({ append:true });
-  });
+
+  UI.btnMas?.addEventListener("click", ()=> { if (_lastSnap) cargar({ append:true }); });
 }
 
 onAuthStateChanged(auth, (user)=>{
-  console.log("[HIST] onAuthStateChanged user?", !!user);
   if (!user){
     window.location.href = "/acceso?role=medico&return=/medico/historial.html";
     return;
@@ -192,4 +210,3 @@ onAuthStateChanged(auth, (user)=>{
   bindUI();
   cargar();
 });
-
