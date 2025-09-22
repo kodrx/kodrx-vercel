@@ -1,138 +1,105 @@
+// Admin Médicos — SDK 12.2.1
 import { auth, db } from "/firebase-init.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js";
 import {
-  collection,
-  getDocs,
-  updateDoc,
-  deleteDoc,
-  doc
-} from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
+  collection, query, orderBy, limit, getDocs, updateDoc, doc, serverTimestamp
+} from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
 
-console.log("[INICIO] adminMedicos-debug.js cargado");
+const UI = {
+  q: document.getElementById("q"),
+  grid: document.getElementById("grid"),
+  btnReload: document.getElementById("btnReload"),
+  btnSoloPend: document.getElementById("btnSoloPend"),
+};
+let soloPend = true;
 
-onAuthStateChanged(auth, (user) => {
-  if (!user || user.email !== "admin@kodrx.app") {
-    window.location.href = "/admin/login.html";
-  } else {
-    console.log("[AUTH] Acceso permitido para admin");
-    cargarMedicos();
-    document.getElementById("buscador").addEventListener("input", filtrarMedicos);
+function isAdminEmail(user){
+  const email = (user?.email || "").toLowerCase();
+  return email === "admin@kodrx.app"; // igual a tu regla isAdmin()
+}
+
+function card(m){
+  const id = m.id, d = m.data() || {};
+  const ver = d.verificado === true;
+  const mailOK = d.correoVerificado === true;
+  const estado = d.estadoCuenta || "activo";
+  const pills = [
+    `<span class="pill ${mailOK?'ok':'warn'}">${mailOK?'Correo verificado':'Correo no verificado'}</span>`,
+    `<span class="pill ${ver?'ok':'warn'}">${ver?'Aprobado':'Pendiente admin'}</span>`,
+    `<span class="pill ${estado==='activo'?'ok':'bad'}">${estado}</span>`
+  ].join(" ");
+
+  const el = document.createElement("article");
+  el.className = "card";
+  el.innerHTML = `
+    <div class="row"><strong>${d.nombre || "(Sin nombre)"} · ${d.cedula || "—"}</strong></div>
+    <div class="muted">${d.especialidad || "General"}</div>
+    <div class="muted">${d.correo || "—"} · ${d.telefono||"—"}</div>
+    <div style="margin:8px 0">${pills}</div>
+    <div class="row">
+      <div>
+        <button class="btn btn--pri" data-act="aprobar">Aprobar</button>
+        <button class="btn" data-act="suspender">Suspender</button>
+        <button class="btn" data-act="revertir">Revertir</button>
+      </div>
+      <small class="muted">${d.createdAt?.toDate? d.createdAt.toDate().toLocaleDateString('es-MX'):''}</small>
+    </div>
+  `;
+
+  el.addEventListener("click", async (ev)=>{
+    const act = ev.target?.dataset?.act;
+    if (!act) return;
+    const ref = doc(db,"medicos", id);
+
+    try{
+      if (act === "aprobar"){
+        if (!mailOK && !confirm("El correo no aparece verificado. ¿Aprobar de todos modos?")) return;
+        await updateDoc(ref, { verificado:true, estadoCuenta:"activo", verificadoPor: auth.currentUser.email||"", verificadoAt: serverTimestamp(), updatedAt: serverTimestamp() });
+      } else if (act === "suspender"){
+        await updateDoc(ref, { estadoCuenta:"suspendido", verificado:false, updatedAt: serverTimestamp() });
+      } else if (act === "revertir"){
+        await updateDoc(ref, { verificado:false, updatedAt: serverTimestamp() });
+      }
+      ev.target.closest(".card").style.opacity = .5;
+    }catch(e){
+      alert("No se pudo actualizar: " + (e?.message||e));
+    }
+  });
+
+  return el;
+}
+
+async function load(){
+  UI.grid.innerHTML = "Cargando…";
+  // Para pocos docs: traemos 200 y filtramos cliente (simple y eficaz)
+  const snap = await getDocs(query(collection(db,"medicos"), orderBy("createdAt","desc"), limit(200)));
+  let docs = snap.docs;
+
+  const qtxt = (UI.q.value||"").trim().toLowerCase();
+  if (qtxt){
+    docs = docs.filter(d=>{
+      const x = JSON.stringify(d.data()||{}).toLowerCase();
+      return x.includes(qtxt);
+    });
   }
+  if (soloPend){
+    docs = docs.sort((a,b)=>{
+      const av = (a.data()?.verificado===true) ? 1 : 0;
+      const bv = (b.data()?.verificado===true) ? 1 : 0;
+      return av - bv; // pendientes (0) primero
+    });
+  }
+
+  UI.grid.innerHTML = "";
+  docs.forEach(d => UI.grid.appendChild(card(d)));
+  if (!docs.length) UI.grid.textContent = "Sin resultados.";
+}
+
+UI.btnReload.onclick = load;
+UI.btnSoloPend.onclick = ()=>{ soloPend = !soloPend; UI.btnSoloPend.textContent = soloPend? "Pendientes primero":"Orden por fecha"; load(); };
+UI.q.addEventListener("keydown", (e)=>{ if (e.key === "Enter") load(); });
+
+onAuthStateChanged(auth, (user)=>{
+  if (!user || !isAdminEmail(user)){ location.href = "/acceso?role=admin"; return; }
+  load();
 });
-
-let medicosGlobal = [];
-
-async function cargarMedicos() {
-  const contenedor = document.getElementById("listaMedicos");
-  contenedor.innerHTML = "Cargando médicos...";
-
-  try {
-    const querySnapshot = await getDocs(collection(db, "medicos"));
-    if (querySnapshot.empty) {
-      contenedor.innerHTML = "<p>No hay médicos registrados.</p>";
-      return;
-    }
-
-    medicosGlobal = querySnapshot.docs.map(docSnap => ({
-      id: docSnap.id,
-      ...docSnap.data()
-    }));
-
-    renderizarMedicos(medicosGlobal);
-  } catch (error) {
-    contenedor.innerHTML = `<p>Error al cargar médicos: ${error.message}</p>`;
-  }
-}
-
-function renderizarMedicos(lista) {
-  const contenedor = document.getElementById("listaMedicos");
-  contenedor.innerHTML = "";
-
-  const verificados = lista.filter(m => m.verificado);
-  const pendientes = lista.filter(m => !m.verificado);
-
-  const crearCard = (med, incluirBoton = false) => {
-    const card = document.createElement("details");
-    card.className = "lab-card";
-
-    const summary = document.createElement("summary");
-    summary.innerHTML = `<strong>${med.nombre}</strong>`;
-    card.appendChild(summary);
-
-    const contenido = document.createElement("div");
-    contenido.innerHTML = `
-      <p><strong>Correo:</strong> ${med.correo}</p>
-      <p><strong>Cédula:</strong> ${med.cedula || "No especificada"}</p>
-      <p><strong>Especialidad:</strong> ${med.especialidad || "No especificada"}</p>
-      <p><strong>Fecha de registro:</strong> ${med.fechaRegistro?.toDate().toLocaleString() || "N/D"}</p>
-    `;
-
-    if (incluirBoton) {
-      const btnVerificar = document.createElement("button");
-      btnVerificar.innerText = "Verificar médico";
-      btnVerificar.onclick = async () => {
-        await updateDoc(doc(db, "medicos", med.id), {
-          verificado: true
-        });
-        alert("Médico verificado correctamente.");
-        cargarMedicos();
-      };
-      contenido.appendChild(btnVerificar);
-    } else {
-      const btnSuspender = document.createElement("button");
-      btnSuspender.innerText = med.suspendido ? "Reactivar médico" : "Suspender médico temporalmente";
-      btnSuspender.onclick = async () => {
-        await updateDoc(doc(db, "medicos", med.id), {
-          suspendido: !med.suspendido
-        });
-        alert(med.suspendido ? "Médico reactivado." : "Médico suspendido.");
-        cargarMedicos();
-      };
-      contenido.appendChild(btnSuspender);
-
-      const btnEliminar = document.createElement("button");
-      btnEliminar.innerText = "❌ Eliminar médico";
-      btnEliminar.style.marginLeft = "10px";
-      btnEliminar.style.backgroundColor = "#e53935";
-      btnEliminar.style.color = "white";
-
-      btnEliminar.onclick = async () => {
-        const confirmado = confirm("¿Estás seguro de eliminar este médico permanentemente?");
-        if (!confirmado) return;
-
-        try {
-          await deleteDoc(doc(db, "medicos", med.id));
-          alert("Médico eliminado.");
-          cargarMedicos();
-        } catch (err) {
-          alert("Error al eliminar: " + err.message);
-        }
-      };
-      contenido.appendChild(btnEliminar);
-    }
-
-    card.appendChild(contenido);
-    return card;
-  };
-
-  const bloqueVerificados = document.createElement("div");
-  bloqueVerificados.innerHTML = `<h3>✅ Médicos verificados</h3>`;
-  verificados.forEach(med => bloqueVerificados.appendChild(crearCard(med)));
-
-  const bloquePendientes = document.createElement("div");
-  bloquePendientes.innerHTML = `<h3>⏳ En espera de verificación</h3>`;
-  pendientes.forEach(med => bloquePendientes.appendChild(crearCard(med, true)));
-
-  contenedor.appendChild(bloquePendientes);
-  contenedor.appendChild(bloqueVerificados);
-}
-
-function filtrarMedicos(e) {
-  const texto = e.target.value.toLowerCase();
-  const filtrados = medicosGlobal.filter(m =>
-    m.nombre.toLowerCase().includes(texto) ||
-    (m.especialidad || "").toLowerCase().includes(texto)
-  );
-  renderizarMedicos(filtrados);
-}
-
