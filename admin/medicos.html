@@ -1,33 +1,35 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Administrar Médicos - KodRx</title>
-  <link rel="stylesheet" href="/estilos/global.css" />
-  <script src="/componentes/header.js" defer></script>
-</head>
-<body>
-  <main class="seccion">
-    <h2>Administración de Médicos</h2>
+<!doctype html>
+<meta charset="utf-8">
+<title>Admin · Médicos</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="stylesheet" href="/estilos/global.css" />
+<style>
+  body{font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:#f8fafc}
+  .wrap{max-width:1080px;margin:24px auto;padding:0 16px}
+  .top{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+  .input{padding:10px 12px;border:1px solid #d1d5db;border-radius:10px}
+  .btn{padding:10px 14px;border:1px solid #d1d5db;border-radius:10px;background:#fff;font-weight:600;cursor:pointer}
+  .btn--pri{background:#0a59ff;border-color:#0a59ff;color:#fff}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px}
+  .card{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:14px}
+  .row{display:flex;justify-content:space-between;gap:8px;align-items:center}
+  .muted{color:#6b7280}
+  .pill{display:inline-block;padding:4px 8px;border-radius:999px;border:1px solid #d1d5db;margin-right:6px;font-size:12px}
+  .ok{color:#059669;border-color:#059669}
+  .warn{color:#b45309;border-color:#b45309}
+  .bad{color:#dc2626;border-color:#dc2626}
+</style>
 
-    <input
-      type="text"
-      id="buscador"
-      placeholder="Buscar por nombre o especialidad..."
-      style="width: 100%; padding: 10px; margin-bottom: 20px; border-radius: 6px; border: 1px solid #ccc;"
-    />
+<main class="wrap">
+  <div class="top">
+    <input id="q" class="input" placeholder="Buscar por nombre o correo…" />
+    <button id="btnReload" class="btn">Recargar</button>
+    <button id="btnSoloPend" class="btn btn--pri">Pendientes primero</button>
+  </div>
 
-   <div class="card" id="listaMedicos">
-  <!-- Aquí el JS insertará médicos pendientes y verificados -->
-</div>
+  <section id="grid" class="grid"></section>
+</main>
 
+<script type="module" src="/firebase-init.js"></script>
+<script type="module" src="/admin/adminMedicos.js?v=20250921a"></script>
 
-
-    <a class="volver" href="/admin/admin.html">← Volver al panel principal</a>
-  </main>
-
-  <script type="module" src="/firebase-init.js"></script>
-  <script type="module" src="adminMedicos-debug.js"></script>
-</body>
-</html>
