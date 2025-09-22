@@ -1,27 +1,16 @@
-// /medico/registroMedico.js — v20250921e (SDK 12.2.1)
+// /medico/registroMedico.js — v20250921f (SDK 12.2.1)
 import { auth, db } from "/firebase-init.js";
 import {
   createUserWithEmailAndPassword,
   sendEmailVerification,
   deleteUser,
-  signOut,
-  onAuthStateChanged
+  signOut
 } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js";
 import { doc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
 
-console.log("[REG] cargado");
-auth.languageCode = "es";
-
+console.log("[REG] cargado"); auth.languageCode = "es";
 let SUBMITTING = false;
-window.addEventListener("error", (e)=> console.error("[REG][window.error]", e?.message||e));
-window.addEventListener("unhandledrejection", (e)=> console.error("[REG][unhandled]", e?.reason||e));
 
-// Espera a que Auth termine su bootstrap (rehidratación de sesión, etc.)
-function waitAuthReady() {
-  return new Promise(resolve => {
-    const off = onAuthStateChanged(auth, () => { off(); resolve(); });
-  });
-}
 // Timeout helper
 const withTimeout = (p, ms, label) => Promise.race([
   p, new Promise((_,rej)=> setTimeout(()=> rej(new Error(`TIMEOUT_${label}`)), ms))
@@ -38,14 +27,14 @@ function init(){
 
 async function onSubmit(e){
   e.preventDefault();
-  if (SUBMITTING) return;
-  SUBMITTING = true;
+  if (SUBMITTING) return; SUBMITTING = true;
 
   const form = e.currentTarget;
   const btn  = document.getElementById("btnRegistro") || form.querySelector("button[type=submit]");
   const prevTxt = btn?.textContent;
   if (btn){ btn.disabled = true; btn.textContent = "Registrando…"; }
 
+  // helpers
   const normTitle = s => (s||"").trim().toLowerCase().replace(/\s+/g," ").replace(/(^|\s)\S/g, m=>m.toUpperCase());
   const normEmail = s => (s||"").trim().toLowerCase();
   const normPhone = s => (s||"").replace(/\D/g,"").slice(-10);
@@ -53,6 +42,7 @@ async function onSubmit(e){
   const buildDom  = d => `${d.calle||""} ${d.numero||""}, ${d.colonia||""}, ${d.municipio||""}, ${d.estado||""}, CP ${(d.cp||"").replace(/\D/g,"").slice(0,5)}`
                         .replace(/\s+,/g,",").replace(/,\s*,/g,", ").replace(/\s{2,}/g," ").trim();
 
+  // valores
   const ids = ["nombre","especialidad","correo","telefono","cedula","calle","numero","colonia","municipio","estado","cp","password"];
   const v = {};
   for (const id of ids){
@@ -70,6 +60,7 @@ async function onSubmit(e){
   const domicilio= buildDom(v);
   const searchName = v.nombre.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
 
+  // validaciones
   if (!v.nombre || !v.especialidad || !v.correo || !v.password){ alert("Completa todos los campos."); return reset(); }
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.correo)){ alert("Correo no válido."); return reset(); }
   if (v.password.length < 8){ alert("La contraseña debe tener al menos 8 caracteres."); return reset(); }
@@ -82,27 +73,20 @@ async function onSubmit(e){
   const watchdog = setInterval(()=> console.warn(`[REG][watchdog] at ${step}…`), 10000);
 
   try{
-    // 0) Asegura Auth listo
-    step = "AUTH_READY";
-    await withTimeout(waitAuthReady(), 8000, "AUTH_READY");
-
-    // 1) Crear usuario con timeout
+    // 1) Crear usuario (con timeout duro)
     step = "STEP1:createUser";
     console.log("[REG] STEP1: creando usuario…");
-    cred = await withTimeout(
-      createUserWithEmailAndPassword(auth, v.correo, v.password),
-      12000,
-      "CREATE_USER"
-    );
+    cred = await withTimeout(createUserWithEmailAndPassword(auth, v.correo, v.password), 12000, "CREATE_USER");
     console.log("[REG] STEP1 OK uid=", cred.user?.uid);
 
-    // 2) Índice de cédula (create-only)
+    // 2) Reclamar cédula (create-only; si existe, falla y hacemos rollback)
     step = "STEP2:claim-cedula";
     await setDoc(doc(db, "indices_cedulas", cedNorm), {
       uid: cred.user.uid, email: v.correo, telefono: tel, createdAt: serverTimestamp()
     }, { merge: false });
+    console.log("[REG] STEP2 OK");
 
-    // 3) Perfil
+    // 3) Perfil del médico
     step = "STEP3:perfil";
     await setDoc(doc(db, "medicos", cred.user.uid), {
       uid: cred.user.uid,
@@ -122,26 +106,27 @@ async function onSubmit(e){
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     });
+    console.log("[REG] STEP3 OK");
 
-    // 4) Verificación (best-effort)
+    // 4) Email de verificación (best-effort)
     step = "STEP4:email";
     try{
       await sendEmailVerification(cred.user, { url: `${location.origin}/medico/espera_verificacion.html`, handleCodeInApp: false });
-    }catch(e){ console.warn("[REG] email verif WARN:", e?.message||e); }
+      console.log("[REG] STEP4 OK (email enviado)");
+    }catch(e){ console.warn("[REG] STEP4 WARN:", e?.message||e); }
 
     alert("¡Registro exitoso! Revisa tu correo para verificar tu cuenta.");
     location.href = "/medico/espera_verificacion.html";
 
   }catch(err){
-    console.error("[REG] ERROR:", err?.message||err);
-    if (String(err?.message||"").startsWith("TIMEOUT_CREATE_USER")){
-      alert("No pudimos contactar el servicio de autenticación.\n\nRevisa:\n• Conexión de red\n• Que el dominio (kodrx.app / www.kodrx.app) esté en Authentication > Authorized domains\n• Que la API Key corresponda al proyecto correcto\n• Desactiva adblock para identitytoolkit.googleapis.com y securetoken.googleapis.com");
-    } else if (String(err?.message||"").startsWith("TIMEOUT_AUTH_READY")){
-      alert("El inicio de Auth tardó demasiado. Recarga la página (Ctrl/Cmd+Shift+R) o borra la sesión con window.kodrxAuthReset().");
-    } else if (err?.code === "permission-denied"){
-      alert("Permisos insuficientes al guardar datos. Revisa tus reglas de /medicos y /indices_cedulas.");
+    console.error("[REG] ERROR:", err?.code || err?.message || err);
+    const msg = String(err?.message||"");
+    if (msg.startsWith("TIMEOUT_CREATE_USER")){
+      alert("No pudimos contactar autenticación (timeout).\n\nRevisa:\n• Conexión de red\n• Authentication > Authorized domains: agrega kodrx.app y www.kodrx.app\n• API key del proyecto correcta\n• Desactiva adblock/CSP para identitytoolkit.googleapis.com y securetoken.googleapis.com");
+    } else if (err?.code === "auth/network-request-failed"){
+      alert("Falla de red al crear usuario. Verifica conexión/AdBlock/CSP.");
     } else if (err?.code === "auth/unauthorized-domain"){
-      alert("Dominio no autorizado en Firebase Authentication. Agrega kodrx.app (y www.kodrx.app) en Authorized domains.");
+      alert("Dominio no autorizado en Firebase Auth. Agrega kodrx.app y www.kodrx.app.");
     } else if (err?.code === "auth/email-already-in-use"){
       alert("Ese correo ya está registrado.");
     } else if (err?.code){
@@ -149,8 +134,7 @@ async function onSubmit(e){
     } else {
       alert("No se pudo completar el registro. Intenta de nuevo.");
     }
-
-    // Rollback si llegó a crearse el usuario pero falló después
+    // Rollback si el user llegó a crearse
     try{ if (cred?.user) await deleteUser(cred.user); }catch{}
     try{ await signOut(auth); }catch{}
   } finally {
