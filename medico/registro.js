@@ -1,4 +1,4 @@
-// /medico/registroMedico.js — v20250921a (SDK 12.2.1)
+// /medico/registroMedico.js — v20250921b (SDK 12.2.1) — init robusto + diagnósticos
 import { auth, db } from "/firebase-init.js";
 import {
   createUserWithEmailAndPassword,
@@ -12,23 +12,25 @@ import {
 
 console.log("[REG] registroMedico.js cargado");
 
+// Errores globales visibles
+window.addEventListener("error", (e)=> console.error("[REG][window.error]", e?.message||e));
+window.addEventListener("unhandledrejection", (e)=> console.error("[REG][unhandled]", e?.reason||e));
+
 auth.languageCode = "es";
 
-document.addEventListener("DOMContentLoaded", () => {
-  const form = document.getElementById("formRegistro");
-  const btn  = document.getElementById("btnRegistro");
+function init(){
+  console.log("[REG] init()");
+  // Soporta #formRegistro o el primer <form> de la página
+  const form = document.getElementById("formRegistro") || document.querySelector("form");
+  // Soporta #btnRegistro o un <button type=submit>
+  const btn  = document.getElementById("btnRegistro") || document.querySelector("button[type=submit], .btn-submit");
 
-  if (!btn && !form){
-    console.error("[REG] No encontré #btnRegistro ni #formRegistro");
-    return;
-  }
-  // Evita que el botón dentro de <form> provoque submit por defecto.
-  if (btn && btn.type !== "button") btn.type = "button";
+  if (!form && !btn){ console.error("[REG] No encontré formulario ni botón"); return; }
+  if (btn && btn.type !== "button") btn.type = "button"; // evita submit nativo
 
   const handler = async (e)=>{
     e?.preventDefault?.();
     console.log("[REG] submit hit");
-
     const busyEl = btn || form;
     const prevTxt = btn?.textContent;
     if (busyEl?.dataset.busy === "1") return;
@@ -39,11 +41,10 @@ document.addEventListener("DOMContentLoaded", () => {
     const datos = {};
     for (const c of campos){
       const el = document.getElementById(c);
-      if (!el){ alert(`Falta el campo '${c}' en el formulario`); return reset(); }
+      if (!el){ alert(`Falta el campo '${c}'`); return reset(); }
       datos[c] = (el.value || "").trim();
     }
 
-    // Normalizaciones ligeras
     const normTitle = s => (s||"").trim().toLowerCase().replace(/\s+/g," ").replace(/(^|\s)\S/g, m=>m.toUpperCase());
     const normEmail = s => (s||"").trim().toLowerCase();
     const normPhone = s => (s||"").replace(/\D/g,"").slice(-10);
@@ -60,7 +61,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const domicilio    = buildDom(datos);
     const searchName   = datos.nombre.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
 
-    // Validaciones mínimas
     if (!datos.nombre || !datos.especialidad || !datos.correo || !datos.password){ alert("Completa todos los campos."); return reset(); }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(datos.correo)){ alert("Correo no válido."); return reset(); }
     if (datos.password.length < 8){ alert("La contraseña debe tener al menos 8 caracteres."); return reset(); }
@@ -70,29 +70,27 @@ document.addEventListener("DOMContentLoaded", () => {
 
     let cred = null;
     try{
-      // 1) Crear cuenta (queda signed-in)
+      // 1) Auth
       cred = await createUserWithEmailAndPassword(auth, datos.correo, datos.password);
       const uid = cred.user.uid;
       console.log("[REG] Auth OK uid=", uid);
 
-      const perfRef = doc(db, "medicos", uid);
-      const idxRef  = doc(db, "indices_cedulas", cedNorm);
-
-      // 2) Reclamar cédula SIN leer (si ya existe → permission-denied por la regla de create-only)
+      // 2) Reclamo de cédula (sin lecturas)
       try{
-        await setDoc(idxRef, { uid, email: datos.correo, telefono: tel, createdAt: serverTimestamp() }, { merge: false });
-        console.log("[REG] Índice cédula creado:", cedNorm);
+        await setDoc(doc(db, "indices_cedulas", cedNorm), {
+          uid, email: datos.correo, telefono: tel, createdAt: serverTimestamp()
+        }, { merge: false });
+        console.log("[REG] Índice cédula OK:", cedNorm);
       }catch(e){
-        console.warn("[REG] Reclamo de cédula falló:", e?.code||e);
-        // Rollback de usuario Auth para no dejar huérfano
+        console.warn("[REG] Cédula tomada:", e?.code||e);
         try{ await deleteUser(cred.user); }catch{}
         try{ await signOut(auth); }catch{}
         alert("La cédula ya está registrada. No se creó la cuenta.");
         return reset();
       }
 
-      // 3) Crear perfil del médico (el dueño puede create en /medicos/{uid})
-      await setDoc(perfRef, {
+      // 3) Perfil
+      await setDoc(doc(db, "medicos", uid), {
         uid,
         nombre: datos.nombre,
         displayName: datos.nombre,
@@ -110,17 +108,17 @@ document.addEventListener("DOMContentLoaded", () => {
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
       });
-      console.log("[REG] Perfil creado");
+      console.log("[REG] Perfil OK");
 
-      // 4) Enviar verificación de correo (redirige a la página de espera)
+      // 4) Verificación
       try{
         await sendEmailVerification(cred.user, {
           url: `${location.origin}/medico/espera_verificacion.html`,
           handleCodeInApp: false
         });
-        console.log("[REG] Email de verificación enviado");
+        console.log("[REG] Email verificación enviado");
       }catch(e){
-        console.warn("[REG] No se pudo enviar verificación (no bloquea):", e?.message||e);
+        console.warn("[REG] sendEmailVerification falló:", e?.message||e);
       }
 
       alert("¡Registro exitoso! Revisa tu correo para verificar tu cuenta.");
@@ -135,15 +133,23 @@ document.addEventListener("DOMContentLoaded", () => {
       else                                           alert("No se pudo completar el registro. Inténtalo de nuevo.");
       reset();
     }
+
+    function reset(){
+      const busyEl = btn || form;
+      busyEl && (busyEl.dataset.busy = "0");
+      if (btn){ btn.disabled = false; btn.textContent = (prevTxt||"Registrarme"); }
+    }
   };
 
-  // Bindings (soporta botón y/o submit de form)
-  if (btn) btn.addEventListener("click", handler);
-  if (form) form.addEventListener("submit", handler);
+  // Bind resiliente (si hay form, si hay botón, o ambos)
+  if (btn)   btn.addEventListener("click", handler);
+  if (form)  form.addEventListener("submit", handler);
+  console.log("[REG] bindings OK", { hasForm: !!form, hasBtn: !!btn });
+}
 
-  function reset(){
-    const busyEl = btn || form;
-    busyEl && (busyEl.dataset.busy = "0");
-    if (btn){ btn.disabled = false; btn.textContent = "Registrarme"; }
-  }
-});
+// 🔧 Init robusto: corre ya o en DOMContentLoaded si aún no llega
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", init, { once:true });
+} else {
+  init();
+}
