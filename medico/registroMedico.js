@@ -1,41 +1,44 @@
-// /medico/registroMedico.js — v20250921d (SDK 12.2.1)
+// /medico/registroMedico.js — v20250921e (SDK 12.2.1)
 import { auth, db } from "/firebase-init.js";
 import {
   createUserWithEmailAndPassword,
   sendEmailVerification,
   deleteUser,
-  signOut
+  signOut,
+  onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js";
-import {
-  doc, setDoc, serverTimestamp
-} from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
+import { doc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
 
 console.log("[REG] cargado");
-
 auth.languageCode = "es";
 
-// Mutex global anti-doble submit
 let SUBMITTING = false;
-
-// Errores globales a consola (por si algo explota silencioso)
 window.addEventListener("error", (e)=> console.error("[REG][window.error]", e?.message||e));
 window.addEventListener("unhandledrejection", (e)=> console.error("[REG][unhandled]", e?.reason||e));
 
+// Espera a que Auth termine su bootstrap (rehidratación de sesión, etc.)
+function waitAuthReady() {
+  return new Promise(resolve => {
+    const off = onAuthStateChanged(auth, () => { off(); resolve(); });
+  });
+}
+// Timeout helper
+const withTimeout = (p, ms, label) => Promise.race([
+  p, new Promise((_,rej)=> setTimeout(()=> rej(new Error(`TIMEOUT_${label}`)), ms))
+]);
+
 function init(){
-  // Form + botón
   const form = document.getElementById("formRegistro") || document.querySelector("form");
   const btn  = document.getElementById("btnRegistro") || form?.querySelector("button");
-
-  if (!form){ console.error("[REG] No encontré <form> (#formRegistro)"); return; }
-  if (btn) btn.type = "submit"; // un solo flujo: submit del form
-
+  if (!form){ console.error("[REG] No hay <form>"); return; }
+  if (btn) btn.type = "submit";
   form.addEventListener("submit", onSubmit);
   console.log("[REG] bindings OK");
 }
 
 async function onSubmit(e){
   e.preventDefault();
-  if (SUBMITTING) return; // evita doble
+  if (SUBMITTING) return;
   SUBMITTING = true;
 
   const form = e.currentTarget;
@@ -43,7 +46,6 @@ async function onSubmit(e){
   const prevTxt = btn?.textContent;
   if (btn){ btn.disabled = true; btn.textContent = "Registrando…"; }
 
-  // Utilidades
   const normTitle = s => (s||"").trim().toLowerCase().replace(/\s+/g," ").replace(/(^|\s)\S/g, m=>m.toUpperCase());
   const normEmail = s => (s||"").trim().toLowerCase();
   const normPhone = s => (s||"").replace(/\D/g,"").slice(-10);
@@ -51,7 +53,6 @@ async function onSubmit(e){
   const buildDom  = d => `${d.calle||""} ${d.numero||""}, ${d.colonia||""}, ${d.municipio||""}, ${d.estado||""}, CP ${(d.cp||"").replace(/\D/g,"").slice(0,5)}`
                         .replace(/\s+,/g,",").replace(/,\s*,/g,", ").replace(/\s{2,}/g," ").trim();
 
-  // Lee campos
   const ids = ["nombre","especialidad","correo","telefono","cedula","calle","numero","colonia","municipio","estado","cp","password"];
   const v = {};
   for (const id of ids){
@@ -60,7 +61,6 @@ async function onSubmit(e){
     v[id] = (el.value||"").trim();
   }
 
-  // Normaliza + valida
   v.nombre       = normTitle(v.nombre);
   v.especialidad = normTitle(v.especialidad || "General");
   v.correo       = normEmail(v.correo);
@@ -77,34 +77,33 @@ async function onSubmit(e){
   if (cp5.length !== 5){ alert("El código postal debe tener 5 dígitos."); return reset(); }
   if (!cedNorm){ alert("Cédula no válida."); return reset(); }
 
-  // Watchdog (10s) por paso para diagnosticar “colgados”
+  let cred = null;
   let step = "INIT";
   const watchdog = setInterval(()=> console.warn(`[REG][watchdog] at ${step}…`), 10000);
 
-  let cred = null;
   try{
+    // 0) Asegura Auth listo
+    step = "AUTH_READY";
+    await withTimeout(waitAuthReady(), 8000, "AUTH_READY");
+
+    // 1) Crear usuario con timeout
     step = "STEP1:createUser";
     console.log("[REG] STEP1: creando usuario…");
-    cred = await createUserWithEmailAndPassword(auth, v.correo, v.password);
+    cred = await withTimeout(
+      createUserWithEmailAndPassword(auth, v.correo, v.password),
+      12000,
+      "CREATE_USER"
+    );
     console.log("[REG] STEP1 OK uid=", cred.user?.uid);
 
+    // 2) Índice de cédula (create-only)
     step = "STEP2:claim-cedula";
-    console.log("[REG] STEP2: reclamando cédula", cedNorm);
-    try{
-      await setDoc(doc(db, "indices_cedulas", cedNorm), {
-        uid: cred.user.uid, email: v.correo, telefono: tel, createdAt: serverTimestamp()
-      }, { merge: false });
-      console.log("[REG] STEP2 OK");
-    }catch(e){
-      console.warn("[REG] STEP2 FAIL (cédula tomada o permiso):", e?.code||e);
-      try{ await deleteUser(cred.user); }catch{}
-      try{ await signOut(auth); }catch{}
-      alert("La cédula ya está registrada. No se creó la cuenta.");
-      return reset();
-    }
+    await setDoc(doc(db, "indices_cedulas", cedNorm), {
+      uid: cred.user.uid, email: v.correo, telefono: tel, createdAt: serverTimestamp()
+    }, { merge: false });
 
+    // 3) Perfil
     step = "STEP3:perfil";
-    console.log("[REG] STEP3: creando perfil…");
     await setDoc(doc(db, "medicos", cred.user.uid), {
       uid: cred.user.uid,
       nombre: v.nombre,
@@ -123,42 +122,44 @@ async function onSubmit(e){
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     });
-    console.log("[REG] STEP3 OK");
 
+    // 4) Verificación (best-effort)
     step = "STEP4:email";
-    console.log("[REG] STEP4: enviando verificación…");
     try{
-      await sendEmailVerification(cred.user, {
-        url: `${location.origin}/medico/espera_verificacion.html`,
-        handleCodeInApp: false
-      });
-      console.log("[REG] STEP4 OK (email enviado)");
-    }catch(e){
-      console.warn("[REG] STEP4 WARN (no se pudo enviar verificación):", e?.message||e);
-    }
+      await sendEmailVerification(cred.user, { url: `${location.origin}/medico/espera_verificacion.html`, handleCodeInApp: false });
+    }catch(e){ console.warn("[REG] email verif WARN:", e?.message||e); }
 
     alert("¡Registro exitoso! Revisa tu correo para verificar tu cuenta.");
     location.href = "/medico/espera_verificacion.html";
 
   }catch(err){
-    console.error("[REG] ERROR:", err?.code, err?.message);
-    const code = err?.code || "";
-    if (code === "auth/email-already-in-use")      alert("Ese correo ya está registrado.");
-    else if (code === "auth/invalid-email")        alert("Correo inválido.");
-    else if (code === "auth/weak-password")        alert("La contraseña es muy débil.");
-    else                                           alert("No se pudo completar el registro. Inténtalo de nuevo.");
-    reset();
+    console.error("[REG] ERROR:", err?.message||err);
+    if (String(err?.message||"").startsWith("TIMEOUT_CREATE_USER")){
+      alert("No pudimos contactar el servicio de autenticación.\n\nRevisa:\n• Conexión de red\n• Que el dominio (kodrx.app / www.kodrx.app) esté en Authentication > Authorized domains\n• Que la API Key corresponda al proyecto correcto\n• Desactiva adblock para identitytoolkit.googleapis.com y securetoken.googleapis.com");
+    } else if (String(err?.message||"").startsWith("TIMEOUT_AUTH_READY")){
+      alert("El inicio de Auth tardó demasiado. Recarga la página (Ctrl/Cmd+Shift+R) o borra la sesión con window.kodrxAuthReset().");
+    } else if (err?.code === "permission-denied"){
+      alert("Permisos insuficientes al guardar datos. Revisa tus reglas de /medicos y /indices_cedulas.");
+    } else if (err?.code === "auth/unauthorized-domain"){
+      alert("Dominio no autorizado en Firebase Authentication. Agrega kodrx.app (y www.kodrx.app) en Authorized domains.");
+    } else if (err?.code === "auth/email-already-in-use"){
+      alert("Ese correo ya está registrado.");
+    } else if (err?.code){
+      alert(`Error de autenticación: ${err.code}`);
+    } else {
+      alert("No se pudo completar el registro. Intenta de nuevo.");
+    }
+
+    // Rollback si llegó a crearse el usuario pero falló después
+    try{ if (cred?.user) await deleteUser(cred.user); }catch{}
+    try{ await signOut(auth); }catch{}
   } finally {
     clearInterval(watchdog);
-  }
-
-  function reset(){
     SUBMITTING = false;
     if (btn){ btn.disabled = false; btn.textContent = (prevTxt||"Registrarme"); }
   }
 }
 
-// Init robusto
 if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", init, { once:true });
 } else {
