@@ -8,7 +8,7 @@ import {
   initializeFirestore, persistentLocalCache
 } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
 
-// ⚠️ Pon tus credenciales reales aquí
+
 const firebaseConfig = {
     apiKey: "AIzaSyBIjaOe4HcGNDk0xrqen8etBv0RyjyOJHw",
   authDomain: "kodrx-105b9.firebaseapp.com",
