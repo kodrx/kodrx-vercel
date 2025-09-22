@@ -10,12 +10,13 @@ import {
 
 // ⚠️ Pon tus credenciales reales aquí
 const firebaseConfig = {
-  apiKey: "AIzaSy...tuKey...",
+    apiKey: "AIzaSyBIjaOe4HcGNDk0xrqen8etBv0RyjyOJHw",
   authDomain: "kodrx-105b9.firebaseapp.com",
+  databaseURL: "https://kodrx-105b9-default-rtdb.firebaseio.com",
   projectId: "kodrx-105b9",
   storageBucket: "kodrx-105b9.appspot.com",
-  messagingSenderId: "...",
-  appId: "1:...:web:..."
+  messagingSenderId: "239675098141",
+  appId: "1:239675098141:web:152ae3741b0ac79db7f2f4"
 };
 
 export const app = initializeApp(firebaseConfig);
