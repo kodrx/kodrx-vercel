@@ -1,15 +1,74 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Verificación en Proceso</title>
-  <link rel="stylesheet" href="/estilos/global.css" />
-  <script src="/componentes/header.js" defer></script>
-</head>
-<body>
-  <h2>Gracias por registrarte en KodRx</h2>
-  <p>El equipo profesional de KodRx está verificando tu información.</p>
-  <p>Nos pondremos en contacto próximamente por correo electrónico.</p>
-</body>
-</html>
+<!doctype html>
+<meta charset="utf-8">
+<title>KodRx · Verifica tu correo</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="stylesheet" href="/estilos/global.css" />
+<style>
+  .wrap{max-width:640px;margin:48px auto;padding:0 16px;font-family:system-ui, -apple-system, Segoe UI, Roboto, sans-serif}
+  .card{background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:20px}
+  .row{display:flex;gap:12px;flex-wrap:wrap;margin-top:12px}
+  .btn{padding:10px 14px;border-radius:12px;border:1px solid #d1d5db;background:#fff;font-weight:600;cursor:pointer}
+  .btn--pri{background:#0a59ff;border-color:#0a59ff;color:#fff}
+  .ok{color:#059669;font-weight:700}
+  .warn{color:#b45309;font-weight:700}
+  .muted{color:#6b7280}
+</style>
+
+<main class="wrap">
+  <div class="card">
+    <h1>Verifica tu correo electrónico</h1>
+    <p id="estado" class="muted">Comprobando…</p>
+    <div class="row">
+      <button id="btnReenviar" class="btn">Reenviar verificación</button>
+      <button id="btnListo" class="btn btn--pri">Ya verifiqué</button>
+      <a class="btn" href="/salir.html">Cerrar sesión</a>
+    </div>
+  </div>
+</main>
+
+<script type="module" src="/firebase-init.js"></script>
+<script type="module">
+  import { auth, db } from "/firebase-init.js";
+  import { onAuthStateChanged, sendEmailVerification } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js";
+  import { doc, updateDoc, serverTimestamp, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
+
+  const elEstado = document.getElementById("estado");
+  const btnReenviar = document.getElementById("btnReenviar");
+  const btnListo = document.getElementById("btnListo");
+
+  async function pintar(user){
+    await user.reload();
+    const ok = user.emailVerified === true;
+    elEstado.innerHTML = ok
+      ? `<span class="ok">✓ Correo verificado.</span> Espera la aprobación del administrador.`
+      : `<span class="warn">✱ Tu correo aún no está verificado.</span> Revisa tu bandeja y spam.`;
+
+    // Actualiza un flag visible para admin (no usado en reglas)
+    try{
+      const ref = doc(db,"medicos", user.uid);
+      const snap = await getDoc(ref);
+      if (!snap.exists()) {
+        await setDoc(ref, { correo: user.email||"", createdAt: serverTimestamp(), verificado: false, correoVerificado: ok, updatedAt: serverTimestamp() }, { merge:true });
+      } else {
+        await updateDoc(ref, { correoVerificado: ok, updatedAt: serverTimestamp() });
+      }
+    }catch(e){ /* no bloquea */ }
+  }
+
+  onAuthStateChanged(auth, async (user)=>{
+    if(!user){ location.href = "/acceso?role=medico"; return; }
+    await pintar(user);
+
+    btnReenviar.onclick = async ()=>{
+      try{
+        await sendEmailVerification(user, { url: location.origin + "/medico/espera_verificacion.html" });
+        alert("Te enviamos otro correo de verificación.");
+      }catch(e){ alert("No pudimos enviar el correo. Intenta más tarde."); }
+    };
+
+    btnListo.onclick = ()=> pintar(user).then(()=>{
+      // Si ya está verificado, lo podemos mandar al panel
+      if (auth.currentUser?.emailVerified) location.href = "/medico/panel.html";
+    });
+  });
+</script>
