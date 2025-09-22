@@ -14,7 +14,7 @@ const firebaseConfig = {
   authDomain: "kodrx-105b9.firebaseapp.com",
   databaseURL: "https://kodrx-105b9-default-rtdb.firebaseio.com",
   projectId: "kodrx-105b9",
-  storageBucket: "kodrx-105b9.firebasestorage.app",
+  storageBucket: "kodrx-105b9.appspot.com",
   messagingSenderId: "239675098141",
   appId: "1:239675098141:web:152ae3741b0ac79db7f2f4"
 };
