@@ -1,18 +1,51 @@
 {
   "version": 2,
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "Content-Security-Policy",
+          "value": "default-src 'self'; connect-src 'self' https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://firestore.googleapis.com https://www.googleapis.com https://www.gstatic.com https://firebaseinstallations.googleapis.com; script-src 'self' https://www.gstatic.com 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' https://fonts.gstatic.com data:; frame-src 'self'; object-src 'none'; base-uri 'self';"
+        },
+        { "key": "Referrer-Policy", "value": "no-referrer" },
+        { "key": "X-Content-Type-Options", "value": "nosniff" }
+      ]
+    },
+    {
+      "source": "/(.*)\\.(js|css)",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
+      ]
+    },
+    {
+      "source": "/(.*)\\.(html)",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-store" }
+      ]
+    }
+  ],
   "redirects": [
-    { "source": "/login",         "destination": "/acceso",                "permanent": true },
-    { "source": "/login.html",    "destination": "/acceso",                "permanent": true },
+    {
+      "source": "/(.*)",
+      "has": [{ "type": "host", "value": "kodrx.app" }],
+      "destination": "https://www.kodrx.app/$1",
+      "permanent": true
+    },
+    { "source": "/login",        "destination": "/acceso",                 "permanent": true },
+    { "source": "/login.html",   "destination": "/acceso",                 "permanent": true },
     { "source": "/farmacia/login","destination": "/acceso?role=farmacia",  "permanent": true },
-    { "source": "/medico/login",  "destination": "/acceso?role=medico",    "permanent": true }
+    { "source": "/medico/login", "destination": "/acceso?role=medico",     "permanent": true }
   ],
   "rewrites": [
     { "source": "/acceso",               "destination": "/acceso.html" },
     { "source": "/reset",                "destination": "/reset.html"  },
+
     { "source": "/medico/panel",         "destination": "/medico/panel.html" },
     { "source": "/medico/historial",     "destination": "/medico/historial.html" },
     { "source": "/medico/resultados",    "destination": "/medico/resultados.html" },
     { "source": "/medico/ver-receta",    "destination": "/medico/ver-receta.html" },
+
     { "source": "/farmacia/panel",       "destination": "/farmacia/panel.html" },
     { "source": "/farmacia/historial",   "destination": "/farmacia/historial.html" },
     { "source": "/farmacia/verificador", "destination": "/farmacia/verificador.html" }
