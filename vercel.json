@@ -24,8 +24,22 @@
         { "key": "Cache-Control", "value": "no-store" }
       ]
     }
-  ],
-  "redirects": [
+  
+
+  {
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "Content-Security-Policy",
+          "value": "default-src 'self'; connect-src 'self' https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://firestore.googleapis.com https://www.googleapis.com https://www.gstatic.com https://firebaseinstallations.googleapis.com; script-src 'self' https://www.gstatic.com https://cdn.jsdelivr.net 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' https://fonts.gstatic.com data:; frame-src 'self'; object-src 'none'; base-uri 'self';"
+        }
+      ]
+    }
+  ]
+}
+],  "redirects": [
     {
       "source": "/(.*)",
       "has": [{ "type": "host", "value": "kodrx.app" }],
