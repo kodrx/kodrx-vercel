@@ -247,10 +247,17 @@ button{appearance:none;border:0;border-radius:12px;padding:10px 14px;font-weight
   /* ================== Config / Utils ================== */
   const BC_BASE = 'https://kodrx-blockchain.onrender.com';
   const sleep = (ms)=>new Promise(r=>setTimeout(r,ms));
-  const = (selOrEl,val)=>{
-    const el = typeof selOrEl==='string' ? document.querySelector('#'+selOrEl+', [data-bind="'+selOrEl+'"], .'+selOrEl) : selOrEl;
-    if(!el) return; el.textContent = (val ?? '—');
-  };
+  const setText = (keyOrEl, val) => {
+  const el = (typeof keyOrEl === 'string')
+    ? (document.getElementById(keyOrEl)
+       || document.querySelector(`[data-bind="${keyOrEl}"]`)
+       || document.querySelector('.' + keyOrEl)
+       || document.querySelector(keyOrEl)) // por si te pasan "#id" o ".clase"
+    : keyOrEl;
+
+  if (!el) { console.warn('[bind] no el for', keyOrEl); return; }
+  el.textContent = (val ?? '—');
+};
   const QR_RECETA_URL = id => `https://kodrx.app/verificar.html?id=${encodeURIComponent(id)}`;
 
   // Normalizador (compat)
@@ -396,7 +403,18 @@ setText('pacTalla', r.paciente?.talla ?? r.talla ?? '—');
 setText('pacTemp',  r.paciente?.temperatura ?? r.temperatura ?? '—');
 setText('pacPresion', r.paciente?.presion ?? r.presion ?? '—');
 setText('pacIMC',     r.paciente?.imc ?? r.imc ?? '—');
+setText('obsTexto',  r.observaciones ?? '—');
+setText('diagTexto', r.diagnostico   ?? '—');
+setText('recetaId', 'ID: ' + (r.id || '—'));
 
+{
+  const meds = Array.isArray(r.medicamentos) ? r.medicamentos : [];
+  const medsTxt = meds.length
+    ? meds.map((m,i)=>`${i+1}. ${m.nombre}\n   Dosis: ${m.dosis}\n   Duración: ${m.duracion}`).join('\n\n')
+    : '—';
+  const medsEl = document.getElementById('listaMedsDerecha');
+  if (medsEl) medsEl.textContent = medsTxt;
+}
 
 
     // Libs + QR receta
