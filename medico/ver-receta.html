@@ -398,18 +398,7 @@ setText('pacPresion', r.paciente?.presion ?? r.presion ?? '—');
 setText('pacIMC',     r.paciente?.imc ?? r.imc ?? '—');
 
 
-setText('obsTexto',  r.observaciones ?? '—');
-setText('diagTexto', r.diagnostico   ?? '—');
-setText('recetaId', 'ID: ' + (r.id || '—'));
 
-{
-  const meds = Array.isArray(r.medicamentos) ? r.medicamentos : [];
-  const medsTxt = meds.length
-    ? meds.map((m,i)=>`${i+1}. ${m.nombre}\n   Dosis: ${m.dosis}\n   Duración: ${m.duracion}`).join('\n\n')
-    : '—';
-  const medsEl = document.getElementById('listaMedsDerecha');
-  if (medsEl) medsEl.textContent = medsTxt;
-}
     // Libs + QR receta
     await ensureLibs();
     const host = document.getElementById('qrMain');
