@@ -388,15 +388,16 @@ button{appearance:none;border:0;border-radius:12px;padding:10px 14px;font-weight
     setText('doctorTel',    r.medico?.telefono ?? r.medicoTelefono ?? '—');
     setText('doctorDir',    r.medico?.direccion ?? r.medicoDomicilio ?? '—');
 
-    // Paciente
     setText('pacienteNombre', r.paciente?.nombre ?? r.nombrePaciente ?? '—');
-    setText('pacEdad',  r.paciente?.edad ?? r.edad ?? '—');
-    setText('pacSexo',  r.paciente?.sexo ?? r.sexo ?? '—');
-    setText('pacPeso',  r.paciente?.peso ?? r.peso ?? '—');
-    setText('pacTalla', r.paciente?.talla ?? r.talla ?? '—');
-    setText('pacTemp',  r.paciente?.temperatura ?? r.temperatura ?? '—');
-    setText('pacPresion', r.paciente?.presion ?? r.presion ?? '—');
-    setText('pacIMC',     r.paciente?.imc ?? r.imc ?? '—');
+setText('pacEdad',  r.paciente?.edad ?? r.edad ?? '—');
+setText('pacSexo',  r.paciente?.sexo ?? r.sexo ?? '—');
+setText('pacPeso',  r.paciente?.peso ?? r.peso ?? '—');
+setText('pacTalla', r.paciente?.talla ?? r.talla ?? '—');
+setText('pacTemp',  r.paciente?.temperatura ?? r.temperatura ?? '—');
+setText('pacPresion', r.paciente?.presion ?? r.presion ?? '—');
+setText('pacIMC',     r.paciente?.imc ?? r.imc ?? '—');
+
+
 setText('obsTexto',  r.observaciones ?? '—');
 setText('diagTexto', r.diagnostico   ?? '—');
 setText('recetaId', 'ID: ' + (r.id || '—'));
