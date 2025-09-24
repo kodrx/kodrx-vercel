@@ -222,229 +222,167 @@ button{appearance:none;border:0;border-radius:12px;padding:10px 14px;font-weight
 </html>
 
 
+<!-- Libs locales (permitidas por tu CSP) -->
+<script defer src="/vendor/qrcode.min.js?v=20250923a"></script>
+<script defer src="/vendor/JsBarcode.all.min.js?v=20250923a"></script>
+<script defer src="/vendor/jspdf.umd.min.js?v=20250923a"></script>
 
-<!-- jsPDF (UMD) -->
-<script src="/vendor/jspdf.umd.min.js?v=2025092"></script>
-<!-- QRCode.js -->
-
-<script src="/vendor/qrcode.min.js?v=20250922" defer></script>
 <script>
-;(() => {
-  const DEBUG = false;                     // ← pon true si quieres ver todo de nuevo
-  if (!DEBUG) {
-    const DROP = ['[paint]','[panel]','[ver]','[bc]','[sanity]','[submit-fixer]','[panel][hotfix]'];
-    for (const m of ['log','info','debug','warn']) {
-      const orig = console[m];
-      console[m] = function(...args){
-        const s = typeof args[0] === 'string' ? args[0] : '';
-        if (DROP.some(p => s.startsWith(p))) return;  // silencia mensajes conocidos
-        return orig.apply(this, args);
-      };
+;(()=>{ // silenciar logs opcionales
+  const DEBUG=false;
+  if(!DEBUG){
+    const DROP=['[paint]','[panel]','[ver]','[bc]','[sanity]','[submit-fixer]','[panel][hotfix]'];
+    for(const m of ['log','info','debug','warn']){
+      const orig=console[m];
+      console[m]=function(...a){ const s=typeof a[0]==='string'?a[0]:''; if(DROP.some(p=>s.startsWith(p)))return; return orig.apply(this,a); };
     }
   }
 })();
 </script>
+
 <script>
-;(() => {
+;(()=>{
   'use strict';
 
-  // ===== Config =====
+  /* ================== Config / Utils ================== */
   const BC_BASE = 'https://kodrx-blockchain.onrender.com';
-
-  // ===== Utils =====
-  const sleep   = (ms)=>new Promise(r=>setTimeout(r,ms));
-  const setText = (selOrEl, val)=>{
-    const el = typeof selOrEl==='string' ? document.querySelector(selOrEl) : selOrEl;
-    if (!el) return; el.textContent = (val ?? '—');
+  const sleep = (ms)=>new Promise(r=>setTimeout(r,ms));
+  const setText = (selOrEl,val)=>{
+    const el = typeof selOrEl==='string' ? document.querySelector('#'+selOrEl+', [data-bind="'+selOrEl+'"], .'+selOrEl) : selOrEl;
+    if(!el) return; el.textContent = (val ?? '—');
   };
-const QR_RECETA_URL = (id) => `https://kodrx.app/verificar.html?id=${encodeURIComponent(id)}`;
-  // Normaliza la receta (soporta legacy)
+  const QR_RECETA_URL = id => `https://kodrx.app/verificar.html?id=${encodeURIComponent(id)}`;
+
+  // Normalizador (compat)
   window.normalize = function normalize(raw0){
-  const raw = raw0 || {};
-  const bc  = raw.blockchain || {};
-
-  // bloque: admite r.bloque o bc.block
-  let bloque = null;
-  if (Number.isFinite(raw.bloque)) bloque = raw.bloque;
-  else if (typeof bc.block === 'number' || typeof bc.block === 'string') bloque = bc.block;
-
-  // hash: primero blockchain.hash, si no r.hash
-  const hash = (bc.hash ?? raw.hash) || null;
-
-  // status derivado si no viene en bc.status
-  const status = bc.status || (bloque ? 'ok' : (hash ? 'simulado' : 'pendiente'));
-
-  // nombre del paciente (compat)
-  const nombrePaciente =
-    raw.nombrePaciente ?? raw.pacienteNombre ?? raw.paciente?.nombre ?? raw.paciente ?? '—';
-
-  // objeto médico desde campos sueltos (compat)
-  const medico = raw.medico || {
-    nombre:       raw.medicoNombre,
-    genero:       raw.medicoGenero,
-    cedula:       raw.medicoCedula,
-    especialidad: raw.medicoEspecialidad,
-    telefono:     raw.medicoTelefono,
-    direccion:    raw.medicoDomicilio
+    const raw = raw0 || {}; const bc = raw.blockchain || {};
+    const bloque = Number.isFinite(raw.bloque) ? raw.bloque : (bc.block ?? null);
+    const hash   = bc.hash ?? raw.hash ?? null;
+    const status = bc.status || (bloque ? 'ok' : (hash ? 'simulado' : 'pendiente'));
+    const nombrePaciente = raw.nombrePaciente ?? raw.pacienteNombre ?? raw.paciente?.nombre ?? raw.paciente ?? '—';
+    const medico = raw.medico || {
+      nombre: raw.medicoNombre, genero: raw.medicoGenero, cedula: raw.medicoCedula,
+      especialidad: raw.medicoEspecialidad, telefono: raw.medicoTelefono, direccion: raw.medicoDomicilio
+    };
+    return { ...raw, nombrePaciente, medico,
+      bloque, hash, blockchain:{ ...bc, status, block:(bc.block ?? bloque) ?? null, hash } };
   };
 
-  return {
-    ...raw,
-    nombrePaciente,
-    medico,
-    bloque,
-    hash,
-    blockchain: {
-      ...bc,
-      status,
-      block: (bc.block ?? bloque) ?? null,
-      hash:  hash
-    }
-  };
-};
-
-  // ===== Libs (idempotentes) =====
+  /* ================== Carga de libs (correcta) ================== */
+  function loadScript(src){
+    return new Promise((res,rej)=>{
+      const s=document.createElement('script'); s.src=src; s.defer=true;
+      s.onload=res; s.onerror=()=>rej(new Error('No se pudo cargar: '+src));
+      document.head.appendChild(s);
+    });
+  }
   async function ensureLibs(){
     const jobs=[];
-    if (!window.QRCode && !window.qrcode){
-      jobs.push(new Promise((res,rej)=>{const s=document.createElement('script');
-        s.src='/vendor/JsBarcode.all.min.js?v=20250923';
-        s.onload=res; s.onerror=rej; document.head.appendChild(s);}));
-    }
-    if (!window.JsBarcode){
-      jobs.push(new Promise((res,rej)=>{const s=document.createElement('script');
-        s.src='/vendor/JsBarcode.all.min.js?v=20250923';
-        s.onload=res; s.onerror=rej; document.head.appendChild(s);}));
-    }
-    if (jobs.length) await Promise.allSettled(jobs);
+    if(!window.QRCode && !window.qrcode) jobs.push(loadScript('/vendor/qrcode.min.js?v=20250923a'));
+    if(!window.JsBarcode && !(window.JsBarcode?.default)) jobs.push(loadScript('/vendor/JsBarcode.all.min.js?v=20250923a'));
+    if(!(window.jspdf && window.jspdf.jsPDF)) jobs.push(loadScript('/vendor/jspdf.umd.min.js?v=20250923a'));
+    if(jobs.length) await Promise.all(jobs);
   }
   async function ensureJsPDF(){
-    if (window.jspdf?.jsPDF) return window.jspdf.jsPDF;
-    await new Promise((res,rej)=>{const s=document.createElement('script');
-      s.src='/vendor/JsBarcode.all.min.js?v=20250923';
-      s.onload=res; s.onerror=rej; document.head.appendChild(s);});
-    return window.jspdf.jsPDF;
+    if(window.jspdf?.jsPDF) return window.jspdf.jsPDF;
+    await loadScript('/vendor/jspdf.umd.min.js?v=20250923a');
+    return window.jspdf?.jsPDF;
+  }
+  async function ensureJsBarcode(){
+    if(window.JsBarcode || window.JsBarcode?.default) return (window.JsBarcode || window.JsBarcode.default);
+    await loadScript('/vendor/JsBarcode.all.min.js?v=20250923a');
+    return (window.JsBarcode || window.JsBarcode?.default);
   }
 
-  // ===== QR helpers =====
+  /* ================== QR helpers ================== */
   function makeQR(host, text, size){
-    if (!host) return false;
+    if(!host) return false;
     const QR = window.QRCode || window.qrcode;
-    if (!QR) return false;
-    host.innerHTML = '';
-    if (window.QRCode){ new QRCode(host, { text, width:size, height:size, correctLevel: QRCode.CorrectLevel.M }); return true; }
+    if(!QR)  return false;
+    host.innerHTML='';
+    if(window.QRCode){ new QRCode(host,{text,width:size,height:size,correctLevel:QRCode.CorrectLevel.M}); return true; }
     try{
-      if (QR.toCanvas){
-        const c=document.createElement('canvas'); host.appendChild(c);
-        QR.toCanvas(c, text, { width:size }); return true;
-      }
+      if(QR.toCanvas){ const c=document.createElement('canvas'); host.appendChild(c); QR.toCanvas(c,text,{width:size}); return true; }
     }catch{}
     return false;
   }
-  async function makeQRDataURLCompat(text, size=220){
+  async function makeQRDataURLCompat(text,size=220){
     await ensureLibs();
     try{
-      if (window.qrcode?.toDataURL){
-        return await window.qrcode.toDataURL(text, { width:size, margin:1 });
-      }
-      if (window.QRCode){
+      if(window.qrcode?.toDataURL) return await window.qrcode.toDataURL(text,{width:size,margin:1});
+      if(window.QRCode){
         const div=document.createElement('div');
-        new QRCode(div, { text, width:size, height:size, correctLevel:(window.QRCode.CorrectLevel?.M ?? 1) });
+        new QRCode(div,{text,width:size,height:size,correctLevel:(window.QRCode.CorrectLevel?.M ?? 1)});
         await Promise.resolve();
-        const img=div.querySelector('img'); if (img?.src) return img.src;
-        const c=div.querySelector('canvas'); if (c) return c.toDataURL('image/png');
+        const img=div.querySelector('img'); if(img?.src) return img.src;
+        const c=div.querySelector('canvas'); if(c) return c.toDataURL('image/png');
       }
     }catch{}
     return '';
   }
 
-  // ===== Firestore helpers =====
-  let __fsMod=null;
-  async function _fs(){
-    if (window.__fs) return window.__fs;
-    if (!__fsMod) __fsMod = await import('https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js');
-    return __fsMod;
-  }
-  async function getDB(){
-    if (window.db) return window.db;
-    const core = await import('/firebase-init.js');
-    return core.db;
-  }
-
-  // ===== Badge =====
-  function updateBadgeFromReceta(r){
-    const el = document.getElementById('badgeOrigen'); if(!el) return;
-    const hasBlock = (r?.blockchain?.block ?? r?.bloque) != null;
-    const hasHash  = !!(r?.blockchain?.hash ?? r?.hash);
-    const S = hasBlock ? {txt:'SELLADO EN BLOCKCHAIN', cls:'badge ok',   bg:'#16a34a', fg:'#fff'}
-          : hasHash   ? {txt:'SELLADO SIMULADO',      cls:'badge warn', bg:'#f59e0b', fg:'#111'}
-                      : {txt:'PENDIENTE',             cls:'badge warn', bg:'#9ca3af', fg:'#111'};
-    el.textContent = S.txt; el.className = S.cls; el.style.background = S.bg; el.style.color = S.fg;
-  }
-
-  // ===== QR del bloque =====
-  async function setChainQR(block){
-    const host = document.getElementById('qrChain');
-    if (!host) return;
-    await ensureLibs();
-    const url = `${BC_BASE}/verificar.html?id=${encodeURIComponent(block)}`;
-    makeQR(host, url, 220);
-    const bn = document.getElementById('blockNum');
-    if (bn) bn.textContent = String(block || '—');
-  }
-
-  // ===== QRs para PDF =====
-  async function getQRSources(receta){
-    const out = {};
-    const mainNode  = document.querySelector('#qrMain  canvas, #qrMain  img');
-    const chainNode = document.querySelector('#qrChain canvas, #qrChain img');
-    if (mainNode)  out.main  = mainNode.tagName==='IMG' ? mainNode.src  : mainNode.toDataURL('image/png');
-    if (chainNode) out.chain = chainNode.tagName==='IMG'? chainNode.src : chainNode.toDataURL('image/png');
-    if (!out.main){
-      const verURL = QR_RECETA_URL(r.id);
-      out.main = await makeQRDataURLCompat(verURL, 220);
-    }
-    if (!out.chain){
-      const blk = receta?.blockchain?.block ?? receta?.bloque ?? null;
-      if (blk) out.chain = await makeQRDataURLCompat(`${BC_BASE}/verificar.html?id=${encodeURIComponent(blk)}`, 220);
-    }
-    return out;
-  }
-
-  // ===== Carga receta si falta =====
+  /* ================== Firestore hydrate ================== */
   async function hydrateIfNeeded(){
-    if (window.RECETA_ACTUAL && (window.RECETA_ACTUAL.blockchain || window.RECETA_ACTUAL.hash || window.RECETA_ACTUAL.bloque)) return;
+    if(window.RECETA_ACTUAL && (window.RECETA_ACTUAL.blockchain || window.RECETA_ACTUAL.hash || window.RECETA_ACTUAL.bloque)) return;
     try{
-      const id = new URLSearchParams(location.search).get('id'); if (!id) return;
+      const id = new URLSearchParams(location.search).get('id'); if(!id) return;
       const core = await import('/firebase-init.js');
-      const fs   = await import('https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js');
+      const fs = await import('https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js');
       const snap = await fs.getDoc(fs.doc(core.db,'recetas',id));
-      if (snap.exists()) window.RECETA_ACTUAL = { id:snap.id, ...(window.RECETA_ACTUAL||{}), ...(snap.data()||{}) };
+      if(snap.exists()) window.RECETA_ACTUAL = { id:snap.id, ...(window.RECETA_ACTUAL||{}), ...(snap.data()||{}) };
     }catch(e){ console.warn('[ver] hydrate warn', e); }
   }
 
-  // ===== Render principal =====
+  /* ================== Badge ================== */
+  function updateBadgeFromReceta(r){
+    const el=document.getElementById('badgeOrigen'); if(!el) return;
+    const hasBlock=(r?.blockchain?.block ?? r?.bloque) != null;
+    const hasHash=!!(r?.blockchain?.hash ?? r?.hash);
+    const S = hasBlock ? {txt:'SELLADO EN BLOCKCHAIN', cls:'badge ok',   bg:'#16a34a', fg:'#fff'}
+            : hasHash  ? {txt:'SELLADO SIMULADO',      cls:'badge warn', bg:'#f59e0b', fg:'#111'}
+                       : {txt:'PENDIENTE',             cls:'badge warn', bg:'#9ca3af', fg:'#111'};
+    el.textContent=S.txt; el.className=S.cls; el.style.background=S.bg; el.style.color=S.fg;
+  }
+
+  /* ================== QR de cadena ================== */
+  async function setChainQR(block){
+    const host=document.getElementById('qrChain'); if(!host) return;
+    await ensureLibs();
+    const url=`${BC_BASE}/verificar.html?id=${encodeURIComponent(block)}`;
+    makeQR(host,url,220);
+    const bn=document.getElementById('blockNum'); if(bn) bn.textContent=String(block||'—');
+  }
+
+  /* ================== QRs para PDF ================== */
+  async function getQRSources(receta){
+    const out={};
+    const mainNode  = document.querySelector('#qrMain  canvas, #qrMain  img');
+    const chainNode = document.querySelector('#qrChain canvas, #qrChain img');
+    if(mainNode)  out.main  = mainNode.tagName==='IMG'? mainNode.src  : mainNode.toDataURL('image/png');
+    if(chainNode) out.chain = chainNode.tagName==='IMG'? chainNode.src : chainNode.toDataURL('image/png');
+    if(!out.main){
+      const verURL = QR_RECETA_URL(receta?.id || '');
+      out.main = await makeQRDataURLCompat(verURL, 220);
+    }
+    if(!out.chain){
+      const blk = receta?.blockchain?.block ?? receta?.bloque ?? null;
+      if(blk) out.chain = await makeQRDataURLCompat(`${BC_BASE}/verificar.html?id=${encodeURIComponent(blk)}`, 220);
+    }
+    return out;
+  }
+  window.getQRSources = getQRSources;
+
+  /* ================== Render principal ================== */
   async function renderOnce(){
-    for (let i=0;i<100;i++){ if (window.RECETA_ACTUAL) break; await sleep(60); }
-    
-window.RXPROG?.set(10,'Renderizando…');
-    
+    for(let i=0;i<100;i++){ if(window.RECETA_ACTUAL) break; await sleep(60); }
     await hydrateIfNeeded();
 
- window.RXPROG?.step('Hidratando datos…', 25);    
-
-    
-    const r0 = window.RECETA_ACTUAL; if (!r0) return;
+    const r0 = window.RECETA_ACTUAL; if(!r0) return;
     const r  = window.RECETA_ACTUAL = normalize(r0);
 
-     window.RXPROG?.step('Normalizando…', 45);
-
-    
-
-    
     // Médico
-    setText('doctorNombre', r.medico?.nombre ? ((String(r.medico?.genero||'').toLowerCase().startsWith('f')?'Dra. ':'Dr. ')+r.medico.nombre) :
-      (r.medicoNombre ? ((String(r.medicoGenero||'').toLowerCase().startsWith('f')?'Dra. ':'Dr. ')+r.medicoNombre) : '—'));
+    const pref=(n,g)=>!n?'—':(String(g||'').toLowerCase().startsWith('f')?'Dra. ':'Dr. ')+n;
+    setText('doctorNombre', pref(r.medico?.nombre ?? r.medicoNombre, r.medico?.genero ?? r.medicoGenero));
     setText('doctorCedula', r.medico?.cedula ?? r.medicoCedula ?? '—');
     setText('doctorEsp',    r.medico?.especialidad ?? r.medicoEspecialidad ?? '—');
     setText('doctorTel',    r.medico?.telefono ?? r.medicoTelefono ?? '—');
@@ -452,639 +390,203 @@ window.RXPROG?.set(10,'Renderizando…');
 
     // Paciente
     setText('pacienteNombre', r.paciente?.nombre ?? r.nombrePaciente ?? '—');
-    setText('pacEdad',        r.paciente?.edad ?? r.edad ?? '—');
-    setText('pacSexo',        r.paciente?.sexo ?? r.sexo ?? '—');
-    setText('pacPeso',        r.paciente?.peso ?? r.peso ?? '—');
-    setText('pacTalla',       r.paciente?.talla ?? r.talla ?? '—');
-    setText('pacTemp',        r.paciente?.temperatura ?? r.temperatura ?? '—');
-    setText('pacPresion',     r.paciente?.presion ?? r.presion ?? '—');
-    setText('pacIMC',         r.paciente?.imc ?? r.imc ?? '—');
+    setText('pacEdad',  r.paciente?.edad ?? r.edad ?? '—');
+    setText('pacSexo',  r.paciente?.sexo ?? r.sexo ?? '—');
+    setText('pacPeso',  r.paciente?.peso ?? r.peso ?? '—');
+    setText('pacTalla', r.paciente?.talla ?? r.talla ?? '—');
+    setText('pacTemp',  r.paciente?.temperatura ?? r.temperatura ?? '—');
+    setText('pacPresion', r.paciente?.presion ?? r.presion ?? '—');
+    setText('pacIMC',     r.paciente?.imc ?? r.imc ?? '—');
 
-    // Texto libre
-    setText('obsTexto',  r.observaciones ?? '—');
-    setText('diagTexto', r.diagnostico   ?? '—');
-
-    // ID y fecha
-    setText('recetaId', 'ID: ' + (r.id || '—'));
-    try{
-      let ts=r.timestamp;
-      if (ts && typeof ts.toDate==='function') ts = ts.toDate();
-      else if (ts && typeof ts.seconds==='number') ts = new Date(ts.seconds*1000 + Math.floor((ts.nanoseconds||0)/1e6));
-      else if (!(ts instanceof Date)) ts = new Date(ts);
-      setText('fechaEmision', ts ? ts.toLocaleString('es-MX',{year:'numeric',month:'long',day:'numeric',hour:'2-digit',minute:'2-digit'}) : '—');
-    }catch{ setText('fechaEmision','—'); }
-
-    // Medicamentos (texto)
-    const meds = Array.isArray(r.medicamentos) ? r.medicamentos : [];
-    const medsTxt = meds.length
-      ? meds.map((m,i)=>`${i+1}. ${m.nombre}\n   Dosis: ${m.dosis}\n   Duración: ${m.duracion}`).join('\n\n')
-      : '—';
-    const medsEl = document.getElementById('listaMedsDerecha'); if (medsEl) medsEl.textContent = medsTxt;
-
-    // Hash / badge
-    const hashEl = document.getElementById('hashTexto');
-    if (hashEl){ const h=r.hash ?? r.blockchain?.hash ?? '';
-      hashEl.textContent = h ? `hash (BC): ${h}` : (r.id ? `hash (local): ${String(r.id).slice(0,8)}` : 'hash: —'); }
-    updateBadgeFromReceta(r);
-
-    // Libs + QRs
-
-    window.RXPROG?.step('Cargando librerías…', 55);
-    
+    // Libs + QR receta
     await ensureLibs();
-    
-window.RXPROG?.step('QR listo…', 70);
-    // QR principal
     const host = document.getElementById('qrMain');
-    if (host && !host.querySelector('canvas,img')){
-    const verURL = QR_RECETA_URL(r.id);
+    if(host && !host.querySelector('canvas,img')){
+      const verURL = QR_RECETA_URL(r.id);
       makeQR(host, verURL, 260);
-       window.RXPROG?.step('Códigos de receta…', 75);
     }
 
-    // Código de barras
+    // Código de barras (canvas)
     const canvas = document.getElementById('barcodeCanvas');
     const label  = document.getElementById('barcodeLabel');
-    if (canvas && window.JsBarcode){
+    const JsBarcodeFn = await ensureJsBarcode();
+    if(canvas && typeof JsBarcodeFn==='function'){
       try{
         const dpr=Math.max(1,window.devicePixelRatio||1), cssW=300, cssH=80;
         canvas.width=cssW*dpr; canvas.height=cssH*dpr;
         canvas.style.width=cssW+'px'; canvas.style.height=cssH+'px';
         const ctx=canvas.getContext('2d'); ctx.setTransform(dpr,0,0,dpr,0,0);
-        JsBarcode(canvas, String(r.id||''), { format:'CODE128', width:2, height:40, margin:4, displayValue:false });
-        if (label) label.textContent = r.id || '—';
-        window.RXPROG?.step('Código de barras…', 82);
-      }catch(e){ if (label) label.textContent = r.id || '—'; }
+        JsBarcodeFn(canvas, String(r.id||''), { format:'CODE128', width:2, height:40, margin:4, displayValue:false });
+        if(label) label.textContent = r.id || '—';
+      }catch(e){ if(label) label.textContent = r.id || '—'; }
     }
+
+    // Hash / badge
+    const hashTxt = (r.hash ?? r.blockchain?.hash) ? `hash (BC): ${r.hash ?? r.blockchain?.hash}` : (r.id ? `hash (local): ${String(r.id).slice(0,8)}` : 'hash: —');
+    setText('hashTexto', hashTxt);
+    updateBadgeFromReceta(r);
 
     // QR blockchain + leyenda
     const blk = r?.blockchain?.block ?? r?.bloque ?? null;
-    if (blk) await setChainQR(blk);
-    window.RXPROG?.step('Blockchain…', 88);
-    {
-      const legendHolder = document.querySelector('.qr-legend .sub');
-      const text='Para consultar bloque visitar kodrx.app';
-      if (legendHolder) legendHolder.textContent = text;
-      else document.getElementById('blockNum')?.insertAdjacentHTML('afterend','<br><span class="sub" style="color:#6b7280;font-weight:400">'+text+'</span>');
-    }
+    if(blk) await setChainQR(blk);
+    const legendHolder = document.querySelector('.qr-legend .sub');
+    const legend='Para consultar bloque visitar kodrx.app';
+    if(legendHolder) legendHolder.textContent=legend;
+    else document.getElementById('blockNum')?.insertAdjacentHTML('afterend','<br><span class="sub" style="color:#6b7280;font-weight:400">'+legend+'</span>');
 
     // QRs para PDF
     window.QRS = await getQRSources(r);
 
-    // apaga cualquier spinner “verificando”
-    document.getElementById('verifyScope')?.remove();
+    // quita overlays de “verificando”
+    ['#verifyScope','#badgeVerificando','#spinnerVerificando','#panelVerificando','[data-role="verificando"]','.verificando','.spinner-verify']
+      .forEach(sel=>document.querySelectorAll(sel).forEach(el=>el.style.display='none'));
 
     console.log('[ver] render ok');
-    window.RXPROG?.done();
   }
+  window.renderOnce = renderOnce;
 
-  // ===== PDF / Botones =====
-window.generarPDF = async function generarPDF(rIn, qrsIn, { mode = 'save' } = {}) {
-  // 1) jsPDF
-  const jsPDF = await (window.ensureJsPDF
-    ? window.ensureJsPDF()
-    : (async () => {
-        if (window.jspdf?.jsPDF) return window.jspdf.jsPDF;
-        await new Promise((res, rej) => {
-          const s = document.createElement('script');
-          s.src = '/vendor/JsBarcode.all.min.js?v=20250923';
-          s.onload = res; s.onerror = rej; document.head.appendChild(s);
-        });
-        return window.jspdf.jsPDF;
-      })()
-  );
-  const { jsPDF: Cls } = window.jspdf || {};
-  if (!Cls) { alert('No se pudo cargar jsPDF'); return; }
+  /* ================== PDF ================== */
+  window.generarPDF = async function generarPDF(rIn,qrsIn,{mode='save'}={}){
+    const jsPDF = await ensureJsPDF();
+    if(!jsPDF){ alert('No se pudo cargar jsPDF'); return; }
+    const { jsPDF: Cls } = window.jspdf || {};
+    if(!Cls){ alert('No se pudo inicializar jsPDF'); return; }
 
-  // 2) Adaptador (mapea tu objeto a una forma común)
-  const adapt = (x={}) => {
-    const medico = {
-      nombre:       x.medico?.nombre ?? x.medicoNombre ?? '—',
-      genero:       x.medico?.genero ?? x.medicoGenero ?? '',
-      cedula:       x.medico?.cedula ?? x.medicoCedula ?? '—',
-      especialidad: x.medico?.especialidad ?? x.medicoEspecialidad ?? 'General',
-      telefono:     x.medico?.telefono ?? x.medicoTelefono ?? '',
-      direccion:    x.medico?.direccion ?? x.medicoDomicilio ?? ''
+    const adapt = (x={})=>{
+      const m = {
+        nombre:x.medico?.nombre ?? x.medicoNombre ?? '—',
+        genero:x.medico?.genero ?? x.medicoGenero ?? '',
+        cedula:x.medico?.cedula ?? x.medicoCedula ?? '—',
+        especialidad:x.medico?.especialidad ?? x.medicoEspecialidad ?? 'General',
+        telefono:x.medico?.telefono ?? x.medicoTelefono ?? '',
+        direccion:x.medico?.direccion ?? x.medicoDomicilio ?? ''
+      };
+      const p = {
+        nombre:x.paciente?.nombre ?? x.nombrePaciente ?? x.pacienteNombre ?? '—',
+        edad:x.paciente?.edad ?? x.edad ?? '—',
+        sexo:x.paciente?.sexo ?? x.sexo ?? '—',
+        peso:x.paciente?.peso ?? x.peso ?? '—',
+        talla:x.paciente?.talla ?? x.talla ?? '—',
+        temperatura:x.paciente?.temperatura ?? x.temperatura ?? '—',
+        presion:x.paciente?.presion ?? x.presion ?? '—',
+        imc:x.paciente?.imc ?? x.imc ?? '—'
+      };
+      return { ...x, medico:m, paciente:p, bloque:(x.blockchain?.block ?? x.bloque ?? null), hash:(x.hash ?? x.blockchain?.hash ?? null) };
     };
-    const paciente = {
-      nombre: x.paciente?.nombre ?? x.nombrePaciente ?? x.pacienteNombre ?? '—',
-      edad:   x.paciente?.edad   ?? x.edad ?? '—',
-      sexo:   x.paciente?.sexo   ?? x.sexo ?? '—',
-      peso:   x.paciente?.peso   ?? x.peso ?? '—',
-      talla:  x.paciente?.talla  ?? x.talla ?? '—',
-      temperatura: x.paciente?.temperatura ?? x.temperatura ?? '—',
-      presion:     x.paciente?.presion     ?? x.presion ?? '—',
-      imc:         x.paciente?.imc         ?? x.imc ?? '—',
-    };
-    const bloque = (x.blockchain?.block ?? x.bloque ?? null);
-    const hash   = x.hash ?? x.blockchain?.hash ?? null;
-    return { ...x, medico, paciente, bloque, hash };
-  };
-  const r = adapt(rIn || {});
+    const r = adapt(rIn||{});
+    const qrs = (qrsIn && (qrsIn.main||qrsIn.chain)) ? qrsIn : (window.QRS || (window.getQRSources ? await window.getQRSources(r) : {}));
 
-  // 3) QRs: usa los que ya existen o regénéralos si faltan
-  const qrs = (qrsIn && (qrsIn.main || qrsIn.chain))
-    ? qrsIn
-    : (window.QRS || (window.getQRSources ? await window.getQRSources(r) : {}));
+    const doc = new Cls({ unit:'pt', format:'letter', compress:true });
+    const W = doc.internal.pageSize.getWidth(), H=doc.internal.pageSize.getHeight();
+    const Mx=40, gutter=16, CW=W-2*Mx, colW=(CW-gutter)/2, leftX=Mx, rightX=Mx+colW+gutter, footerH=52, My=50, availYMax=H-My-footerH-10;
+    const wrap = (t,w)=>doc.splitTextToSize(String(t??'—'), w);
+    const linesH = 11;
 
-  // 4) Doc y layout base
-  const doc = new Cls({ unit: 'pt', format: 'letter', compress: true }); // 612 x 792
-  const W = doc.internal.pageSize.getWidth();
-  const H = doc.internal.pageSize.getHeight();
-
-  const Mx = 40, gutter = 16, CW = W - 2*Mx, colW = (CW - gutter)/2;
-  const leftX = Mx, rightX = Mx + colW + gutter;
-  const footerH = 52, My = 50, availYMax = H - My - footerH - 10;
-
-  const COLORS = {
-    panelFill:   [248,250,252],
-    panelStroke: [224,231,240],
-    text:        [17,24,39],
-    sub:         [55,65,81],
-    label:       [107,114,128],
-    brand:       [11,91,211]
-  };
-  const FONT = 'helvetica';
-  doc.setFont(FONT, 'normal');
-
-  // 5) Utils de dibujo
-  const prefixMed = (nombre, genero) => {
-    if (!nombre) return '—';
-    const g = String(genero||'').toLowerCase();
-    return (g.startsWith('f') ? 'Dra. ' : 'Dr. ') + nombre;
-  };
-  const wrap  = (txt, w) => doc.splitTextToSize(String(txt ?? '—'), w);
-  const linesH = 11;
-
-  function header() {
-    const headY = 18, headH = 50;
-    doc.setFillColor(240,245,255);
-    doc.roundedRect(18, headY, W-36, headH, 9, 9, 'F');
-    doc.setTextColor(11,27,43); doc.setFont(FONT,'bold'); doc.setFontSize(13);
+    // Header simple
+    const headY=18, headH=50;
+    doc.setFillColor(240,245,255); doc.roundedRect(18, headY, W-36, headH, 9, 9, 'F');
+    doc.setTextColor(11,27,43); doc.setFont('helvetica','bold'); doc.setFontSize(13);
     doc.text('KodRx — Receta médica digital', Mx, headY+30);
-    doc.setFont(FONT, 'normal');
-    return headY + headH + 12;
-  }
-  function footer() {
-    doc.setFillColor(...COLORS.brand);
-    doc.rect(18, H-18-footerH, W-36, footerH, 'F');
-    doc.setTextColor(255,255,255);
-    doc.setFont(FONT, 'bold'); doc.setFontSize(10.5);
-    doc.text('Creada con KodRx. Tecnología que verifica, salud que protege.', W/2, H-22, { align: 'center' });
-  }
-  function sectionBox(x, y, w, contentH, title) {
-    const padX = 10, padY = 10, titleH = 18, boxH = contentH + padY*2 + titleH;
-    const yClamped = Math.min(y, availYMax - boxH);
-    doc.setFillColor(...COLORS.panelFill);
-    doc.setDrawColor(...COLORS.panelStroke); doc.setLineWidth(0.8);
-    doc.roundedRect(x, yClamped, w, boxH, 8, 8, 'FD');
-    doc.setTextColor(...COLORS.label); doc.setFont(FONT,'bold'); doc.setFontSize(10);
-    doc.text(title, x + padX, yClamped + 14);
-    doc.setFont(FONT,'normal'); doc.setFontSize(9.5); doc.setTextColor(...COLORS.text);
-    return { cx: x+padX, cy: yClamped + 14 + padY, ny: yClamped + boxH + 10, innerH: contentH };
-  }
-  function drawClamp(x, y, maxW, maxH, text, lineH = linesH) {
-    const lines = wrap(text, maxW);
-    let used = 0, lastY = y;
-    for (let i = 0; i < lines.length; i++) {
-      if (used + lineH > maxH) {
-        if (i > 0) {
-          const prev = lines[i-1];
-          doc.text(prev.length > 1 ? prev.slice(0, prev.length - 1) + '…' : prev + '…', x, lastY);
-        }
-        return;
-      }
-      lastY = y + used + lineH;
-      doc.text(lines[i], x, lastY);
-      used += lineH;
+    let yL=headY+headH+12, yR=yL;
+
+    // Médico / Paciente (resumido)
+    const sec = (x,y,w,h,t)=>{ doc.setFillColor(248,250,252); doc.setDrawColor(224,231,240); doc.setLineWidth(0.8);
+      doc.roundedRect(x,y,w,h,8,8,'FD'); doc.setFont('helvetica','bold'); doc.setFontSize(10);
+      doc.setTextColor(107,114,128); doc.text(t,x+10,y+14); return {cx:x+10, cy:y+24, ny:y+h+10}; };
+
+    { const s=sec(leftX,yL,colW,90,'MÉDICO'); doc.setFont('helvetica','bold'); doc.setTextColor(17,24,39); doc.setFontSize(11.5);
+      const name=(g=> (g?.toLowerCase?.().startsWith('f')?'Dra. ':'Dr. ')+ (r.medico.nombre||'—') )(r.medico.genero||'');
+      doc.text(name, s.cx, s.cy); doc.setFont('helvetica','normal'); doc.setFontSize(9.5); doc.setTextColor(55,65,81);
+      doc.text(`Cédula: ${r.medico.cedula||'—'}  Esp: ${r.medico.especialidad||'—'}`, s.cx, s.cy+14);
+      doc.text(`Tel: ${r.medico.telefono||'—'}`, s.cx, s.cy+28);
+      doc.text(`Dir: ${r.medico.direccion||'—'}`, s.cx, s.cy+42);
+      yL=s.ny;
     }
-  }
-  function fechaStr(ts) {
-    try {
-      if (ts && typeof ts.toDate === 'function') ts = ts.toDate();
-      else if (ts && typeof ts.seconds === 'number') ts = new Date(ts.seconds*1000 + Math.floor((ts.nanoseconds||0)/1e6));
-      else if (!(ts instanceof Date)) ts = new Date(ts);
-      return ts.toLocaleString('es-MX', { year:'numeric', month:'long', day:'numeric', hour:'2-digit', minute:'2-digit' });
-    } catch { return ''; }
-  }
-  const medsText = (list) =>
-    (Array.isArray(list) && list.length)
-      ? list.map((m,i)=>`${i+1}. ${m.nombre}\n   Dosis: ${m.dosis}\n   Duración: ${m.duracion}`).join('\n\n')
-      : '—';
-  const blockNumber = (x) => {
-    if (x?.bloque != null) return String(x.bloque);
-    if (x?.blockchain?.block != null) return String(x.blockchain.block);
-    try {
-      const u = new URL(x.urlBlockchain);
-      return u.searchParams.get('id') || u.searchParams.get('block') || '—';
-    } catch { return '—'; }
+    { const s=sec(leftX,yL,colW,100,'PACIENTE'); doc.setFont('helvetica','bold'); doc.setTextColor(17,24,39); doc.setFontSize(11.5);
+      doc.text(String(r.paciente.nombre||'—'), s.cx, s.cy); doc.setFont('helvetica','normal'); doc.setFontSize(9.5); doc.setTextColor(55,65,81);
+      doc.text(`ID: ${r.id||'—'}`, s.cx, s.cy+14);
+      doc.text(`Edad: ${r.paciente.edad||'—'}   Sexo: ${r.paciente.sexo||'—'}`, s.cx, s.cy+28);
+      doc.text(`Peso: ${r.paciente.peso||'—'}   Talla: ${r.paciente.talla||'—'}`, s.cx, s.cy+42);
+      yL=s.ny;
+    }
+
+    // Medicamentos
+    { const meds = (Array.isArray(r.medicamentos)&&r.medicamentos.length)
+        ? r.medicamentos.map((m,i)=>`${i+1}. ${m.nombre}\n   Dosis: ${m.dosis}\n   Duración: ${m.duracion}`).join('\n\n')
+        : '—';
+      const tmp = wrap(meds, colW-16); const need=Math.max(90, tmp.length*linesH+6);
+      const s=sec(rightX,yR,colW,need,'MEDICAMENTOS'); doc.setFont('helvetica','normal'); doc.setTextColor(17,24,39);
+      let y=s.cy; tmp.forEach(line=>{ y+=linesH; doc.text(line,rightX+10,y); }); yR=s.ny;
+    }
+
+    // QR receta
+    { const box=120,pad=10; const x=rightX+(colW-box)/2; const y=yR;
+      if(qrs?.main){ doc.setDrawColor(11,91,211); doc.setLineWidth(2.2);
+        doc.roundedRect(x,y,box,box,10,10,'S'); doc.addImage(qrs.main,'PNG',x+pad,y+pad,box-2*pad,box-2*pad,undefined,'FAST');
+        doc.setTextColor(11,91,211); doc.setFont('helvetica','bold'); doc.setFontSize(9.5);
+        doc.text('Receta', x+box/2, y+box+12, {align:'center'}); yR=y+box+20;
+      }
+    }
+
+    // Código de barras (ID) a imagen
+    { const JsBarcodeFn = await ensureJsBarcode();
+      if(typeof JsBarcodeFn==='function' && r.id){
+        const cv=document.createElement('canvas'); cv.width=300; cv.height=40;
+        JsBarcodeFn(cv,String(r.id),{format:'CODE128',width:2,height:32,margin:4,displayValue:false});
+        const barUrl=cv.toDataURL('image/png');
+        let imgW=Math.min(colW-20,300), imgH=40*(imgW/300), x=rightX+(colW-imgW)/2, y=yR+6;
+        doc.setFillColor(248,250,252); doc.setDrawColor(224,231,240); doc.setLineWidth(0.8);
+        doc.roundedRect(rightX,y,colW,imgH+26,8,8,'FD');
+        doc.addImage(barUrl,'PNG',x,y+8,imgW,imgH,undefined,'FAST');
+        doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(55,65,81);
+        doc.text('Código de barras (ID)', rightX+colW/2, y+imgH+20, {align:'center'}); yR=y+imgH+36;
+      }
+    }
+
+    // Hash
+    { const s=sec(rightX,yR,colW,50,'HASH'); doc.setFont('helvetica','normal'); doc.setTextColor(55,65,81); doc.setFontSize(9.5);
+      const label = r.hash ? `hash (BC): ${r.hash}` : 'hash (local): —';
+      let y=s.cy+12; wrap(label,colW-16).forEach(line=>{ doc.text(line,rightX+10,y); y+=11; }); yR=s.ny;
+    }
+
+    // Footer
+    doc.setFillColor(11,91,211); doc.rect(18,H-18-52,W-36,52,'F');
+    doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(10.5);
+    doc.text('Creada con KodRx. Tecnología que verifica, salud que protege.', W/2, H-22, {align:'center'});
+
+    const filename=`receta_${r.id||'sin-id'}.pdf`;
+    if(mode==='print'){ try{ doc.autoPrint(); doc.output('dataurlnewwindow'); }catch{ doc.save(filename);} }
+    else if(mode==='open'){ const url=doc.output('bloburl'); window.open(url,'_blank'); }
+    else { doc.save(filename); }
   };
 
-  // 6) Composición
-  const startY = header();
-  let yL = startY, yR = startY;
-
-  // MÉDICO
-  { const Hfixed = 90; const s = sectionBox(leftX, yL, colW, Hfixed, 'MÉDICO');
-    doc.setFont(FONT,'bold'); doc.setFontSize(11.5);
-    drawClamp(s.cx, s.cy, colW-16, 26, prefixMed(r.medico.nombre, r.medico.genero), 13);
-    let cy = s.cy + 26 + 6;
-    doc.setFont(FONT,'normal'); doc.setFontSize(9.5); doc.setTextColor(...COLORS.sub);
-    const info =
-      `Cédula: ${r.medico.cedula || '—'}    Especialidad: ${r.medico.especialidad || '—'}\n` +
-      `Tel: ${r.medico.telefono || '—'}\n` +
-      `Dirección: ${r.medico.direccion || '—'}`;
-    drawClamp(s.cx, cy, colW-16, Hfixed - (cy - s.cy), info, 13);
-    yL = s.ny;
-  }
-
-  // PACIENTE
-  { const Hfixed = 100; const s = sectionBox(leftX, yL, colW, Hfixed, 'PACIENTE');
-    doc.setFont(FONT,'bold'); doc.setFontSize(11.5);
-    drawClamp(s.cx, s.cy, colW-16, 26, String(r.paciente.nombre || '—'), 13);
-    let cy = s.cy + 26 + 6;
-    doc.setFont(FONT,'normal'); doc.setFontSize(9.5); doc.setTextColor(...COLORS.sub);
-    doc.text(fechaStr(r.timestamp), s.cx, cy); cy += 13;
-    doc.text(`ID: ${r.id || '—'}`, s.cx, cy); cy += 16;
-    const lv = (x,y,lbl,val)=>{ doc.setFont(FONT,'bold'); doc.setTextColor(...COLORS.sub); doc.text(lbl, x, y);
-      const w = doc.getTextWidth(lbl); doc.setFont(FONT,'normal'); doc.setTextColor(...COLORS.text); doc.text(String(val ?? '—'), x+w+4, y); };
-    lv(s.cx, cy, 'Edad:', r.paciente.edad);   lv(s.cx+120, cy, 'Sexo:', r.paciente.sexo);   cy += 13;
-    lv(s.cx, cy, 'Peso:', r.paciente.peso);   lv(s.cx+120, cy, 'Talla:', r.paciente.talla); cy += 13;
-    lv(s.cx, cy, 'Temp:', r.paciente.temperatura); lv(s.cx+120, cy, 'PA:', r.paciente.presion); cy += 13;
-    lv(s.cx, cy, 'IMC:',  r.paciente.imc);
-    yL = s.ny;
-  }
-
-  // OBSERVACIONES + DIAGNÓSTICO (con separador)
-  { const lineH = linesH, SEP = 35, MIN_OBS = 60, MIN_DX = 60;
-    const leftSpace   = Math.max(0, availYMax - yL);
-    const obsWrapped  = doc.splitTextToSize(String(r.observaciones ?? '—'), colW-16);
-    const idealObsH   = Math.max(MIN_OBS, obsWrapped.length*lineH + 6);
-    const obsMaxH     = Math.max(MIN_OBS, leftSpace - (SEP + MIN_DX));
-    const obsH        = Math.min(idealObsH, obsMaxH);
-
-    const sObs = sectionBox(leftX, yL, colW, obsH, 'OBSERVACIONES');
-    doc.setFont(FONT,'normal'); doc.setFontSize(9.5); doc.setTextColor(...COLORS.text);
-    drawClamp(sObs.cx, sObs.cy, colW-16, sObs.innerH, r.observaciones, lineH);
-
-    const gapY = sObs.ny - 2, midY = gapY + SEP/2;
-    doc.setFillColor(255,255,255); doc.setDrawColor(255,255,255);
-    doc.rect(leftX, gapY, colW, SEP, 'F');
-    doc.setDrawColor(...COLORS.panelStroke); doc.setLineWidth(0.8);
-    doc.line(leftX+6, midY, leftX+colW-6, midY);
-    yL = gapY + SEP + 6;
-
-    const dxH  = Math.max(MIN_DX, availYMax - yL);
-    const sDx = sectionBox(leftX, yL, colW, dxH, 'DIAGNÓSTICO');
-    drawClamp(sDx.cx, sDx.cy, colW-16, sDx.innerH, r.diagnostico, lineH);
-    yL = sDx.ny;
-  }
-
-  // DERECHA: MEDICAMENTOS
-  { const lineH = linesH;
-    const medsTxt = medsText(r.medicamentos);
-    const tmp = wrap(medsTxt, colW-16);
-    const need = Math.max(90, tmp.length * lineH + 6);
-    const s = sectionBox(rightX, yR, colW, need, 'MEDICAMENTOS');
-    drawClamp(s.cx, s.cy, colW-16, s.innerH, medsTxt, lineH);
-    yR = s.ny;
-  }
-
-  // QR de Receta (tarjeta centrada)
-  { const box=120, pad=10; let y = yR; const yMax = availYMax - (box + 20);
-    y = Math.min(Math.max(y, startY), yMax);
-    const xQR = rightX + (colW - box)/2;
-    if (qrs?.main) {
-      doc.setDrawColor(...COLORS.brand); doc.setLineWidth(2.2);
-      doc.roundedRect(xQR, y, box, box, 10, 10, 'S');
-      doc.addImage(qrs.main, 'PNG', xQR+pad, y+pad, box-2*pad, box-2*pad, undefined, 'FAST');
-      doc.setTextColor(...COLORS.brand); doc.setFont(FONT,'bold'); doc.setFontSize(9.5);
-      doc.text('Receta', xQR + box/2, y + box + 12, { align: 'center' });
-      yR = y + box + 20;
-    }
-  }
-
-  // Código de barras (ID)
-  { await (window.ensureJsBarcode ? window.ensureJsBarcode() : (async () => {
-      if (window.JsBarcode) return;
-      await new Promise((res, rej) => {
-        const s = document.createElement('script');
-        s.src = '/vendor/JsBarcode.all.min.js?v=20250923';
-        s.onload = res; s.onerror = rej; document.head.appendChild(s);
-      });
-    })());
-    if (window.JsBarcode) {
-      const canvas = document.createElement('canvas'); canvas.width = 300; canvas.height = 40;
-      if (r.id) window.JsBarcode(canvas, String(r.id), { format:'CODE128', width:2, height:32, margin:4, displayValue:false });
-      const barUrl = canvas.toDataURL('image/png');
-
-      let imgW = Math.min(colW-20, 300), imgH = 40*(imgW/300);
-      let x = rightX + (colW - imgW)/2; let y = yR + 6; let boxH = imgH + 26;
-      for (const f of [0.95, 0.9, 0.85]) { if (y + boxH <= availYMax) break; imgW *= f; imgH *= f; boxH = imgH + 26; x = rightX + (colW-imgW)/2; }
-      if (y + boxH <= availYMax) {
-        doc.setFillColor(248,250,252); doc.setDrawColor(224,231,240); doc.setLineWidth(0.8);
-        doc.roundedRect(rightX, y, colW, boxH, 8, 8, 'FD');
-        doc.addImage(barUrl, 'PNG', x, y+8, imgW, imgH, undefined, 'FAST');
-        doc.setFont(FONT,'bold'); doc.setFontSize(9); doc.setTextColor(55,65,81);
-        doc.text('Código de barras (ID)', rightX + colW/2, y + imgH + 20, { align:'center' });
-        yR = y + boxH + 10;
-      }
-    }
-  }
-
-  // HASH (real o simulado)
-  { const s = sectionBox(rightX, yR, colW, 50, 'HASH');
-    doc.setFont(FONT,'normal'); doc.setFontSize(9.5); doc.setTextColor(...COLORS.sub);
-    const hashLabel = r.hash ? `hash (BC): ${r.hash}` : 'hash (local): —';
-    drawClamp(s.cx, s.cy, colW-16, s.innerH, hashLabel, 11);
-    yR = s.ny;
-  }
-
-  // QR Blockchain mini + bloque
-  { const mini = 90, rectW = mini, rectH = mini; const qrX = rightX + colW - rectW;
-    let qrY = Math.max(yL, yR) + 6; if (qrY + rectH + 38 > availYMax) qrY = availYMax - rectH - 38;
-    if (qrs?.chain) {
-      doc.setDrawColor(...COLORS.brand); doc.setLineWidth(2.0);
-      doc.roundedRect(qrX, qrY, rectW, rectH, 8, 8, 'S');
-      doc.addImage(qrs.chain, 'PNG', qrX+8, qrY+8, rectW-16, rectH-16, undefined, 'FAST');
-      doc.setTextColor(...COLORS.brand); doc.setFont(FONT,'bold'); doc.setFontSize(9);
-      doc.text('Blockchain', qrX + rectW/2, qrY + rectH + 12, { align:'center' });
-      const bn = blockNumber(r);
-      doc.setTextColor(...COLORS.text); doc.setFont(FONT,'bold'); doc.setFontSize(10);
-      doc.text('Bloque: ' + (bn || '—'), qrX + rectW/2, qrY + rectH + 26, { align:'center' });
-      doc.setTextColor(...COLORS.sub); doc.setFont(FONT,'normal'); doc.setFontSize(8.5);
-      doc.text('Para consultar bloque visitar kodrx.app', qrX + rectW/2, qrY + rectH + 38, { align:'center' });
-    }
-  }
-
-  footer();
-
-  // 7) Output
-  const filename = `receta_${r.id || 'sin-id'}.pdf`;
-  if (mode === 'print') {
-    try { doc.autoPrint(); doc.output('dataurlnewwindow'); } catch { doc.save(filename); }
-  } else if (mode === 'open') {
-    const url = doc.output('bloburl'); window.open(url, '_blank');
-  } else {
-    doc.save(filename);
-  }
-};
-    function bindButtons(){
-    const btnD = document.getElementById('btnDescargar');
-    const btnP = document.getElementById('btnImprimir');
-    const btnB = document.getElementById('btnVolver');
-
-    const onPDF = (mode)=>async (e)=>{
+  /* ================== Botones ================== */
+  function bindButtons(){
+    const btnD=document.getElementById('btnDescargar');
+    const btnP=document.getElementById('btnImprimir');
+    const btnB=document.getElementById('btnVolver');
+    const onPDF=(mode)=>async (e)=>{
       e?.preventDefault?.();
-      try{
-        if (!window.RECETA_ACTUAL && typeof renderOnce==='function') await renderOnce();
-        const r   = window.RECETA_ACTUAL || {};
-        const qrs = window.QRS || (typeof getQRSources==='function' ? await getQRSources(r) : {});
-        if (typeof generarPDF !== 'function'){ alert('Falta generador de PDF'); return; }
-        await generarPDF(r, qrs, {mode});
-      }catch(err){ console.error('[pdf]',err); alert('No se pudo generar el PDF.'); }
+      if(!window.RECETA_ACTUAL) await renderOnce();
+      const r=window.RECETA_ACTUAL||{}; const qrs=window.QRS||await getQRSources(r);
+      await window.generarPDF(r,qrs,{mode});
     };
-
-    if (btnD && !btnD.__b){ btnD.type='button'; btnD.disabled=false; btnD.addEventListener('click', onPDF('save'),  {capture:true}); btnD.__b=true; }
-    if (btnP && !btnP.__b){ btnP.type='button'; btnP.disabled=false; btnP.addEventListener('click', onPDF('print'), {capture:true}); btnP.__b=true; }
-    if (btnB && !btnB.__b){
+    if(btnD && !btnD.__b){ btnD.type='button'; btnD.disabled=false; btnD.addEventListener('click',onPDF('save'),{capture:true}); btnD.__b=true; }
+    if(btnP && !btnP.__b){ btnP.type='button'; btnP.disabled=false; btnP.addEventListener('click',onPDF('print'),{capture:true}); btnP.__b=true; }
+    if(btnB && !btnB.__b){
       btnB.type='button';
-      btnB.addEventListener('click', (e)=>{ e.preventDefault(); if (history.length>1) history.back(); else location.href='/medico/panel.html'; }, {capture:true});
+      btnB.addEventListener('click',(e)=>{ e.preventDefault(); if(history.length>1) history.back(); else location.href='/medico/panel.html'; },{capture:true});
       btnB.__b=true;
     }
   }
-if (window.RXPROG) return; // idempotente
-  const PR = {
-    pct: 0, el: null, bar: null, label: null, shown: false,
-    mount(){
-      if (this.el) return;
-      const box = document.createElement('div');
-      box.className = 'rx-progress';
-      box.innerHTML = `
-        <div class="rx-title">Cargando receta… <span class="rx-per">0%</span></div>
-        <div class="rx-bar"><i style="width:0%"></i></div>
-        <div class="rx-sub">Iniciando…</div>
-      `;
-      Object.assign(box.style, {
-        position:'fixed', top:'12px', right:'12px', zIndex:99999,
-        background:'rgba(17,24,39,.92)', color:'#fff', padding:'10px 12px',
-        borderRadius:'12px', width:'260px', boxShadow:'0 10px 25px rgba(0,0,0,.25)',
-        fontFamily:'system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif',
-        fontSize:'13px', lineHeight:'1.25'
-      });
-      const title = box.querySelector('.rx-title');
-      title.style.fontWeight='600';
-      const per = title.querySelector('.rx-per'); per.style.opacity='.85';
-      const bar = box.querySelector('.rx-bar');
-      Object.assign(bar.style, {height:'6px', background:'rgba(255,255,255,.15)', borderRadius:'999px', overflow:'hidden', marginTop:'8px'});
-      const fill = bar.querySelector('i');
-      Object.assign(fill.style, {
-        display:'block', height:'100%', width:'0%',
-        background:'linear-gradient(90deg,#60a5fa,#34d399)', transition:'width .25s ease'
-      });
-      const sub = box.querySelector('.rx-sub'); sub.style.opacity='.9'; sub.style.marginTop='6px';
-      this.el = box; this.bar = fill; this.label = sub; this.perEl = per;
-      document.body.appendChild(box);
-      box.hidden = true;
-    },
-    show(){ this.mount(); if (!this.shown){ this.el.hidden = false; this.shown = true; } },
-    hide(){ if (this.el){ this.el.hidden = true; this.shown = false; } },
-    set(p,label){
-      this.show();
-      this.pct = Math.max(0, Math.min(100, Math.round(p)));
-      if (this.bar) this.bar.style.width = this.pct + '%';
-      if (this.perEl) this.perEl.textContent = this.pct + '%';
-      if (label && this.label) this.label.textContent = label;
-    },
-    step(label, p){ this.set(p ?? (this.pct+5), label); },
-    done(){ this.set(100,'Listo'); setTimeout(()=>this.hide(), 700); },
-    error(msg){ this.set(this.pct||5, 'Error: '+(msg||'desconocido')); this.el && (this.el.style.background='#7f1d1d'); }
-  };
-  window.RXPROG = PR;
 
-  // ====== Instrumentación no intrusiva ======
-  function waitFor(name, cb, tries=60){
-    const id = setInterval(()=>{
-      const fn = window[name];
-      if (typeof fn === 'function' && !fn.__rxprog_wrapped){
-        clearInterval(id);
-        fn.__rxprog_wrapped = true;
-        cb(fn);
-      }
-      if (--tries<=0) clearInterval(id);
-    }, 150);
-  }
-  function hookAsync(name, label, pWhenCalled){
-    waitFor(name, (orig)=>{
-      window[name] = async function(...args){
-        PR.step(label, pWhenCalled);
-        try { return await orig.apply(this, args); }
-        catch(e){ PR.error(e?.message||name+' falló'); throw e; }
-      };
-    });
-  }
-  function hookSync(name, label, pWhenCalled){
-    waitFor(name, (orig)=>{
-      window[name] = function(...args){
-        PR.step(label, pWhenCalled);
-        try { return orig.apply(this, args); }
-        catch(e){ PR.error(e?.message||name+' falló'); throw e; }
-      };
-    });
-  }
-
-  // Mapa de pasos (ajusta % si quieres)
-  hookAsync('hydrateIfNeeded',    'Hidratando datos…',        25);
-  hookSync ('normalized',          'Normalizando…',            45);
-  hookAsync('ensureLibs',         'Cargando librerías…',      60);
-  hookAsync('ensureQRCode',       'QR listo…',                70);
-  hookAsync('setChainQR',         'QR blockchain…',           88);
-  hookAsync('sellIfPending',      'Sellando en blockchain…',  92);
-  hookSync ('updateBadgeFromReceta','Actualizando estado…',   96);
-
-  // Envolver renderOnce/pintado para arrancar y cerrar
-  waitFor('renderOnce', (orig)=>{
-    window.renderOnce = async function(...a){
-      PR.set(Math.max(PR.pct, 10), 'Renderizando…');
-      const out = await orig.apply(this,a);
-      PR.step('Campos listos', 55);
-      return out;
-    };
-    // por si tu flujo llama renderOnce tarde:
-    PR.set(5, 'Iniciando…');
-  });
-  waitFor('paint', (orig)=>{
-    window.paint = function(...a){
-      const out = orig.apply(this,a);
-      PR.step('Finalizando…', 98);
-      setTimeout(()=>PR.done(), 500);
-      return out;
-    };
-  });
-
-  // Failsafe: si en 5s ya hay receta pero no cerró, cierra.
-  setTimeout(()=>{ if (window.RECETA_ACTUAL && PR.pct<90) PR.done(); }, 5000);
-// ===== Boot =====
+  /* ================== Boot ================== */
   function start(){
-    try{ typeof renderOnce==='function' && renderOnce().catch?.(console.error); }catch(e){}
-    try{ bindButtons(); }catch(e){ console.warn('bindButtons err', e); }
+    try{ renderOnce(); }catch(e){}
+    try{ bindButtons(); }catch(e){ console.warn('bindButtons err',e); }
   }
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', start, {once:true});
-  } else {
-    start();
-  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', start, {once:true});
+  else start();
 })();
 </script>
-
-<script>
-;(() => {
-  // --- normalizador mínimo (solo si faltara) ---
-  if (typeof window.normalize !== 'function') {
-    window.normalize = function normalize(raw0){
-      const raw = raw0 || {};
-      const bc  = raw.blockchain || {};
-      const bloque = Number.isFinite(raw.bloque) ? raw.bloque : (bc.block ?? null);
-      const hash   = bc.hash ?? raw.hash ?? null;
-      const status = bc.status || (bloque ? 'ok' : (hash ? 'simulado' : 'pendiente'));
-      const medico = raw.medico || {
-        nombre: raw.medicoNombre,
-        genero: raw.medicoGenero,
-        cedula: raw.medicoCedula,
-        especialidad: raw.medicoEspecialidad,
-        telefono: raw.medicoTelefono,
-        direccion: raw.medicoDomicilio
-      };
-      const nombrePaciente = raw.nombrePaciente ?? raw.pacienteNombre ?? raw.paciente?.nombre ?? raw.paciente ?? '—';
-      return { ...raw, nombrePaciente, medico,
-        bloque, hash,
-        blockchain: { ...bc, status, block: (bc.block ?? bloque) ?? null, hash }
-      };
-    };
-  }
-
-  // --- helpers ---
-  const write = (key, val) => {
-    const txt = String(val ?? '—');
-    document.querySelectorAll('#'+key+', [data-bind="'+key+'"], .'+key)
-      .forEach(el => { if (el && el.textContent !== txt) el.textContent = txt; });
-  };
-  const prefijoMed = (nombre, genero) => {
-    if (!nombre) return '—';
-    const g = String(genero||'').toLowerCase();
-    return (g.startsWith('f') ? 'Dra. ' : 'Dr. ') + nombre;
-  };
-
-  // --- pintado central ---
-  function paint(){
-    const r0 = window.RECETA_ACTUAL;
-    if (!r0) { console.log('[paint] no RECETA_ACTUAL aún'); return false; }
-    const r  = window.normalize(r0);
-    const m  = r.medico || {};
-
-    // Médico
-    write('doctorNombre', prefijoMed(m.nombre ?? r.medicoNombre, m.genero ?? r.medicoGenero));
-    write('doctorCedula', m.cedula ?? r.medicoCedula);
-    write('doctorEsp',    m.especialidad ?? r.medicoEspecialidad);
-    write('doctorTel',    m.telefono ?? r.medicoTelefono);
-    write('doctorDir',    m.direccion ?? r.medicoDomicilio);
-
-    // Paciente
-    write('pacienteNombre', r.paciente?.nombre ?? r.nombrePaciente ?? r.pacienteNombre);
-    write('pacEdad',   r.paciente?.edad ?? r.edad);
-    write('pacSexo',   r.paciente?.sexo ?? r.sexo);
-    write('pacPeso',   r.paciente?.peso ?? r.peso);
-    write('pacTalla',  r.paciente?.talla ?? r.talla);
-    write('pacTemp',   r.paciente?.temperatura ?? r.temperatura);
-    write('pacPresion',r.paciente?.presion ?? r.presion);
-    write('pacIMC',    r.paciente?.imc ?? r.imc);
-
-    // Textos
-    write('obsTexto',  r.observaciones);
-    write('diagTexto', r.diagnostico);
-
-    // ID + fecha
-    write('recetaId', 'ID: ' + (r.id || '—'));
-    try{
-      let ts = r.timestamp;
-      if (ts && typeof ts.toDate==='function') ts = ts.toDate();
-      else if (ts && typeof ts.seconds==='number') ts=new Date(ts.seconds*1000 + Math.floor((ts.nanoseconds||0)/1e6));
-      else if (!(ts instanceof Date)) ts = new Date(ts);
-      write('fechaEmision', ts ? ts.toLocaleString('es-MX',{year:'numeric',month:'long',day:'numeric',hour:'2-digit',minute:'2-digit'}) : '—');
-    }catch{ write('fechaEmision','—'); }
-
-    // oculta overlays
-    ['#badgeVerificando','#spinnerVerificando','#panelVerificando','[data-role="verificando"]','.verificando','.spinner-verify']
-      .forEach(sel => document.querySelectorAll(sel).forEach(el => (el.style.display='none')));
-
-    console.log('[paint] OK');
-    return true;
-  }
-
-  // expón y dispara
-  window.kodrxPaint = paint;
-  // 1) intenta pintar YA (por si ya está RECETA_ACTUAL)
-  setTimeout(paint, 0);
-  setTimeout(paint, 250);
-
-  // 2) engancha renderOnce si existe (para pintar al final)
-  (function hook(){
-    if (typeof window.renderOnce === 'function' && !window.renderOnce.__kodrxHooked) {
-      const orig = window.renderOnce;
-      window.renderOnce = async function(...args){
-        const out = await orig.apply(this, args);
-        try { paint(); } catch {}
-        return out;
-      };
-      window.renderOnce.__kodrxHooked = true;
-      return;
-    }
-    setTimeout(hook, 200);
-  })();
-
-  // 3) repintado defensivo por si otro script borra texto
-  let n=0; const iv=setInterval(()=>{ const ok=paint(); if ((ok && ++n>2) || n>20) clearInterval(iv); }, 300);
-})();
-</script>
-
 
