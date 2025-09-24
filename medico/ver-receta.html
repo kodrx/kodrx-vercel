@@ -226,7 +226,7 @@ button{appearance:none;border:0;border-radius:12px;padding:10px 14px;font-weight
 <!-- jsPDF (UMD) -->
 <script src="/vendor/jspdf.umd.min.js?v=20250922"></script>
 <!-- QRCode.js -->
-<script src="/vendor/qrcode.min.js?v=20250922"></script>
+
 <script src="/vendor/qrcode.min.js?v=20250922" defer></script>
 <script>
 ;(() => {
@@ -308,12 +308,12 @@ const QR_RECETA_URL = (id) => `https://kodrx.app/verificar.html?id=${encodeURICo
     const jobs=[];
     if (!window.QRCode && !window.qrcode){
       jobs.push(new Promise((res,rej)=>{const s=document.createElement('script');
-        s.src='https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js';
+        s.src='/vendor/JsBarcode.all.min.js?v=20250922';
         s.onload=res; s.onerror=rej; document.head.appendChild(s);}));
     }
     if (!window.JsBarcode){
       jobs.push(new Promise((res,rej)=>{const s=document.createElement('script');
-        s.src='https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js';
+        s.src='/vendor/JsBarcode.all.min.js?v=20250922';
         s.onload=res; s.onerror=rej; document.head.appendChild(s);}));
     }
     if (jobs.length) await Promise.allSettled(jobs);
@@ -321,7 +321,7 @@ const QR_RECETA_URL = (id) => `https://kodrx.app/verificar.html?id=${encodeURICo
   async function ensureJsPDF(){
     if (window.jspdf?.jsPDF) return window.jspdf.jsPDF;
     await new Promise((res,rej)=>{const s=document.createElement('script');
-      s.src='https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+      s.src='/vendor/JsBarcode.all.min.js?v=20250922';
       s.onload=res; s.onerror=rej; document.head.appendChild(s);});
     return window.jspdf.jsPDF;
   }
@@ -547,7 +547,7 @@ window.generarPDF = async function generarPDF(rIn, qrsIn, { mode = 'save' } = {}
         if (window.jspdf?.jsPDF) return window.jspdf.jsPDF;
         await new Promise((res, rej) => {
           const s = document.createElement('script');
-          s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+          s.src = '/vendor/JsBarcode.all.min.js?v=20250922';
           s.onload = res; s.onerror = rej; document.head.appendChild(s);
         });
         return window.jspdf.jsPDF;
@@ -769,7 +769,7 @@ window.generarPDF = async function generarPDF(rIn, qrsIn, { mode = 'save' } = {}
       if (window.JsBarcode) return;
       await new Promise((res, rej) => {
         const s = document.createElement('script');
-        s.src = 'https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js';
+        s.src = '/vendor/JsBarcode.all.min.js?v=20250922';
         s.onload = res; s.onerror = rej; document.head.appendChild(s);
       });
     })());
