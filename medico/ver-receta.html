@@ -617,39 +617,52 @@ setText('recetaId', 'ID: ' + (r.id || '—'));
     yL = s.ny;
   }
 
-    // 8) OBSERVACIONES + DIAGNÓSTICO (proporcional, evita cortes feos)
-  {
-    const SEP = 36; // separador entre cajas
-    const MIN_OBS = 72; // mínimos elegantes
-    const MIN_DX  = 72;
+   // 8) OBSERVACIONES + DIAGNÓSTICO (proporcional, evita cortes feos)
+{
+  const SEP = 28;
+  const MIN_OBS = 64, MIN_DX = 64;
 
-    // Espacio restante en la columna izquierda
-    const leftSpace = Math.max(0, availYMax - yL);
+  const leftSpace    = Math.max(0, availYMax - yL);
+  const contentSpace = Math.max(0, leftSpace - SEP);
 
-    // OBS
-    const obsLines = wrap(String(r.observaciones ?? '—'), colW - 16);
-    const idealObsH = Math.max(MIN_OBS, obsLines.length * lineH + 6);
-    const maxObsH   = Math.max(MIN_OBS, leftSpace - (SEP + MIN_DX));
-    const obsH      = Math.min(idealObsH, maxObsH);
+  const obsText  = String(r.observaciones ?? '—');
+  const dxText   = String(r.diagnostico   ?? '—');
+  const obsLines = wrap(obsText, colW - 16).length || 1;
+  const dxLines  = wrap(dxText,  colW - 16).length || 1;
 
-    const sObs = sectionBox(leftX, yL, colW, obsH, 'OBSERVACIONES');
-    doc.setFont(FONT, 'normal'); doc.setFontSize(10); doc.setTextColor(...COLORS.text);
-    drawClamp(sObs.cx, sObs.cy, colW - 16, sObs.innerH, r.observaciones);
-    yL = sObs.ny;
+  const idealObsH = Math.max(MIN_OBS, obsLines * lineH + 6);
+  const idealDxH  = Math.max(MIN_DX,  dxLines  * lineH + 6);
 
-    // Separador lineal suave
-    const gapY = yL - 2, midY = gapY + SEP / 2;
-    doc.setDrawColor(...COLORS.stPanel); doc.setLineWidth(0.8);
-    doc.line(leftX + 6, midY, leftX + colW - 6, midY);
-    yL = gapY + SEP + 6;
+  const sumW   = obsLines + dxLines;
+  let allocObs = sumW ? Math.round(contentSpace * (obsLines / sumW)) : Math.floor(contentSpace/2);
+  let allocDx  = contentSpace - allocObs;
 
-    // DX
-    const dxLines = wrap(String(r.diagnostico ?? '—'), colW - 16);
-    const needDx  = Math.max(MIN_DX, dxLines.length * lineH + 6);
-    const sDx = sectionBox(leftX, yL, colW, Math.min(needDx, availYMax - yL), 'DIAGNÓSTICO');
-    drawClamp(sDx.cx, sDx.cy, colW - 16, sDx.innerH, r.diagnostico);
-    yL = sDx.ny;
+  // respeta mínimos y no excedas lo ideal
+  allocObs = Math.min(Math.max(allocObs, MIN_OBS), idealObsH);
+  allocDx  = Math.min(Math.max(allocDx,  MIN_DX),  idealDxH);
+
+  // si aún sobra/rebasa, recorta OBS primero (puedes invertir si prefieres)
+  if (allocObs + allocDx > contentSpace) {
+    const over = allocObs + allocDx - contentSpace;
+    allocObs = Math.max(MIN_OBS, allocObs - over);
   }
+
+  const sObs = sectionBox(leftX, yL, colW, allocObs, 'OBSERVACIONES');
+  doc.setFont(FONT,'normal'); doc.setFontSize(10); doc.setTextColor(...COLORS.text);
+  drawClamp(sObs.cx, sObs.cy, colW - 16, sObs.innerH, obsText);
+  yL = sObs.ny;
+
+  // separador
+  doc.setDrawColor(...COLORS.stPanel); doc.setLineWidth(0.8);
+  const midY = yL - 2 + SEP / 2;
+  doc.line(leftX + 6, midY, leftX + colW - 6, midY);
+  yL = yL - 2 + SEP + 6;
+
+  const sDx = sectionBox(leftX, yL, colW, Math.min(allocDx, availYMax - yL), 'DIAGNÓSTICO');
+  drawClamp(sDx.cx, sDx.cy, colW - 16, sDx.innerH, dxText);
+  yL = sDx.ny;
+}
+
 
  
   // 9) MEDICAMENTOS (columna derecha)
