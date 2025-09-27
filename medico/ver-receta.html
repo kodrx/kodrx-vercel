@@ -509,15 +509,15 @@ setText('recetaId', 'ID: ' + (r.id || '—'));
 
   // Paleta y tipografía
   const COLORS = {
-    bgPanel:   [248,250,252],
-    stPanel:   [224,231,240],
-    brand:     [11,91,211],
-    text:      [17,24,39],
-    sub:       [55,65,81],
-    label:     [107,114,128]
-  };
-  const FONT = 'helvetica';
-  doc.setFont(FONT, 'normal');
+  bgPanel:   [248,250,252],
+  stPanel:   [224,231,240],
+  brand:     [11,91,211],
+  text:      [17,24,39],
+  sub:       [55,65,81],
+  label:     [107,114,128]
+};
+const FONT = 'helvetica';
+doc.setFont(FONT, 'normal');
 
   // Márgenes / columnas
   const Mx = 40, My = 50, gutter = 16;
@@ -527,7 +527,7 @@ setText('recetaId', 'ID: ' + (r.id || '—'));
 
   // Helpers de texto y cajas
   const wrap  = (t, w) => doc.splitTextToSize(String(t ?? '—'), w);
-  const lineH = 12; // interlínea base PDF
+  const lineH = 11; // interlínea base PDF
   function sectionBox(x, y, w, contentH, title) {
     const padX = 10, padY = 10, titleH = 18, boxH = contentH + padY * 2 + titleH;
     const yClamp = Math.min(y, availYMax - boxH);
@@ -573,7 +573,7 @@ setText('recetaId', 'ID: ' + (r.id || '—'));
     const headY = 18, headH = 50;
     doc.setFillColor(240,245,255);
     doc.roundedRect(18, headY, W - 36, headH, 9, 9, 'F');
-    doc.setTextColor(11,27,43); doc.setFont(FONT, 'bold'); doc.setFontSize(13);
+    doc.setTextColor(11,27,43); doc.setFont(FONT, 'bold'); doc.setFontSize(12);
     doc.text('KodRx — Receta médica digital', Mx, headY + 30);
   })();
 
@@ -588,10 +588,10 @@ setText('recetaId', 'ID: ' + (r.id || '—'));
       const g = String(gen || '').toLowerCase();
       return (g.startsWith('f') ? 'Dra. ' : 'Dr. ') + nom;
     };
-    doc.setFont(FONT, 'bold'); doc.setFontSize(11.5);
+    doc.setFont(FONT, 'bold'); doc.setFontSize(10);
     drawClamp(s.cx, s.cy, colW - 16, 26, prefijo(r.medico.nombre, r.medico.genero));
 
-    doc.setFont(FONT, 'normal'); doc.setFontSize(10); doc.setTextColor(...COLORS.sub);
+    doc.setFont(FONT, 'normal'); doc.setFontSize(9); doc.setTextColor(...COLORS.sub);
     let cy = s.cy + 28;
     drawClamp(s.cx, cy, colW - 16, 14, `Cédula: ${r.medico.cedula || '—'}   Esp: ${r.medico.especialidad || '—'}`); cy += 14;
     drawClamp(s.cx, cy, colW - 16, 14, `Tel: ${r.medico.telefono || '—'}`); cy += 14;
@@ -602,10 +602,10 @@ setText('recetaId', 'ID: ' + (r.id || '—'));
   // 7) PACIENTE + ID + FECHA
   {
     const s = sectionBox(leftX, yL, colW, 114, 'PACIENTE');
-    doc.setFont(FONT, 'bold'); doc.setFontSize(11.5); doc.setTextColor(...COLORS.text);
+    doc.setFont(FONT, 'bold'); doc.setFontSize(10); doc.setTextColor(...COLORS.text);
     drawClamp(s.cx, s.cy, colW - 16, 24, String(r.paciente.nombre || '—'));
 
-    doc.setFont(FONT, 'normal'); doc.setFontSize(10); doc.setTextColor(...COLORS.sub);
+    doc.setFont(FONT, 'normal'); doc.setFontSize(9); doc.setTextColor(...COLORS.sub);
     let cy = s.cy + 26;
     drawClamp(s.cx, cy, colW - 16, 14, `Fecha: ${fechaStr(r.timestamp)}`); cy += 14;
     drawClamp(s.cx, cy, colW - 16, 14, `ID: ${r.id || '—'}`); cy += 18;
@@ -648,7 +648,7 @@ setText('recetaId', 'ID: ' + (r.id || '—'));
   }
 
   const sObs = sectionBox(leftX, yL, colW, allocObs, 'OBSERVACIONES');
-  doc.setFont(FONT,'normal'); doc.setFontSize(10); doc.setTextColor(...COLORS.text);
+  doc.setFont(FONT,'normal'); doc.setFontSize(9); doc.setTextColor(...COLORS.text);
   drawClamp(sObs.cx, sObs.cy, colW - 16, sObs.innerH, obsText);
   yL = sObs.ny;
 
@@ -675,7 +675,7 @@ setText('recetaId', 'ID: ' + (r.id || '—'));
     const need  = Math.max(100, lines.length * lineH + 6);
 
     const s = sectionBox(rightX, yR, colW, Math.min(need, Math.max(100, availYMax - yR)), 'MEDICAMENTOS');
-    doc.setFont(FONT, 'normal'); doc.setFontSize(10); doc.setTextColor(...COLORS.text);
+    doc.setFont(FONT, 'normal'); doc.setFontSize(9); doc.setTextColor(...COLORS.text);
     drawClamp(s.cx, s.cy, colW - 16, s.innerH, medsTxt);
     yR = s.ny;
   }
