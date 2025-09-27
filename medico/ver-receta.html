@@ -704,39 +704,76 @@ setText('recetaId', 'ID: ' + (r.id || '—'));
     }
   }
 
-  // 12) HASH
-  {
-    const label = r.hash ? `hash (BC): ${r.hash}` : 'hash (local): —';
-    const s = sectionBox(rightX, yR, colW, 50, 'HASH');
-    doc.setFont(FONT, 'normal'); doc.setFontSize(9.8); doc.setTextColor(...COLORS.sub);
-    drawClamp(s.cx, s.cy, colW - 16, s.innerH, label);
-    yR = s.ny;
-  }
+// 12) HASH (altura dinámica) + 13) Blockchain (evita montonarse)
+{
+  const hashLabel = r.hash ? `hash (BC): ${r.hash}` : 'hash (local): —';
+  const hashLines = wrap(hashLabel, colW - 16).length || 1;
+  const hashNeed  = Math.max(56, hashLines * lineH + 12);
 
-  // 13) QR mini de Blockchain + bloque
-  {
-    const mini = 90, pad = 8;
+  const mini = 90, pad = 8, qrCaptionH = 38; // “Blockchain”, “Bloque …”, leyenda
+  const qrReserve = (qrs?.chain) ? (mini + qrCaptionH + 12) : 0;
+
+  // Si no cabe todo en orden natural (HASH → QR), dibuja QR primero
+  if (qrs?.chain && (yR + hashNeed + qrReserve > availYMax)) {
     const qrX = rightX + colW - mini;
-    let qrY = Math.max(yL, yR) + 6;
-    if (qrY + mini + 38 > availYMax) qrY = availYMax - mini - 38;
+    let qrY = yR + 6;
+    if (qrY + mini + qrCaptionH > availYMax) qrY = Math.max(yR + 6, availYMax - mini - qrCaptionH);
+
+    doc.setDrawColor(...COLORS.brand); doc.setLineWidth(2.0);
+    doc.roundedRect(qrX, qrY, mini, mini, 8, 8, 'S');
+    doc.addImage(qrs.chain, 'PNG', qrX + pad, qrY + pad, mini - 2*pad, mini - 2*pad, undefined, 'FAST');
+
+    doc.setTextColor(...COLORS.brand); doc.setFont(FONT,'bold'); doc.setFontSize(9);
+    doc.text('Blockchain', qrX + mini/2, qrY + mini + 12, { align: 'center' });
+
+    const bn = (r.bloque != null) ? String(r.bloque)
+            : (r.blockchain?.block != null) ? String(r.blockchain.block) : '—';
+    doc.setTextColor(...COLORS.text); doc.setFont(FONT,'bold'); doc.setFontSize(10);
+    doc.text('Bloque: ' + bn, qrX + mini/2, qrY + mini + 26, { align: 'center' });
+
+    doc.setTextColor(...COLORS.sub); doc.setFont(FONT,'normal'); doc.setFontSize(8.5);
+    doc.text('Para consultar bloque visitar kodrx.app', qrX + mini/2, qrY + mini + 38, { align: 'center' });
+
+    yR = qrY + mini + qrCaptionH + 10; // respiro
+
+    const remaining = Math.max(44, availYMax - yR);
+    const s = sectionBox(rightX, yR, colW, Math.min(hashNeed, remaining), 'HASH');
+    doc.setFont(FONT,'normal'); doc.setFontSize(9.8); doc.setTextColor(...COLORS.sub);
+    drawClamp(s.cx, s.cy, colW - 16, s.innerH, hashLabel);
+    yR = s.ny;
+
+  } else {
+    // Cabe en orden natural: HASH → Blockchain
+    const s = sectionBox(rightX, yR, colW, hashNeed, 'HASH');
+    doc.setFont(FONT,'normal'); doc.setFontSize(9.8); doc.setTextColor(...COLORS.sub);
+    drawClamp(s.cx, s.cy, colW - 16, s.innerH, hashLabel);
+    yR = s.ny;
 
     if (qrs?.chain) {
+      const qrX = rightX + colW - mini;
+      let qrY = yR + 6;
+      if (qrY + mini + qrCaptionH > availYMax) qrY = Math.max(yR + 6, availYMax - mini - qrCaptionH);
+
       doc.setDrawColor(...COLORS.brand); doc.setLineWidth(2.0);
       doc.roundedRect(qrX, qrY, mini, mini, 8, 8, 'S');
-      doc.addImage(qrs.chain, 'PNG', qrX + pad, qrY + pad, mini - 2 * pad, mini - 2 * pad, undefined, 'FAST');
+      doc.addImage(qrs.chain, 'PNG', qrX + pad, qrY + pad, mini - 2*pad, mini - 2*pad, undefined, 'FAST');
 
-      doc.setTextColor(...COLORS.brand); doc.setFont(FONT, 'bold'); doc.setFontSize(9);
-      doc.text('Blockchain', qrX + mini / 2, qrY + mini + 12, { align: 'center' });
+      doc.setTextColor(...COLORS.brand); doc.setFont(FONT,'bold'); doc.setFontSize(9);
+      doc.text('Blockchain', qrX + mini/2, qrY + mini + 12, { align: 'center' });
 
       const bn = (r.bloque != null) ? String(r.bloque)
               : (r.blockchain?.block != null) ? String(r.blockchain.block) : '—';
-      doc.setTextColor(...COLORS.text); doc.setFont(FONT, 'bold'); doc.setFontSize(10);
-      doc.text('Bloque: ' + bn, qrX + mini / 2, qrY + mini + 26, { align: 'center' });
+      doc.setTextColor(...COLORS.text); doc.setFont(FONT,'bold'); doc.setFontSize(10);
+      doc.text('Bloque: ' + bn, qrX + mini/2, qrY + mini + 26, { align: 'center' });
 
-      doc.setTextColor(...COLORS.sub); doc.setFont(FONT, 'normal'); doc.setFontSize(8.5);
-      doc.text('Para consultar bloque visitar kodrx.app', qrX + mini / 2, qrY + mini + 38, { align: 'center' });
+      doc.setTextColor(...COLORS.sub); doc.setFont(FONT,'normal'); doc.setFontSize(8.5);
+      doc.text('Para consultar bloque visitar kodrx.app', qrX + mini/2, qrY + mini + 38, { align: 'center' });
+
+      yR = qrY + mini + qrCaptionH + 10;
     }
   }
+}
+
 
   // 14) Footer
   (function footer(){
