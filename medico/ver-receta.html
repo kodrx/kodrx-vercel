@@ -617,7 +617,7 @@ setText('recetaId', 'ID: ' + (r.id || '—'));
     yL = s.ny;
   }
 
-  // 8) OBSERVACIONES + DIAGNÓSTICO (dinámicos)
+    // 8) OBSERVACIONES + DIAGNÓSTICO (proporcional, evita cortes feos)
   {
     const SEP = 36; // separador entre cajas
     const MIN_OBS = 72; // mínimos elegantes
@@ -651,6 +651,7 @@ setText('recetaId', 'ID: ' + (r.id || '—'));
     yL = sDx.ny;
   }
 
+ 
   // 9) MEDICAMENTOS (columna derecha)
   {
     const medsTxt = (Array.isArray(r.medicamentos) && r.medicamentos.length)
