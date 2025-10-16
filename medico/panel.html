@@ -221,14 +221,23 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.2.1/fi
 
       if (!nombrePaciente){ alert('Falta el nombre del paciente'); byId('nombrePaciente')?.focus(); return; }
 
-      const medicamentos = [...document.querySelectorAll('#medicamentosContainer .medicamento')].map(row=>{
-        const get = (cls)=> row.querySelector('.'+cls)?.value?.trim() || '';
-        const nombre   = get('nombre');
-        const dosis    = get('dosis');
-        const duracion = get('duracion');
-        const ini = nombre.split(/\s+/).map(w=>w[0]||'').join('').slice(0,3).toUpperCase();
-        return { nombre, dosis, duracion, ini };
-      });
+     // helper para obtener las 3 letras
+const toIni3 = (nombre='') => {
+  const letters = nombre
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // quita acentos
+    .replace(/[^a-zA-Z]/g, '')                       // solo letras
+    .toUpperCase();
+  return letters.slice(0, 3);                         // primeras 3
+};
+
+const medicamentos = [...document.querySelectorAll('#medicamentosContainer .medicamento')].map(row => {
+  const get = (cls) => row.querySelector('.' + cls)?.value?.trim() || '';
+  const nombre   = get('nombre');
+  const dosis    = get('dosis');
+  const duracion = get('duracion');
+  const ini      = toIni3(nombre);  // 👈 ahora AMO, CLA, IBU, etc.
+  return { nombre, dosis, duracion, ini };
+});
 
       if (!medicamentos.length){
         if(!confirm('No agregaste medicamentos. ¿Continuar?')) return;
