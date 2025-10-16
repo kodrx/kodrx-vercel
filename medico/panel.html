@@ -18,7 +18,7 @@
   <button class="btn ghost" onclick="location.reload()"> Nueva receta</button>
   <button class="btn ghost" onclick="window.location.href='historial.html'">Historial</button>
   <button class="btn primary" onclick="window.location.href='#'">Acceder IA clínica</button>
-  <button id="btnLogout" class="btn ghost">Cerrar sesión</button>
+  <button id="btnLogout" type="button" class="btn danger">Cerrar sesión</button>
 
      <!-- usa exactamente estos IDs / types -->
 
@@ -403,7 +403,35 @@ function bindSubmit(){
 })();
 </script>
 
+<script>
+;(async () => {
+  if (window.__kodrxLogoutBound) return; 
+  window.__kodrxLogoutBound = true;
 
+  const btn = document.getElementById('btnLogout');
+  if (btn) btn.type = 'button';
+
+  const { auth } = await import('/firebase-init.js');
+  const { signOut } = await import('https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js');
+
+  if (!btn) { console.warn('[logout] no se encontró #btnLogout'); return; }
+
+  btn.addEventListener('click', async (e) => {
+    e?.preventDefault?.();
+    const prev = btn.textContent; btn.disabled = true; btn.textContent = 'Cerrando…';
+    try {
+      try { sessionStorage.clear(); } catch {}
+      try { localStorage.removeItem('kodrx.lastUser'); } catch {}
+      await signOut(auth);
+      location.replace('/acceso.html'); // o '/acceso' si tienes rewrite
+    } catch (err) {
+      console.error('[logout] error:', err?.code || err?.message || err);
+      alert('No se pudo cerrar sesión. Intenta de nuevo.');
+      btn.disabled = false; btn.textContent = prev;
+    }
+  }, { capture:true, passive:false });
+})();
+</script>
 
 </body>
 </html>
