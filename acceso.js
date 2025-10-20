@@ -82,28 +82,43 @@ function setLoading(formEl, isLoading){
 }
 
 /* ========== Rol real desde Firestore (doc, no collection) ========== */
+
+function isSusp(d={}) {
+  const estadoTxt = String(d.estado || d.estadoCuenta || '').toLowerCase();
+  return d.suspendido === true || estadoTxt === 'suspendido';
+}
+
 async function determineRole(uid){
-  // helper susp
-  const isSusp = (d) =>
-    d?.suspendido === true || String(d?.estado || "").toLowerCase() === "suspendido";
-
+  // 1) roles/{uid} manda
   try{
-    const m = await getDoc(doc(db, "medicos", uid));
-    if (m.exists()){
-      const d = m.data();
-      return isSusp(d) ? "suspendido" : "medico";
+    const r = await getDoc(doc(db,'roles',uid));
+    if (r.exists()){
+      const t = String(r.data()?.tipo || r.data()?.role || '').toLowerCase();
+      if (['admin','medico','farmacia'].includes(t)) return t;
     }
-  }catch(e){ console.warn("[ACCESO] Error medicos/{uid}:", e); }
+  }catch{}
 
+  // 2) farmacias/{uid}
   try{
-    const f = await getDoc(doc(db, "farmacias", uid));
+    const f = await getDoc(doc(db,'farmacias',uid));
     if (f.exists()){
-      const d = f.data();
-      return isSusp(d) ? "suspendido" : "farmacia";
+      const d = f.data() || {};
+      if (isSusp(d)) return 'suspendido';
+      return 'farmacia';
     }
-  }catch(e){ console.warn("[ACCESO] Error farmacias/{uid}:", e); }
+  }catch{}
 
-  return "desconocido";
+  // 3) medicos/{uid}
+  try{
+    const m = await getDoc(doc(db,'medicos',uid));
+    if (m.exists()){
+      const d = m.data() || {};
+      if (isSusp(d)) return 'suspendido';
+      return 'medico';
+    }
+  }catch{}
+
+  return 'desconocido';
 }
 
 /* ========== Validación de ?return por rol ========== */
