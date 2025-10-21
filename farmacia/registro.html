@@ -82,11 +82,83 @@
 
 </head>
 <body>
- <button id="btnRegistro">Registrar</button>
-<script type="module" src="/farmacia/registroFarmacia.js?v=1"></script>
-    <p class="volver"><a href="/farmacia/login.html">← Volver al inicio de sesión</a></p>
+  <header>
+    <div class="brand">
+      <img src="/logo.svg" alt="KodRx" aria-hidden="true">
+      <div>KodRx</div>
+    </div>
+    <div style="opacity:.9;margin-top:6px">Registro de Farmacia</div>
+  </header>
+<body>
+  <main>
+    <div class="card">
+      <h1>Crear cuenta de farmacia</h1>
+      <p class="sub">Completa tus datos. Tras enviar el registro, un administrador activará tu cuenta.</p>
+
+      <form id="frmFarmacia" novalidate>
+        <!-- Identidad -->
+        <div class="span-2">
+          <label for="nombreFarmacia">Nombre de la farmacia</label>
+          <input id="nombreFarmacia" name="nombreFarmacia" type="text" required autocomplete="organization"
+                 placeholder="Farmacia Ejemplo">
+        </div>
+
+        <div class="span-2">
+          <label for="medicoResponsable">Médico responsable</label>
+          <input id="medicoResponsable" name="medicoResponsable" type="text" required
+                 placeholder="Nombre del médico responsable">
+        </div>
+
+        <!-- Contacto -->
+        <div>
+          <label for="telefono">Teléfono</label>
+          <input id="telefono" name="telefono" type="tel" required inputmode="numeric" pattern="[0-9\s+\-]{8,}"
+                 placeholder="4491234567" autocomplete="tel">
+          <div class="hint">Sólo dígitos, + y guiones.</div>
+        </div>
+
+        <div>
+          <label for="correo">Correo</label>
+          <input id="correo" name="correo" type="email" required placeholder="correo@farmacia.com" autocomplete="email">
+        </div>
+
+        <div>
+          <label for="password">Contraseña</label>
+          <input id="password" name="password" type="password" required minlength="6" autocomplete="new-password"
+                 placeholder="Mínimo 6 caracteres">
+          <div class="hint">Se enviará verificación a tu correo.</div>
+        </div>
+
+        <!-- Dirección -->
+        <div>
+          <label for="estado">Estado</label>
+          <input id="estado" name="estado" type="text" required placeholder="Estado">
+        </div>
+
+        <div>
+          <label for="municipio">Municipio</label>
+          <input id="municipio" name="municipio" type="text" required placeholder="Municipio">
+        </div>
+
+        <div class="span-2">
+          <label for="colonia">Colonia</label>
+          <input id="colonia" name="colonia" type="text" required placeholder="Colonia / Localidad">
+        </div>
+
+        <!-- Acciones -->
+        <div class="span-2 actions" style="margin-top:6px">
+          <button id="btnRegistro" type="button">Registrar</button>
+          <a href="/acceso?role=farmacia" style="text-decoration:none">¿Ya tienes cuenta? Inicia sesión</a>
+        </div>
+
+        <div class="span-2 footer">
+          Al continuar aceptas los términos y autorizas el tratamiento de datos para la operación de KodRx.
+        </div>
+      </form>
+    </div>
   </main>
 
-  
+  <!-- Lógica de registro (usa los IDs anteriores) -->
+  <script type="module" src="/farmacia/registroFarmacia.js?v=1"></script>
 </body>
 </html>
