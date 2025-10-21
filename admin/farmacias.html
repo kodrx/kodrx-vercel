@@ -8,30 +8,8 @@
   <script src="/componentes/header.js" defer></script>
 </head>
 <body>
-  <main class="seccion">
-    <h2>Administración de Farmacias</h2>
-
-    <input
-      type="text"
-      id="buscador"
-      placeholder="Buscar por nombre o colonia..."
-      style="width: 100%; padding: 10px; margin-bottom: 20px; border-radius: 6px; border: 1px solid #ccc;"
-    />
-
-    <div class="laboratorios card">
-      <h3>Farmacias verificadas ✅</h3>
-      <div id="farmaciasVerificadas">Cargando farmacias verificadas...</div>
-    </div>
-
-    <div class="laboratorios card" style="margin-top: 30px;">
-      <h3>Farmacias por verificar ⏳</h3>
-      <div id="farmaciasPendientes">Cargando farmacias por verificar...</div>
-    </div>
-
-    <a class="volver" href="/admin/admin.html">← Volver al panel principal</a>
-  </main>
-
-  <script type="module" src="/firebase-init.js"></script>
-  <script type="module" src="adminFarmacias-debug.js"></script>
+<div id="pendientes"></div>
+<div id="activas"></div>
+<script type="module" src="/admin/adminFarmacias.js?v=1"></script>
 </body>
 </html>
