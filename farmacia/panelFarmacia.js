@@ -11,77 +11,123 @@ function setNombreFarmacia(txt){
   if (el) el.textContent = txt || 'Farmacia';
 }
 
-// /farmacia/panelFarmacia.js
-const v = document.getElementById('cam');
+// --- Scanner QR con BarcodeDetector + fallback jsQR ---
+const video = document.getElementById('cam');
 const btnScan = document.getElementById('btnScan');
-const btnAbrir= document.getElementById('btnAbrir');
-const manual  = document.getElementById('manual');
+const inputManual = document.getElementById('manual');
+const btnAbrir = document.getElementById('btnAbrir');
 
-btnScan.addEventListener('click', startScan);
-btnAbrir.addEventListener('click', ()=>{
-  const val = (manual.value||'').trim();
-  if (!val) return;
+btnScan?.addEventListener('click', startScan);
+btnAbrir?.addEventListener('click', () => {
+  const val = (inputManual?.value || '').trim();
   const id = extractId(val);
-  if (!id){ alert('No se reconoce ID/URL.'); return; }
-  location.href = `/medico/ver-receta.html?id=${encodeURIComponent(id)}`;
+  if (!id) { alert('Ingresa un ID o URL válida'); return; }
+  go(id);
 });
 
 function extractId(txt){
-  try{
+  try {
     const u = new URL(txt);
-    // acepta .../verificar.html?id=XXXX o ...?id=XXXX
     return u.searchParams.get('id') || null;
-  }catch{ /* no es URL */ }
-  return txt.match(/^[A-Za-z0-9_-]{8,}$/) ? txt : null;
+  } catch { /* no es URL */ }
+  return /^[A-Za-z0-9_-]{8,}$/.test(txt) ? txt : null;
 }
 
-async function startScan(){
-  // iOS necesita muted + playsinline, y user-gesture (hiciste click)
-  const stream = await navigator.mediaDevices.getUserMedia({
-    video: { facingMode: 'environment' }, audio: false
-  });
-  v.srcObject = stream; await v.play();
+let stopScanFn = null;
 
-  if ('BarcodeDetector' in window){
-    const det = new BarcodeDetector({ formats: ['qr_code'] });
-    const loop = async ()=>{
-      if (v.readyState >= 2){
-        const bitmap = await createImageBitmap(v);
-        try{
-          const codes = await det.detect(bitmap);
-          if (codes?.length){
-            const raw = codes[0].rawValue || '';
-            const id  = extractId(raw) || raw;
-            stop(); go(id); return;
-          }
-        }catch{}
-        bitmap.close?.();
-      }
-      raf = requestAnimationFrame(loop);
-    };
-    raf = requestAnimationFrame(loop);
-  }else{
-    // Fallback ZXing
-    const codeReader = new window.ZXing?.BrowserQRCodeReader();
-    if (!codeReader){ alert('Tu navegador no soporta escáner. Usa la caja de texto.'); return; }
-    const devices = await codeReader.getVideoInputDevices();
-    const back = devices.find(d=>/back|rear|environment/i.test(d.label))?.deviceId || devices[0]?.deviceId;
-    await codeReader.decodeFromVideoDevice(back, v, (res, err)=>{
-      if (res?.text){
-        stop(); go(extractId(res.text) || res.text);
-      }
+async function startScan(){
+  try{
+    // Cámara
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: 'environment' } }, audio: false
     });
+    video.srcObject = stream;
+    video.setAttribute('playsinline', 'true'); // iOS
+    video.muted = true;
+    await video.play();
+
+    // Elegimos detector
+    if ('BarcodeDetector' in window) {
+      await runWithBarcodeDetector();
+    } else if (window.jsQR) {
+      await runWithJsQR();
+    } else {
+      alert('Tu navegador no soporta escaneo por cámara (no hay BarcodeDetector / jsQR). Usa el campo manual.');
+      stop();
+    }
+  }catch(e){
+    console.error('[SCAN] error getUserMedia:', e);
+    alert('No se pudo acceder a la cámara. Revisa permisos o usa la caja manual.');
   }
 
   function stop(){
-    try{ v.srcObject?.getTracks?.().forEach(t=>t.stop()); }catch{}
-    try{ cancelAnimationFrame(raf); }catch{}
+    try { video.srcObject?.getTracks?.().forEach(t => t.stop()); } catch {}
+    try { cancelAnimationFrame(_rafId); } catch {}
+    stopScanFn = null;
   }
-  function go(id){
-    if (!id){ alert('No se pudo leer el código'); return; }
-    location.href = `/medico/ver-receta.html?id=${encodeURIComponent(id)}`;
-  }
+  stopScanFn = stop;
 }
+
+let _rafId = 0;
+
+async function runWithBarcodeDetector(){
+  const det = new window.BarcodeDetector({ formats: ['qr_code'] });
+  const loop = async () => {
+    try {
+      if (video.readyState >= 2) {
+        const bmp = await createImageBitmap(video);
+        const codes = await det.detect(bmp);
+        bmp.close?.();
+        if (codes && codes.length) {
+          const raw = codes[0].rawValue || '';
+          const id = extractId(raw) || raw;
+          if (stopScanFn) stopScanFn();
+          return go(id);
+        }
+      }
+    } catch (e) {
+      // Si falla (algunos Android viejos), caemos a jsQR si está disponible
+      if (window.jsQR) {
+        return runWithJsQR();
+      }
+    }
+    _rafId = requestAnimationFrame(loop);
+  };
+  _rafId = requestAnimationFrame(loop);
+}
+
+async function runWithJsQR(){
+  // Canvas temporal para leer el frame
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  const loop = () => {
+    try{
+      const w = video.videoWidth, h = video.videoHeight;
+      if (w && h) {
+        canvas.width = w; canvas.height = h;
+        ctx.drawImage(video, 0, 0, w, h);
+        const img = ctx.getImageData(0, 0, w, h);
+        const res = window.jsQR(img.data, w, h, { inversionAttempts: 'dontInvert' });
+        if (res?.data) {
+          const id = extractId(res.data) || res.data;
+          if (stopScanFn) stopScanFn();
+          return go(id);
+        }
+      }
+    }catch(e){ /* ignora, seguimos */ }
+    _rafId = requestAnimationFrame(loop);
+  };
+  _rafId = requestAnimationFrame(loop);
+}
+
+function go(id){
+  if (!id){ alert('No se pudo leer el código'); return; }
+  // Si farmacia debe abrir verificador:
+  // location.href = `/farmacia/verificador.html?id=${encodeURIComponent(id)}`;
+  // Si deben ver la receta del médico:
+  location.href = `/medico/ver-receta.html?id=${encodeURIComponent(id)}`;
+}
+
 
 async function cerrarSesion(){
   try {
