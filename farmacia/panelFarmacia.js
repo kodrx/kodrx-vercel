@@ -11,6 +11,26 @@ function setNombreFarmacia(txt){
   if (el) el.textContent = txt || 'Farmacia';
 }
 
+
+// Checar permiso antes de pedir cámara
+async function camPermissionState(){
+  if (!navigator.permissions) return 'unknown';
+  try{
+    const s = await navigator.permissions.query({ name: 'camera' });
+    return s.state; // 'granted' | 'denied' | 'prompt'
+  }catch{ return 'unknown'; }
+}
+
+btnScan.addEventListener('click', async () => {
+  const st = await camPermissionState();
+  // Opcional: mostrar hint si viene 'denied' antes de intentar
+  if (st === 'denied'){
+    alert('La cámara está bloqueada. Habilítala en el candado de la barra de direcciones y vuelve a intentar.');
+  }
+  // Aquí sí getUserMedia, inmediatamente tras el clic
+  await startScan();
+});
+
 // --- Scanner QR con BarcodeDetector + fallback jsQR ---
 const video     = document.getElementById('cam');
 const btnScan   = document.getElementById('btnScan');
