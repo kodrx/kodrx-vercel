@@ -11,8 +11,21 @@
   <div id="nombre-farmacia">Farmacia</div>
   <button id="btnLogout" type="button">Cerrar sesión</button>
 </header>
+<body>
+  <!-- farmacia/panel.html -->
+<video id="cam" playsinline style="width:100%;max-width:420px;border-radius:12px"></video>
+<div style="margin:8px 0">
+  <button id="btnScan">Iniciar cámara</button>
+  <input id="manual" placeholder="Pega URL o ID de receta" style="width:60%">
+  <button id="btnAbrir">Abrir</button>
+</div>
+
+<!-- Fallback ZXing local -->
+
+
 
 <script type="module" src="/farmacia/panelFarmacia.js?v=1"></script>
-
+<script src="/vendor/zxing.min.js" defer></script>
+</body>
 
 </html>
