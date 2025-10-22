@@ -2,29 +2,39 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Panel Farmacia - KodRx</title>
+
   <link rel="stylesheet" href="/estilos/global.css" />
   <script src="/componentes/header.js" defer></script>
+
+  <!-- Si usas CSP estricta sin 'unsafe-inline', perfecto: no hay inline JS -->
 </head>
-  <header>
-  <div id="nombre-farmacia">Farmacia</div>
-  <button id="btnLogout" type="button">Cerrar sesión</button>
-</header>
 <body>
-  <!-- farmacia/panel.html -->
-<video id="cam" playsinline style="width:100%;max-width:420px;border-radius:12px"></video>
-<div style="margin:8px 0">
-  <button id="btnScan">Iniciar cámara</button>
-  <input id="manual" placeholder="Pega URL o ID de receta" style="width:60%">
-  <button id="btnAbrir">Abrir</button>
-</div>
+  <header>
+    <div id="nombre-farmacia">Farmacia</div>
+    <button id="btnLogout" type="button">Cerrar sesión</button>
+  </header>
 
-<!-- Fallback ZXing local -->
+  <main style="padding:12px">
+    <video id="cam" playsinline muted style="width:100%;max-width:420px;border-radius:12px;background:#000"></video>
 
+    <div style="margin:8px 0; display:flex; gap:8px; align-items:center; flex-wrap:wrap">
+      <button id="btnScan" type="button">Iniciar cámara</button>
 
-<script defer src="/vendor/jsqr.min.js"></script>
-<script type="module" src="/farmacia/panelFarmacia.js?v=2"></script>
+      <!-- Fallback: abrir cámara nativa o seleccionar foto del QR -->
+      <button id="btnPick" type="button" onclick="document.getElementById('fileQR').click()">Subir foto/QR</button>
+      <input id="fileQR" type="file" accept="image/*" capture="environment" hidden>
+
+      <input id="manual" placeholder="Pega URL o ID de receta" style="flex:1;min-width:240px" />
+      <button id="btnAbrir" type="button">Abrir</button>
+    </div>
+  </main>
+
+  <!-- Librería de fallback para decodificar QR desde imagen/video -->
+  <script defer src="/vendor/jsqr.min.js"></script>
+
+  <!-- Lógica del panel -->
+  <script type="module" src="/farmacia/panelFarmacia.js?v=2"></script>
 </body>
-
 </html>
