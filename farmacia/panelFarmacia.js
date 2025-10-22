@@ -96,40 +96,7 @@ function extractId(txt){
 }
 let stopScanFn = null;
 
-async function startScan(){
-  try{
-    // Cámara
-    const stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: { ideal: 'environment' } }, audio: false
-    });
-    video.srcObject = stream;
-    video.setAttribute('playsinline', 'true'); // iOS
-    video.muted = true;
-    await video.play();
 
-    // Elegimos detector
-    if ('BarcodeDetector' in window) {
-      await runWithBarcodeDetector();
-    } else if (window.jsQR) {
-      await runWithJsQR();
-    } else {
-      alert('Tu navegador no soporta escaneo por cámara (no hay BarcodeDetector / jsQR). Usa el campo manual.');
-      stop();
-    }
-  }catch(e){
-    console.error('[SCAN] error getUserMedia:', e);
-    alert('No se pudo acceder a la cámara. Revisa permisos o usa la caja manual.');
-  }
-
-  function stop(){
-    try { video.srcObject?.getTracks?.().forEach(t => t.stop()); } catch {}
-    try { cancelAnimationFrame(_rafId); } catch {}
-    stopScanFn = null;
-  }
-  stopScanFn = stop;
-}
-
-let _rafId = 0;
 
 async function runWithBarcodeDetector(){
   const det = new window.BarcodeDetector({ formats: ['qr_code'] });
