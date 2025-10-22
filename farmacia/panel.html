@@ -7,72 +7,12 @@
   <link rel="stylesheet" href="/estilos/global.css" />
   <script src="/componentes/header.js" defer></script>
 </head>
-<body>
-  <main class="seccion">
-    <h2>Bienvenido a KodRx</h2>
-    <p id="nombre-farmacia">Cargando...</p>
+  <header>
+  <div id="nombre-farmacia">Farmacia</div>
+  <button id="btnLogout" type="button">Cerrar sesión</button>
+</header>
 
-    <div style="display:flex;flex-direction:column;gap:10px;max-width:320px;margin:auto;margin-top:20px;">
-      <button onclick="location.href='verificador.html'">Verificador de Recetas</button>
-      <button onclick="location.href='historial.html'">Mis Recetas Surtidas</button>
-      <button onclick="cerrarSesion()">Cerrar sesión</button>
-    </div>
-  </main>
+<script type="module" src="/farmacia/panelFarmacia.js?v=1"></script>
 
-  <!-- JS (un solo módulo) -->
-  <script type="module">
-    import { auth, db } from '/firebase-init.js';
-    import { onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js';
-    import { doc, getDoc } from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js';
 
-    const nombreFarmacia = document.getElementById('nombre-farmacia');
-    const ACCESS_URL = '/acceso?role=farmacia';
-
-    // Guard + carga de datos
-    onAuthStateChanged(auth, async (user) => {
-      if (!user) {
-        location.href = ACCESS_URL;
-        return;
-      }
-
-      try {
-        const snap = await getDoc(doc(db, 'farmacias', user.uid));
-        if (!snap.exists()) {
-          await signOut(auth);
-          location.href = '/acceso?role=farmacia&msg=sin_permiso';
-          return;
-        }
-
-        const data = snap.data();
-        const estado = (data.estado || '').toLowerCase();
-        const suspendido = data.suspendido === true;
-
-        if (estado === 'suspendido' || suspendido) {
-          await signOut(auth);
-          location.href = '/acceso?role=farmacia&msg=suspendido';
-          return;
-        }
-
-        // Intentamos varios nombres posibles
-        const nombre =
-          (data.nombreFarmacia || data.nombre || data.razonSocial || '').trim() || 'Farmacia';
-        nombreFarmacia.textContent = nombre;
-      } catch (e) {
-        console.error('Error cargando farmacia:', e);
-        nombreFarmacia.textContent = '—';
-      }
-    });
-
-    // Logout global (usado por el botón inline)
-    window.cerrarSesion = async () => {
-      try {
-        await signOut(auth);
-        location.href = '/acceso?role=farmacia&msg=logout_ok';
-      } catch (err) {
-        console.error('❌ Error al cerrar sesión:', err);
-        alert('Hubo un problema al cerrar sesión, intenta de nuevo.');
-      }
-    };
-  </script>
-</body>
 </html>
