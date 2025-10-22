@@ -12,27 +12,88 @@ function setNombreFarmacia(txt){
 }
 
 // --- Scanner QR con BarcodeDetector + fallback jsQR ---
-const video = document.getElementById('cam');
-const btnScan = document.getElementById('btnScan');
-const inputManual = document.getElementById('manual');
-const btnAbrir = document.getElementById('btnAbrir');
+const video     = document.getElementById('cam');
+const btnScan   = document.getElementById('btnScan');
+const fileInput = document.getElementById('fileQR');
 
 btnScan?.addEventListener('click', startScan);
-btnAbrir?.addEventListener('click', () => {
-  const val = (inputManual?.value || '').trim();
-  const id = extractId(val);
-  if (!id) { alert('Ingresa un ID o URL válida'); return; }
-  go(id);
-});
+fileInput?.addEventListener('change', onPickImage);
 
-function extractId(txt){
-  try {
-    const u = new URL(txt);
-    return u.searchParams.get('id') || null;
-  } catch { /* no es URL */ }
-  return /^[A-Za-z0-9_-]{8,}$/.test(txt) ? txt : null;
+async function startScan(){
+  try{
+    // 1) pedir permiso con gesto de usuario
+    const constraints = { video: { facingMode: { ideal: 'environment' } }, audio: false };
+    const stream = await navigator.mediaDevices.getUserMedia(constraints);
+    video.srcObject = stream;
+    video.setAttribute('playsinline', 'true'); // iOS
+    video.muted = true;
+    await video.play();
+
+    // 2) detector
+    if ('BarcodeDetector' in window) {
+      await runWithBarcodeDetector();  // tu función
+    } else if (window.jsQR) {
+      await runWithJsQR();             // tu función
+    } else {
+      throw new Error('No hay BarcodeDetector ni jsQR');
+    }
+  }catch(err){
+    console.warn('[SCAN] getUserMedia fail:', err);
+
+    // Mensaje didáctico según tipo de error
+    const msg = String(err?.name || err?.message || '');
+    if (msg.includes('NotAllowedError') || msg.includes('Permission')) {
+      alert(
+        'No hay permiso para usar la cámara.\n\n' +
+        '• Revisa el candado de la barra (Permisos → Cámara → Permitir)\n' +
+        '• En tu sistema habilita el permiso de cámara para el navegador\n' +
+        '• En iPhone: Ajustes > Safari > Cámara → Permitir'
+      );
+    } else if (msg.includes('NotFoundError')) {
+      alert('No se encontró ninguna cámara en este dispositivo.');
+    } else {
+      alert('No se pudo acceder a la cámara. Usa el botón “Subir foto/QR”.');
+    }
+
+    // Fallback inmediato: abrir selector de imagen (usa cámara nativa en móviles)
+    try { fileInput?.click(); } catch {}
+  }
 }
 
+// Fallback: leer una imagen (foto del QR) con jsQR
+async function onPickImage(e){
+  const file = e.target.files?.[0];
+  if (!file) return;
+  if (!window.jsQR) { alert('No se pudo cargar el lector offline (jsQR).'); return; }
+
+  const img = new Image();
+  img.onload = () => {
+    const canvas = document.createElement('canvas');
+    canvas.width  = img.naturalWidth;
+    canvas.height = img.naturalHeight;
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    ctx.drawImage(img, 0, 0);
+    const data = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const res = window.jsQR(data.data, canvas.width, canvas.height, { inversionAttempts:'dontInvert' });
+    if (res?.data) {
+      const id = extractId(res.data) || res.data;
+      go(id);  // tu función de navegación
+    } else {
+      alert('No se pudo leer el QR de la imagen. Intenta con otra foto (que esté bien enfocada y con buena luz).');
+    }
+    URL.revokeObjectURL(img.src);
+  };
+  img.onerror = () => { alert('No se pudo abrir la imagen seleccionada.'); };
+  img.src = URL.createObjectURL(file);
+}
+
+function extractId(txt){
+  try{
+    const u = new URL(txt);
+    return u.searchParams.get('id') || null;
+  }catch{}
+  return /^[A-Za-z0-9_-]{8,}$/.test(txt) ? txt : null;
+}
 let stopScanFn = null;
 
 async function startScan(){
