@@ -5,65 +5,162 @@ import { doc, getDoc } from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-
 
 const ACCESS_URL = '/acceso?role=farmacia';
 const $ = s => document.querySelector(s);
+const video     = document.getElementById('cam');
+const btnScan   = document.getElementById('btnScan');
+const fileInput = document.getElementById('fileQR');
+const btnPick   = document.getElementById('btnPick'); // botón “Subir foto/QR” en el HTML
 
 function setNombreFarmacia(txt){
   const el = $('#nombre-farmacia');
   if (el) el.textContent = txt || 'Farmacia';
 }
 
+/* ─────────────────────────────
+   SCAN: control de ciclo
+────────────────────────────── */
+let _rafId = 0;
+let stopScanFn = null;
 
+function stopScan(){
+  try{ cancelAnimationFrame(_rafId); }catch{}
+  _rafId = 0;
+  try{
+    const s = video.srcObject;
+    if (s && s.getTracks) s.getTracks().forEach(t=>t.stop());
+  }catch{}
+  video.srcObject = null;
+}
+stopScanFn = stopScan;
 
+// Cuando la pestaña se oculta, paramos
+document.addEventListener('visibilitychange', ()=>{ if (document.hidden) stopScan(); });
 
-// --- Scanner QR con BarcodeDetector + fallback jsQR ---
-const video     = document.getElementById('cam');
-const btnScan   = document.getElementById('btnScan');
-const fileInput = document.getElementById('fileQR');
+/* ─────────────────────────────
+   SCAN: helpers
+────────────────────────────── */
+function extractId(txt){
+  try{
+    const u = new URL(txt);
+    return u.searchParams.get('id') || null;
+  }catch{}
+  return /^[A-Za-z0-9_-]{8,}$/.test(txt) ? txt : null;
+}
 
-btnScan?.addEventListener('click', startScan);
-fileInput?.addEventListener('change', onPickImage);
+function go(id){
+  if (!id){ alert('No se pudo leer el código'); return; }
+  // Verificador para farmacia (si prefieres ver receta, cambia la URL):
+  location.href = `/farmacia/verificador.html?id=${encodeURIComponent(id)}`;
+  // location.href = `/medico/ver-receta.html?id=${encodeURIComponent(id)}`;
+}
 
+/* ─────────────────────────────
+   SCAN: jsQR (fallback)
+────────────────────────────── */
+async function runWithJsQR(){
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+
+  const loop = () => {
+    try{
+      const w = video.videoWidth, h = video.videoHeight;
+      if (w && h) {
+        canvas.width = w; canvas.height = h;
+        ctx.drawImage(video, 0, 0, w, h);
+        const img = ctx.getImageData(0, 0, w, h);
+        const res = window.jsQR && window.jsQR(img.data, w, h, { inversionAttempts:'dontInvert' });
+        if (res?.data) {
+          const id = extractId(res.data) || res.data;
+          stopScan();
+          return go(id);
+        }
+      }
+    }catch{}
+    _rafId = requestAnimationFrame(loop);
+  };
+  _rafId = requestAnimationFrame(loop);
+}
+
+/* ─────────────────────────────
+   SCAN: BarcodeDetector (rápido)
+────────────────────────────── */
+async function runWithBarcodeDetector(){
+  const det = new window.BarcodeDetector({ formats: ['qr_code'] });
+  const loop = async () => {
+    try{
+      if (video.readyState >= 2) {
+        const bmp = await createImageBitmap(video);
+        const codes = await det.detect(bmp);
+        bmp.close?.();
+        if (codes && codes.length) {
+          const raw = codes[0].rawValue || '';
+          const id = extractId(raw) || raw;
+          stopScan();
+          return go(id);
+        }
+      }
+    }catch(e){
+      // Si falla, caemos a jsQR
+      if (window.jsQR) return runWithJsQR();
+    }
+    _rafId = requestAnimationFrame(loop);
+  };
+  _rafId = requestAnimationFrame(loop);
+}
+
+/* ─────────────────────────────
+   SCAN: pedido de cámara (gesto)
+────────────────────────────── */
 async function startScan(){
   try{
-    // 1) pedir permiso con gesto de usuario
-    const constraints = { video: { facingMode: { ideal: 'environment' } }, audio: false };
-    const stream = await navigator.mediaDevices.getUserMedia(constraints);
+    // 1) Warm-up para disparar prompt (y habilitar enumerate labels)
+    const warm = await navigator.mediaDevices.getUserMedia({ video:true, audio:false });
+    warm.getTracks().forEach(t=>t.stop());
+
+    // 2) Elegir cámara trasera (si existe)
+    const devs = await navigator.mediaDevices.enumerateDevices();
+    const cams = devs.filter(d=>d.kind==='videoinput');
+    const back = cams.find(d => /back|rear|environment/i.test(d.label)) || cams[0];
+    if (!back) throw new Error('NoCamera');
+
+    // 3) Abrir stream seleccionado
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { deviceId: { exact: back.deviceId } },
+      audio: false
+    });
+
     video.srcObject = stream;
-    video.setAttribute('playsinline', 'true'); // iOS
+    video.setAttribute('playsinline','true'); // iOS
     video.muted = true;
     await video.play();
 
-    // 2) detector
+    // 4) Detector
     if ('BarcodeDetector' in window) {
-      await runWithBarcodeDetector();  // tu función
+      await runWithBarcodeDetector();
     } else if (window.jsQR) {
-      await runWithJsQR();             // tu función
+      await runWithJsQR();
     } else {
-      throw new Error('No hay BarcodeDetector ni jsQR');
+      alert('No hay lector disponible. Usa “Subir foto/QR”.');
     }
   }catch(err){
     console.warn('[SCAN] getUserMedia fail:', err);
-
-    // Mensaje didáctico según tipo de error
     const msg = String(err?.name || err?.message || '');
-    if (msg.includes('NotAllowedError') || msg.includes('Permission')) {
-      alert(
-        'No hay permiso para usar la cámara.\n\n' +
-        '• Revisa el candado de la barra (Permisos → Cámara → Permitir)\n' +
-        '• En tu sistema habilita el permiso de cámara para el navegador\n' +
-        '• En iPhone: Ajustes > Safari > Cámara → Permitir'
-      );
-    } else if (msg.includes('NotFoundError')) {
-      alert('No se encontró ninguna cámara en este dispositivo.');
+
+    if (/NotAllowed/i.test(msg) || /Permission/i.test(msg)) {
+      alert('La cámara está bloqueada por el navegador o el sistema.\n\n• Pulsa el candado y permite “Cámara”\n• Revisa permisos del sistema\n• En iPhone: Ajustes > Safari > Cámara → Permitir');
+    } else if (/NotFound|NoCamera/i.test(msg)) {
+      alert('No se encontró cámara en este dispositivo.');
     } else {
-      alert('No se pudo acceder a la cámara. Usa el botón “Subir foto/QR”.');
+      alert('No se pudo acceder a la cámara. Usa “Subir foto/QR”.');
     }
 
-    // Fallback inmediato: abrir selector de imagen (usa cámara nativa en móviles)
-    try { fileInput?.click(); } catch {}
+    // IMPORTANTE: NO llamar fileInput.click() aquí (no hay user activation)
+    stopScan();
   }
 }
 
-// Fallback: leer una imagen (foto del QR) con jsQR
+/* ─────────────────────────────
+   Fallback: leer foto del QR
+────────────────────────────── */
 async function onPickImage(e){
   const file = e.target.files?.[0];
   if (!file) return;
@@ -80,9 +177,9 @@ async function onPickImage(e){
     const res = window.jsQR(data.data, canvas.width, canvas.height, { inversionAttempts:'dontInvert' });
     if (res?.data) {
       const id = extractId(res.data) || res.data;
-      go(id);  // tu función de navegación
+      go(id);
     } else {
-      alert('No se pudo leer el QR de la imagen. Intenta con otra foto (que esté bien enfocada y con buena luz).');
+      alert('No se pudo leer el QR de la imagen. Asegúrate de que esté enfocado y con buena luz.');
     }
     URL.revokeObjectURL(img.src);
   };
@@ -90,108 +187,32 @@ async function onPickImage(e){
   img.src = URL.createObjectURL(file);
 }
 
-function extractId(txt){
-  try{
-    const u = new URL(txt);
-    return u.searchParams.get('id') || null;
-  }catch{}
-  return /^[A-Za-z0-9_-]{8,}$/.test(txt) ? txt : null;
-}
-let stopScanFn = null;
+/* ─────────────────────────────
+   Botones
+────────────────────────────── */
+btnScan?.addEventListener('click', startScan);
+fileInput?.addEventListener('change', onPickImage);
+btnPick?.addEventListener('click', () => fileInput?.click()); // gesto del usuario
 
-
-
-async function runWithBarcodeDetector(){
-  const det = new window.BarcodeDetector({ formats: ['qr_code'] });
-  const loop = async () => {
-    try {
-      if (video.readyState >= 2) {
-        const bmp = await createImageBitmap(video);
-        const codes = await det.detect(bmp);
-        bmp.close?.();
-        if (codes && codes.length) {
-          const raw = codes[0].rawValue || '';
-          const id = extractId(raw) || raw;
-          if (stopScanFn) stopScanFn();
-          return go(id);
-        }
-      }
-    } catch (e) {
-      // Si falla (algunos Android viejos), caemos a jsQR si está disponible
-      if (window.jsQR) {
-        return runWithJsQR();
-      }
-    }
-    _rafId = requestAnimationFrame(loop);
-  };
-  _rafId = requestAnimationFrame(loop);
-}
-
-async function runWithJsQR(){
-  // Canvas temporal para leer el frame
-  const canvas = document.createElement('canvas');
-  const ctx = canvas.getContext('2d', { willReadFrequently: true });
-  const loop = () => {
-    try{
-      const w = video.videoWidth, h = video.videoHeight;
-      if (w && h) {
-        canvas.width = w; canvas.height = h;
-        ctx.drawImage(video, 0, 0, w, h);
-        const img = ctx.getImageData(0, 0, w, h);
-        const res = window.jsQR(img.data, w, h, { inversionAttempts: 'dontInvert' });
-        if (res?.data) {
-          const id = extractId(res.data) || res.data;
-          if (stopScanFn) stopScanFn();
-          return go(id);
-        }
-      }
-    }catch(e){ /* ignora, seguimos */ }
-    _rafId = requestAnimationFrame(loop);
-  };
-  _rafId = requestAnimationFrame(loop);
-}
-
-function go(id){
-  if (!id){ alert('No se pudo leer el código'); return; }
-  // Si farmacia debe abrir verificador:
-  // location.href = `/farmacia/verificador.html?id=${encodeURIComponent(id)}`;
-  // Si deben ver la receta del médico:
-  location.href = `/medico/ver-receta.html?id=${encodeURIComponent(id)}`;
-}
-
-
-async function cerrarSesion(){
-  try {
-    await signOut(auth);
-    location.href = '/acceso?role=farmacia&msg=logout_ok';
-  } catch (err) {
-    console.error('[FARM] logout error:', err);
-    alert('Hubo un problema al cerrar sesión, intenta de nuevo.');
-  }
-}
-
-// Bind del botón (idempotente)
-function bindUI(){
+/* ─────────────────────────────
+   Guard + carga farmacia
+────────────────────────────── */
+onAuthStateChanged(auth, async (user) => {
+  // Bind logout idempotente
   const btn = $('#btnLogout');
   if (btn && !btn.__bound){
     btn.type = 'button';
-    btn.addEventListener('click', cerrarSesion, { capture:true });
+    btn.addEventListener('click', async ()=>{
+      try{ stopScan(); await signOut(auth); }
+      finally { location.href = '/acceso?role=farmacia&msg=logout_ok'; }
+    }, {capture:true});
     btn.__bound = true;
   }
-}
 
-// Guard + carga
-onAuthStateChanged(auth, async (user) => {
-  bindUI();
-
-  if (!user) {
-    location.href = ACCESS_URL;
-    return;
-  }
+  if (!user) { location.href = ACCESS_URL; return; }
 
   try {
     await user.reload(); await user.getIdToken(true);
-
     const snap = await getDoc(doc(db, 'farmacias', user.uid));
     if (!snap.exists()) {
       await signOut(auth);
@@ -200,51 +221,25 @@ onAuthStateChanged(auth, async (user) => {
     }
 
     const d = snap.data() || {};
-    // Normaliza campos
     const estadoCuenta = String(d.estadoCuenta || '').toLowerCase();
     const suspendido   = d.suspendido === true;
-    const verificado   = d.verificado !== false;
 
-    // Bloqueos
     if (suspendido || estadoCuenta === 'suspendido') {
       await signOut(auth);
       location.href = '/acceso?role=farmacia&msg=suspendido';
       return;
     }
     if (estadoCuenta && estadoCuenta !== 'activo') {
-      // pendiente u otro estado
       await signOut(auth);
       location.href = '/acceso?role=farmacia&msg=pendiente';
       return;
     }
 
-    // Pintar nombre
-    const nombre =
-      (d.nombre || d.nombreFarmacia || d.razonSocial || '').trim() || 'Farmacia';
+    const nombre = (d.nombreFarmacia || d.nombre || d.razonSocial || '').trim() || 'Farmacia';
     setNombreFarmacia(nombre);
-
   } catch (e) {
     console.error('[FARM] error guard:', e);
     setNombreFarmacia('—');
   }
 });
-// Checar permiso antes de pedir cámara
-async function camPermissionState(){
-  if (!navigator.permissions) return 'unknown';
-  try{
-    const s = await navigator.permissions.query({ name: 'camera' });
-    return s.state; // 'granted' | 'denied' | 'prompt'
-  }catch{ return 'unknown'; }
-}
 
-btnScan.addEventListener('click', async () => {
-  const st = await camPermissionState();
-  // Opcional: mostrar hint si viene 'denied' antes de intentar
-  if (st === 'denied'){
-    alert('La cámara está bloqueada. Habilítala en el candado de la barra de direcciones y vuelve a intentar.');
-  }
-  // Aquí sí getUserMedia, inmediatamente tras el clic
-  await startScan();
-});
-// (Opcional) expón cerrarSesion solo si aún tienes algún onclick viejo en plantillas
-// window.cerrarSesion = cerrarSesion;
