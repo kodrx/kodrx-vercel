@@ -11,21 +11,32 @@
   <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
 </head>
 <body>
-  <main class="seccion">
-    <h2>🔍 Verificador de Receta</h2>
+  <header>
+  <div id="nombre-farmacia">Farmacia</div>
+  <button id="btnLogout" type="button">Cerrar sesión</button>
+</header>
 
-    <div style="max-width: 400px; margin: auto;">
-      <button onclick="iniciarEscaneo()">📷 Escanear receta con cámara</button>
-      <p style="text-align:center;">o</p>
-      <input type="text" id="inputID" placeholder="Ingresar ID de receta manualmente" />
-      <button onclick="verificarManual()">Verificar</button>
-    </div>
+<main style="max-width:720px;margin:auto;padding:12px;">
+  <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:10px;">
+    <button id="btnStart" type="button">🎥 Escanear en vivo</button>
+    <button id="btnStop"  type="button" disabled>■ Detener</button>
+    <input id="manual" placeholder="Pega URL o ID de receta" style="flex:1;min-width:240px">
+    <button id="btnAbrir" type="button">Abrir</button>
+  </div>
 
-    <div id="qr-reader" style="width: 300px; margin: 20px auto;"></div>
-    <div id="resultado" style="margin-top: 20px;"></div>
-  </main>
+  <!-- Contenedor del lector Html5Qrcode -->
+  <div id="qr-reader" style="width:100%;max-width:420px"></div>
 
-  <script type="module" src="/firebase-init.js"></script>
-  <script type="module" src="/farmacia/verificador.js"></script>
+  <!-- Resultado / ficha de receta -->
+  <div id="resultado" style="margin-top:16px;"></div>
+</main>
+
+<!-- Librerías -->
+<script defer src="/vendor/jsqr.min.js"></script> <!-- opcional; Html5Qrcode ya lee QR, pero lo dejamos como fallback por si quieres -->
+<script defer src="/vendor/html5-qrcode.min.js"></script>
+
+<!-- Tu JS del panel -->
+<script type="module" src="/farmacia/panelFarmacia.html5.js?v=1"></script>
+
 </body>
 </html>
