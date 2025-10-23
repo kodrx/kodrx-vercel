@@ -11,30 +11,29 @@
   <!-- Si usas CSP estricta sin 'unsafe-inline', perfecto: no hay inline JS -->
 </head>
 <body>
-  <header>
-    <div id="nombre-farmacia">Farmacia</div>
-    <button id="btnLogout" type="button">Cerrar sesión</button>
-  </header>
+ <header>
+  <div id="nombre-farmacia">Farmacia</div>
+  <button id="btnLogout" type="button">Cerrar sesión</button>
+</header>
 
-  <main style="padding:12px">
-    <video id="cam" playsinline muted style="width:100%;max-width:420px;border-radius:12px;background:#000"></video>
+<main>
+  <video id="cam" playsinline muted style="width:100%;max-width:420px;border-radius:12px"></video>
 
-    <div style="margin:8px 0; display:flex; gap:8px; align-items:center; flex-wrap:wrap">
-      <button id="btnScan" type="button">Iniciar cámara</button>
+  <div style="margin:8px 0; display:flex; gap:8px; flex-wrap:wrap;">
+    <button id="btnScan" type="button">🎥 Escanear en vivo</button>
+    <button id="btnPick" type="button">📸 Escanear (Foto)</button>
+    <input id="fileQR" type="file" accept="image/*" capture="environment" hidden>
+  </div>
 
-      <!-- Fallback: abrir cámara nativa o seleccionar foto del QR -->
-      <button id="btnPick" type="button" onclick="document.getElementById('fileQR').click()">Subir foto/QR</button>
-      <input id="fileQR" type="file" accept="image/*" capture="environment" hidden>
+  <div style="margin:8px 0;">
+    <input id="manual" placeholder="Pega URL o ID de receta" style="width:60%">
+    <button id="btnAbrir" type="button">Abrir</button>
+  </div>
+</main>
 
-      <input id="manual" placeholder="Pega URL o ID de receta" style="flex:1;min-width:240px" />
-      <button id="btnAbrir" type="button">Abrir</button>
-    </div>
-  </main>
+<!-- Fallback de decodificación QR -->
+<script defer src="/vendor/jsqr.min.js"></script>
+<script type="module" src="/farmacia/panelFarmacia.js?v=3"></script>
 
-  <!-- Librería de fallback para decodificar QR desde imagen/video -->
-  <script defer src="/vendor/jsqr.min.js"></script>
-
-  <!-- Lógica del panel -->
-  <script type="module" src="/farmacia/panelFarmacia.js?v=2"></script>
 </body>
 </html>
