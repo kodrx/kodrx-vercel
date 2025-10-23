@@ -8,32 +8,22 @@
   <link rel="stylesheet" href="/estilos/global.css" />
   <script src="/componentes/header.js" defer></script>
 
-  <!-- Si usas CSP estricta sin 'unsafe-inline', perfecto: no hay inline JS -->
 </head>
 <body>
- <header>
-  <div id="nombre-farmacia">Farmacia</div>
-  <button id="btnLogout" type="button">Cerrar sesión</button>
-</header>
+  <header class="top">
+    <div id="nombre-farmacia">Farmacia</div>
+    <button id="btnLogout" type="button">Cerrar sesión</button>
+  </header>
 
-<main>
-  <video id="cam" playsinline muted style="width:100%;max-width:420px;border-radius:12px"></video>
+  <main class="wrap" style="max-width:860px;margin:20px auto">
+    <h1>Panel de Farmacia</h1>
+    <div class="grid" style="display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))">
+      <a class="btn" href="/farmacia/verificador.html" style="text-align:center">📷 Escanear receta</a>
+      <a class="btn" href="/farmacia/historial.html"  style="text-align:center">🗂️ Historial</a>
+      <button class="btn" id="btnLogout2" type="button">🚪 Cerrar sesión</button>
+    </div>
+  </main>
 
-  <div style="margin:8px 0; display:flex; gap:8px; flex-wrap:wrap;">
-    <button id="btnScan" type="button">🎥 Escanear en vivo</button>
-    <button id="btnPick" type="button">📸 Escanear (Foto)</button>
-    <input id="fileQR" type="file" accept="image/*" capture="environment" hidden>
-  </div>
-
-  <div style="margin:8px 0;">
-    <input id="manual" placeholder="Pega URL o ID de receta" style="width:60%">
-    <button id="btnAbrir" type="button">Abrir</button>
-  </div>
-</main>
-
-<!-- Fallback de decodificación QR -->
-<script defer src="/vendor/jsqr.min.js"></script>
-<script type="module" src="/farmacia/panelFarmacia.js?v=3"></script>
-
+  <script type="module" src="/farmacia/panelFarmacia.js?v=1"></script>
 </body>
 </html>
