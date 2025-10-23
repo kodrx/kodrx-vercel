@@ -11,32 +11,29 @@
   <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
 </head>
 <body>
-  <header>
-  <div id="nombre-farmacia">Farmacia</div>
-  <button id="btnLogout" type="button">Cerrar sesión</button>
-</header>
+  <main class="wrap" style="max-width:980px;margin:16px auto">
+    <h1>Verificar / Surtir receta</h1>
 
-<main style="max-width:720px;margin:auto;padding:12px;">
-  <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:10px;">
-    <button id="btnStart" type="button">🎥 Escanear en vivo</button>
-    <button id="btnStop"  type="button" disabled>■ Detener</button>
-    <input id="manual" placeholder="Pega URL o ID de receta" style="flex:1;min-width:240px">
-    <button id="btnAbrir" type="button">Abrir</button>
-  </div>
+    <section class="card" style="padding:12px;border:1px solid #e5e7eb;border-radius:12px">
+      <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center">
+        <button id="btnCam" type="button">📷 Activar cámara</button>
+        <input id="manual" placeholder="Pega URL o ID de receta" style="flex:1;min-width:260px">
+        <button id="btnAbrir" type="button">Abrir</button>
+      </div>
+      <div id="camWrap" style="margin-top:12px">
+        <video id="cam" playsinline style="width:100%;max-width:520px;border-radius:12px"></video>
+        <canvas id="frame" hidden></canvas>
+        <div id="camMsg" class="sub" style="margin-top:6px;color:#6b7280"></div>
+      </div>
+    </section>
 
-  <!-- Contenedor del lector Html5Qrcode -->
-  <div id="qr-reader" style="width:100%;max-width:420px"></div>
+    <section id="resultado" class="card" style="margin-top:14px;padding:14px;border:1px solid #e5e7eb;border-radius:12px">
+      <!-- aquí se renderiza receta + checklist -->
+      <div class="sub">Escanea un código o ingresa un ID.</div>
+    </section>
+  </main>
 
-  <!-- Resultado / ficha de receta -->
-  <div id="resultado" style="margin-top:16px;"></div>
-</main>
-
-<!-- Librerías -->
-<script defer src="/vendor/jsqr.min.js"></script> <!-- opcional; Html5Qrcode ya lee QR, pero lo dejamos como fallback por si quieres -->
-<script defer src="/vendor/html5-qrcode.min.js"></script>
-
-<!-- Tu JS del panel -->
-<script type="module" src="/farmacia/panelFarmacia.html5.js?v=1"></script>
-
+  <!-- Lector local: preferimos BarcodeDetector; fallback a jsQR -->
+  <script defer src="/vendor/jsqr.min.js"></script>
+  <script type="module" src="/farmacia/verificador.js?v=1"></script>
 </body>
-</html>
