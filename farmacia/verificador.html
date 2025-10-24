@@ -40,144 +40,175 @@
 <!-- Lector offline -->
 <script defer src="/vendor/jsqr.min.js"></script>
 
+<!-- Lector offline -->
+<script defer src="/vendor/jsqr.min.js"></script>
+
 <script>
-(() => {
-  // …deja el resto de tu script igual…
+document.addEventListener('DOMContentLoaded', () => {
+  'use strict';
 
-  const IS_IOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
-    || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  // ---------- refs ----------
+  const $ = (s) => document.querySelector(s);
+  const video     = $('#cam');
+  const btnScan   = $('#btnScan');
+  const fileInput = $('#fileQR');
+  const inputMan  = $('#manual');
+  const btnAbrir  = $('#btnAbrir');
 
-  let _rafId = 0, _stream = null;
-  const stopScan = ()=>{
-    try{ cancelAnimationFrame(_rafId); }catch{} _rafId=0;
-    try{ if (_stream){ _stream.getTracks().forEach(t=>t.stop()); _stream=null; } }catch{}
-  };
-
-  // ===== lector con BarcodeDetector (con espera a playing) =====
-  async function runWithBarcodeDetector(video){
-    console.log('[SCAN] BD: start');
-    const det = new window.BarcodeDetector({ formats:['qr_code'] });
-
-    // espera a que el video realmente tenga frames
-    if (video.readyState < 2) {
-      await new Promise(res => {
-        const onPlaying = ()=>{ video.removeEventListener('playing', onPlaying); res(); };
-        video.addEventListener('playing', onPlaying, { once:true });
-      });
-    }
-
-    const loop = async ()=>{
-      try{
-        if (video.readyState >= 2) {
-          const codes = await det.detect(video);
-          if (codes && codes.length){
-            const raw = codes[0].rawValue || '';
-            console.log('[SCAN] BD hit:', raw);
-            stopScan(); return go(extractId(raw) || raw);
-          }
-        }
-      }catch(e){
-        console.warn('[SCAN] BD fail → fallback jsQR', e);
-        stopScan(); return runWithJsQR(video);
-      }
-      _rafId = requestAnimationFrame(loop);
-    };
-    _rafId = requestAnimationFrame(loop);
+  if (!video || !btnScan || !fileInput) {
+    console.warn('[SCAN] faltan elementos requeridos');
+    return;
   }
 
-  // ===== lector con jsQR (downscale) =====
-  function runWithJsQR(video){
-    console.log('[SCAN] jsQR: start');
-    const CANVAS_MAX_W = 720; // bajar si el QR está muy cerca; subir si está lejos
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d', { willReadFrequently:true });
+  // ---------- estado ----------
+  let _rafId = 0;
+  let _stream = null;
+  let _running = false;
 
-    const loop = ()=>{
-      try{
-        const vw = video.videoWidth, vh = video.videoHeight;
-        if (vw && vh){
-          // downscale manteniendo aspecto
-          const scale = Math.min(1, CANVAS_MAX_W / vw);
-          const w = Math.max(1, Math.floor(vw * scale));
-          const h = Math.max(1, Math.floor(vh * scale));
-          canvas.width = w; canvas.height = h;
+  // ---------- utils ----------
+  const extractId = (txt) => {
+    try { const u = new URL(txt); return u.searchParams.get('id') || null; } catch {}
+    return /^[A-Za-z0-9_-]{8,}$/.test(txt) ? txt : null;
+  };
+  const go = (id) => {
+    if (!id) { alert('No se pudo leer el código'); return; }
+    // Abre receta del médico (como tenían antes)
+    location.href = `/medico/ver-receta.html?id=${encodeURIComponent(id)}`;
+  };
+  const stopScan = () => {
+    _running = false;
+    try { cancelAnimationFrame(_rafId); } catch {}
+    _rafId = 0;
+    try { if (_stream) { _stream.getTracks().forEach(t => t.stop()); _stream = null; } } catch {}
+  };
+
+  // ---------- lazo jsQR (downscale para rendimiento) ----------
+  function runJsQRLoop(){
+    if (!window.jsQR) { console.error('[SCAN] jsQR no cargado'); return; }
+
+    const MAX_W = 640;
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+
+    const loop = () => {
+      if (!_running) return;
+      try {
+        const vw = video.videoWidth|0, vh = video.videoHeight|0;
+        if (vw > 0 && vh > 0) {
+          const scale = Math.min(1, MAX_W / vw);
+          const w = Math.max(1, (vw * scale) | 0);
+          const h = Math.max(1, (vh * scale) | 0);
+          if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
 
           ctx.drawImage(video, 0, 0, w, h);
           const img = ctx.getImageData(0, 0, w, h);
-          const res = window.jsQR(img.data, w, h, { inversionAttempts:'dontInvert' });
-
-          // logs de diagnóstico cada ~15 frames
-          if ((_rafId % 15) === 0) console.debug('[SCAN] frame', w, 'x', h, 'res?', !!res);
-
-          if (res?.data){
-            const raw = res.data;
-            console.log('[SCAN] jsQR hit:', raw);
-            stopScan(); return go(extractId(raw) || raw);
+          const res = jsQR(img.data, w, h, { inversionAttempts: 'dontInvert' });
+          if (res && res.data) {
+            stopScan();
+            const id = extractId(res.data) || res.data;
+            return go(id);
           }
         }
-      }catch(e){ /* ignore y seguir */ }
+      } catch (e) {
+        // no rompemos: intentamos siguiente frame
+      }
       _rafId = requestAnimationFrame(loop);
     };
+
+    _running = true;
     _rafId = requestAnimationFrame(loop);
   }
 
-  // ===== abrir cámara (con espera a playing + elección motor) =====
+  // ---------- arrancar cámara ----------
   async function startScan(){
-    stopScan();
+    stopScan(); // limpia cualquier sesión previa
     try{
-      const constraints = { video:{ facingMode:{ exact:'environment' } }, audio:false };
-      console.log('[SCAN] getUserMedia…');
-      _stream = await navigator.mediaDevices.getUserMedia(constraints).catch(async e=>{
-        // fallback si exact falla
-        console.warn('[SCAN] exact env failed, retry ideal', e?.name);
-        return navigator.mediaDevices.getUserMedia({ video:{ facingMode:{ ideal:'environment' } }, audio:false });
-      });
+      // algunos navegadores “exigen” exact y otros fallan con exact → probamos ambos
+      const try1 = { video: { facingMode: { exact: 'environment' } }, audio: false };
+      const try2 = { video: { facingMode: { ideal: 'environment' } }, audio: false };
 
-      const video = document.getElementById('cam');
+      try {
+        _stream = await navigator.mediaDevices.getUserMedia(try1);
+      } catch {
+        _stream = await navigator.mediaDevices.getUserMedia(try2);
+      }
+
       video.srcObject = _stream;
-      video.setAttribute('playsinline','true');
+      video.setAttribute('playsinline','true'); // iOS
       video.muted = true;
 
+      // Esperar a que haya frames reales
       await video.play().catch(()=>{});
-      if (video.paused) {
-        await new Promise(res=>{
-          const onPlaying=()=>{ video.removeEventListener('playing', onPlaying); res(); };
+      if (video.readyState < 2 || video.videoWidth === 0) {
+        await new Promise(res => {
+          const onPlaying = () => { video.removeEventListener('playing', onPlaying); res(); };
           video.addEventListener('playing', onPlaying, { once:true });
         });
       }
-      // nudge iOS
-      document.addEventListener('touchstart', ()=>{ if (video.paused) video.play().catch(()=>{}); }, { once:true });
 
-      // motor
-      if (IS_IOS && window.jsQR) {
-        runWithJsQR(video);
-      } else if ('BarcodeDetector' in window) {
-        runWithBarcodeDetector(video);
-      } else if (window.jsQR) {
-        runWithJsQR(video);
-      } else {
-        alert('No hay lector disponible en este navegador.');
-      }
+      // Nudge iOS por si pausa
+      document.addEventListener('touchstart', () => { if (video.paused) video.play().catch(()=>{}); }, { once:true });
+
+      runJsQRLoop();
     }catch(err){
-      console.warn('[SCAN] gUM fail:', err);
+      console.warn('[SCAN] getUserMedia fail:', err);
       const msg = String(err?.name || err?.message || '');
-      if (msg.includes('NotAllowedError') || msg.includes('Permission')) {
-        alert('No hay permiso para usar la cámara. Revisa el candado (Permisos → Cámara → Permitir). En iPhone: Ajustes > Safari > Cámara → Permitir');
-      } else if (msg.includes('NotFoundError')) {
+      if (msg.includes('NotAllowed') || msg.includes('Permission')) {
+        alert('No hay permiso de cámara.\nAbre el candado → Cámara → Permitir. En iPhone: Ajustes > Safari > Cámara.');
+      } else if (msg.includes('NotFound')) {
         alert('No se encontró cámara en este dispositivo.');
       } else {
-        alert('No se pudo acceder a la cámara. Usa “Escanear foto”.');
+        alert('No se pudo abrir la cámara. Usa “Escanear foto”.');
       }
-      try{ document.getElementById('fileQR')?.click(); }catch{}
+      // Fallback a foto
+      try { fileInput.click(); } catch {}
     }
   }
 
-  // expón startScan si lo necesitas en otros handlers
-  window.__startScanPatched = startScan;
+  // ---------- foto (fallback) ----------
+  async function onPickImage(e){
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    if (!window.jsQR) { alert('Lector offline no disponible.'); return; }
 
-  // re-vincula el botón si no lo hace ya tu script
-  document.getElementById('btnScan')?.addEventListener('click', startScan, { capture:true });
+    const img = new Image();
+    img.onload = () => {
+      const c = document.createElement('canvas');
+      c.width = img.naturalWidth; c.height = img.naturalHeight;
+      const cx = c.getContext('2d', { willReadFrequently: true });
+      cx.drawImage(img, 0, 0);
+      const data = cx.getImageData(0, 0, c.width, c.height);
+      const res = jsQR(data.data, c.width, c.height, { inversionAttempts: 'dontInvert' });
+      if (res && res.data) {
+        stopScan();
+        const id = extractId(res.data) || res.data;
+        go(id);
+      } else {
+        alert('No se pudo leer el QR de la imagen. Intenta otra foto con mejor luz/enfoque.');
+      }
+      URL.revokeObjectURL(img.src);
+      fileInput.value = '';
+    };
+    img.onerror = () => { alert('No se pudo abrir la imagen.'); fileInput.value=''; };
+    img.src = URL.createObjectURL(file);
+  }
 
-})();
+  // ---------- abrir manual ----------
+  const abrirManual = () => {
+    const raw = (inputMan?.value || '').trim();
+    const id  = extractId(raw) || raw;
+    go(id);
+  };
+
+  // ---------- bindings ----------
+  btnScan.addEventListener('click', startScan, { capture:true });
+  fileInput.addEventListener('change', onPickImage, { capture:true });
+  btnAbrir && btnAbrir.addEventListener('click', (e)=>{ e.preventDefault(); abrirManual(); }, { capture:true });
+  inputMan && inputMan.addEventListener('keydown', (e)=>{ if (e.key === 'Enter') abrirManual(); });
+
+  // Limpieza al salir
+  window.addEventListener('pagehide', stopScan);
+  window.addEventListener('beforeunload', stopScan);
+});
 </script>
 
