@@ -17,18 +17,21 @@
   <h2 class="kx-title">Verificador de Recetas</h2>
 
   <!-- scanUI -->
-  <section id="scanUI" hidden>
-    <div class="kx-card">
-      <video id="cam" class="kx-video" autoplay muted playsinline style="width:100%;max-width:420px"></video>
-      <div style="margin:10px 0; display:flex; gap:8px; flex-wrap:wrap">
-        <button id="btnScan" class="kx-btn kx-btn--brand">Iniciar cámara</button>
-        <input id="manual" class="kx-input" placeholder="Pega URL o ID" style="flex:1; min-width:200px">
-        <button id="btnAbrir" class="kx-btn kx-btn--ghost">Abrir</button>
-      </div>
-      <input id="fileQR" type="file" accept="image/*" capture="environment" style="display:none">
-      <button id="btnFoto" class="kx-btn kx-btn--ghost">Escanear foto</button>
+<section id="scanUI" hidden>
+  <div class="kx-card">
+    <div class="kx-cambox">
+      <video id="cam" class="kx-video" autoplay muted playsinline></video>
+      <canvas id="ovl"></canvas> <!-- overlay para el marco verde -->
     </div>
-  </section>
+    <div style="margin:10px 0; display:flex; gap:8px; flex-wrap:wrap">
+      <button id="btnScan" class="kx-btn kx-btn--brand">Iniciar cámara</button>
+      <input id="manual" class="kx-input" placeholder="Pega URL o ID" style="flex:1; min-width:200px">
+      <button id="btnAbrir" class="kx-btn kx-btn--ghost">Abrir</button>
+    </div>
+    <input id="fileQR" type="file" accept="image/*" capture="environment" style="display:none">
+    <button id="btnFoto" class="kx-btn kx-btn--ghost">Escanear foto</button>
+  </div>
+</section>
 
   <!-- detalleUI -->
   <section id="detalleUI" hidden>
