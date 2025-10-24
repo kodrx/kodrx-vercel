@@ -77,10 +77,12 @@ document.addEventListener('DOMContentLoaded', () => {
     try { const u = new URL(txt); return u.searchParams.get('id') || null; } catch {}
     return /^[A-Za-z0-9_-]{8,}$/.test(String(txt||'')) ? txt : null;
   };
-  const go = (id) => {
-    if (!id) { alert('No se pudo leer el código'); return; }
-    location.href = `/medico/ver-receta.html?id=${encodeURIComponent(id)}`;
-  };
+
+function go(id){
+  if (!id){ alert('No se pudo leer el código'); return; }
+  location.href = `/farmacia/verificador.html?id=${encodeURIComponent(id)}`; // 👈 cambia a farmacia
+}
+
   const stopScan = () => {
     _running = false;
     try { cancelAnimationFrame(_raf); } catch {}
@@ -297,3 +299,182 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 </script>
 
+<script>
+;(() => {
+  'use strict';
+
+  const $ = s => document.querySelector(s);
+  const scanUI    = $('#scanUI');
+  const detalleUI = $('#detalleUI');
+  const host      = $('#detalleReceta');
+
+  // Detectar si hay ?id=
+  const ID = new URLSearchParams(location.search).get('id');
+
+  if (!ID) {
+    // sin id → mostrar lector
+    scanUI.hidden = false;
+    detalleUI.hidden = true;
+    return;
+  }
+
+  // con id → mostrar detalle
+  scanUI.hidden = true;
+  detalleUI.hidden = false;
+  host.textContent = 'Cargando…';
+
+  // Utils
+  const fmtFecha = (ts) => {
+    try{
+      if (ts && typeof ts.toDate==='function') ts = ts.toDate();
+      else if (ts && typeof ts.seconds==='number') ts = new Date(ts.seconds*1000 + Math.floor((ts.nanoseconds||0)/1e6));
+      else if (!(ts instanceof Date)) ts = new Date(ts);
+      return ts.toLocaleString('es-MX', { year:'numeric', month:'long', day:'numeric', hour:'2-digit', minute:'2-digit' });
+    }catch{ return '—'; }
+  };
+  const html = (strings, ...vals) => strings.reduce((a,s,i)=>a+s+(vals[i]??''),'');
+
+  // Carga perezosa de Firebase
+  async function core(){
+    const core = await import('/firebase-init.js');
+    const fs   = await import('https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js');
+    const au   = await import('https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js');
+    return { ...core, fs, au };
+  }
+
+  // Render del detalle + checklist
+  async function render(){
+    const { db, auth } = await core();
+    const { getDoc, doc } = (await core()).fs;
+
+    // 1) receta
+    const snap = await getDoc(doc(db,'recetas',ID));
+    if (!snap.exists()){
+      host.innerHTML = '<p style="color:#b91c1c">Receta no encontrada.</p>';
+      return;
+    }
+    const r = { id: snap.id, ...snap.data() };
+
+    // 2) farmacia (usuario actual)
+    const user = (await core()).auth.currentUser;
+    let farmacia = null;
+    if (user){
+      try{
+        const fSnap = await getDoc(doc(db,'farmacias', user.uid));
+        if (fSnap.exists()) farmacia = { uid:user.uid, ...fSnap.data() };
+      }catch{}
+    }
+
+    // 3) UI — datos COFEPRIS + checklist
+    const meds = Array.isArray(r.medicamentos) ? r.medicamentos : [];
+    const surtidosPrev = Array.isArray(r.surtidoParcial) ? r.surtidoParcial : [];
+    const yaSurtidos = new Set(surtidosPrev.map(x => (x?.nombre||'') + '||' + (x?.dosis||'')));
+
+    host.innerHTML = html`
+      <div class="card" style="padding:12px;border:1px solid #e5e7eb;border-radius:12px">
+        <h3 style="margin-top:0">Paciente: ${r.nombrePaciente ?? '—'}</h3>
+        <div style="font-size:13px;color:#374151;margin-bottom:8px">
+          <div><b>Fecha:</b> ${fmtFecha(r.timestamp)}</div>
+          <div><b>ID:</b> ${r.id}</div>
+          <div><b>Médico:</b> ${r.medicoNombre ?? '—'} &nbsp; <b>Cédula:</b> ${r.medicoCedula ?? '—'}</div>
+          <div><b>Especialidad:</b> ${r.medicoEspecialidad ?? '—'}</div>
+          <div><b>Domicilio consultorio:</b> ${r.medicoDomicilio ?? '—'}</div>
+          <div><b>Diagnóstico:</b> ${r.diagnostico ?? '—'}</div>
+        </div>
+
+        <h4 style="margin:12px 0 8px">Medicamentos</h4>
+        <div id="medList">
+          ${
+            meds.length
+              ? meds.map((m,i)=>{
+                  const key = (m?.nombre||'') + '||' + (m?.dosis||'');
+                  const ya  = yaSurtidos.has(key);
+                  const extra = ya
+                    ? (() => {
+                        const s = surtidosPrev.find(x => ((x?.nombre||'')+'||'+(x?.dosis||'')) === key) || {};
+                        const by = s.surtidoPor || '—';
+                        const tel = s.telefono || '—';
+                        const f  = s.fecha ? new Date(s.fecha).toLocaleString('es-MX') : '—';
+                        return `<div class="surtido-info" style="color:#065f46;font-size:12px">Surtido por: ${by} — Tel: ${tel} — ${f}</div>`;
+                      })()
+                    : '';
+                  return `
+                    <label style="display:block;padding:6px 0;border-bottom:1px dashed #e5e7eb">
+                      <input type="checkbox" data-index="${i}" ${ya?'checked disabled':''}>
+                      <b>${m?.nombre||'—'}</b> — ${m?.dosis||'—'} · ${m?.duracion||'—'}
+                      ${extra}
+                    </label>
+                  `;
+                }).join('')
+              : '<div>—</div>'
+          }
+        </div>
+
+        <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+          <button id="btnSurtir" type="button">Registrar surtido</button>
+          <button id="btnImprimir" type="button" onclick="window.open('/medico/ver-receta.html?id=${encodeURIComponent(r.id)}','_blank')">Abrir receta</button>
+          <button type="button" onclick="history.length>1?history.back():location.href='/farmacia/panel.html'">Volver</button>
+        </div>
+
+        <div id="msg" style="margin-top:8px;font-size:13px;color:#6b7280"></div>
+      </div>
+    `;
+
+    // 4) manejar "Registrar surtido"
+    $('#btnSurtir')?.addEventListener('click', async ()=>{
+      try{
+        if (!farmacia){
+          alert('Necesitas iniciar sesión como farmacia para registrar surtido.');
+          return;
+        }
+        const checks = host.querySelectorAll('#medList input[type="checkbox"]:not(:disabled):checked');
+        const seleccionados = Array.from(checks).map(ch => meds[Number(ch.dataset.index)]).filter(Boolean);
+        if (!seleccionados.length){
+          alert('Selecciona al menos un medicamento para marcar como surtido.');
+          return;
+        }
+
+        // fusionar con los previos (no duplicar)
+        const prev = surtidosPrev.slice();
+        const prevKeys = new Set(prev.map(x => (x?.nombre||'')+'||'+(x?.dosis||'')));
+        const nuevos = seleccionados
+          .filter(m => !prevKeys.has((m?.nombre||'')+'||'+(m?.dosis||'')))
+          .map(m => ({
+            ...m,
+            surtidoPor: (farmacia.nombreFarmacia || farmacia.nombre || 'Farmacia'),
+            telefono: farmacia.telefono || '',
+            farmaciaUid: farmacia.uid || '',
+            fecha: new Date().toISOString()
+          }));
+
+        const merged = prev.concat(nuevos);
+        const esTotal = merged.length >= meds.length;
+        const estado = esTotal ? 'surtida' : 'parcial';
+
+        // write
+        const { db } = await core();
+        const { updateDoc, doc } = (await core()).fs;
+        await updateDoc(doc(db,'recetas',ID), {
+          surtidoParcial: merged,
+          estado
+        });
+
+        $('#msg').textContent = esTotal
+          ? 'Surtido total registrado. La receta queda cerrada.'
+          : 'Surtido parcial registrado. La receta puede completarse después.';
+        // refrescar la UI (pinta los ya surtidos como disabled)
+        render();
+      }catch(e){
+        console.error('[FAR] update error:', e);
+        alert('No se pudo registrar el surtido. Revisa permisos o intenta de nuevo.');
+      }
+    });
+  }
+
+  // boot
+  render().catch(err=>{
+    console.error('[detalle] error:', err);
+    host.innerHTML = '<p style="color:#b91c1c">Ocurrió un error al cargar la receta.</p>';
+  });
+})();
+</script>
