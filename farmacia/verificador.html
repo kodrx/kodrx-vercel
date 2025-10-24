@@ -15,70 +15,67 @@
 <body>
   <h2>Verificador de Recetas</h2>
 
-  <!-- Bloque lector (sólo se muestra si NO hay ?id=) -->
-  <section id="scanUI" hidden>
-    <video id="cam" autoplay muted playsinline style="width:100%;max-width:420px;border-radius:12px"></video>
+  
+<!-- verificador.html (fragmento relevante) -->
+<section id="scanUI" hidden>
+  <video id="cam" autoplay muted playsinline style="width:100%;max-width:420px;border-radius:12px"></video>
 
-    <div style="margin:8px 0">
-      <button id="btnScan">Iniciar cámara</button>
-      <input id="manual" placeholder="Pega URL o ID" style="width:60%">
-      <button id="btnAbrir">Abrir</button>
-    </div>
-    <input id="fileQR" type="file" accept="image/*" capture="environment" style="display:none">
-    <button id="btnFoto">Escanear foto</button>
-  </section>
+  <div style="margin:8px 0">
+    <button id="btnScan">Iniciar cámara</button>
+    <input id="manual" placeholder="Pega URL o ID" style="width:60%">
+    <button id="btnAbrir">Abrir</button>
+  </div>
 
-  <!-- Bloque detalle receta (sólo si HAY ?id=) -->
-  <section id="detalleUI" hidden>
-    <div id="detalleReceta">Cargando…</div>
-    <!-- aquí va tu checklist/surtido -->
-  </section>
+  <input id="fileQR" type="file" accept="image/*" capture="environment" style="display:none">
+  <button id="btnFoto">Escanear foto</button>
+  <!-- Canvas para overlay de marco verde (debug visual) -->
+  <canvas id="ovl" style="display:block;max-width:420px;width:100%;border-radius:12px;margin-top:6px"></canvas>
+</section>
 
-  <!-- Lector offline -->
+<section id="detalleUI" hidden>
+  <div id="detalleReceta">Cargando…</div>
+</section>
+</body>
+<!-- jsQR local; ponle id para que el loader pueda “esperarlo” -->
 <script defer src="/vendor/jsqr.min.js" id="jsqr-lib"></script>
-
-
 
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
   'use strict';
 
-  // ---------- mostrar/ocultar UI según ?id= ----------
-  const params   = new URLSearchParams(location.search);
-  const hasId    = params.has('id');
-  const scanUI   = document.getElementById('scanUI');
-  const detalleUI= document.getElementById('detalleUI');
-  if (scanUI)   scanUI.hidden   = hasId;   // si NO hay id, mostramos el escáner
-  if (detalleUI)detalleUI.hidden= !hasId;  // si hay id, mostrar detalle (tu lógica de detalle va aparte)
-
-  // ---------- refs ----------
+  // ---------- UI básico ----------
   const $ = (s) => document.querySelector(s);
-  const video     = $('#cam');
-  const btnScan   = $('#btnScan');
-  const fileInput = $('#fileQR');
-  const inputMan  = $('#manual');
-  const btnAbrir  = $('#btnAbrir');
+  const video   = $('#cam');
+  const btnScan = $('#btnScan');
+  const inputMan= $('#manual');
+  const btnAbrir= $('#btnAbrir');
+  const fileInp = $('#fileQR');
+  const btnFoto = $('#btnFoto');
+  const cnvOvl  = $('#ovl');
 
-  if (!video || !btnScan || !fileInput) {
+  // Muestra #scanUI si NO hay ?id=; si hay id, muestra #detalleUI (tu lógica luego)
+  const idFromURL = new URLSearchParams(location.search).get('id');
+  if (idFromURL) {
+    $('#detalleUI')?.removeAttribute('hidden');
+    $('#scanUI')?.setAttribute('hidden','');
+  } else {
+    $('#scanUI')?.removeAttribute('hidden');
+    $('#detalleUI')?.setAttribute('hidden','');
+  }
+
+  if (!video || !btnScan || !fileInp) {
     console.warn('[SCAN] faltan elementos requeridos (#cam, #btnScan, #fileQR)');
     return;
   }
 
-  // overlay para dibujar caja del QR (debug visual)
-  const overlay = document.createElement('canvas');
-  overlay.style.cssText = 'position:absolute; top:0; left:0; width:100%; max-width:420px; border-radius:12px; pointer-events:none; display:none;';
-  video.parentNode.insertBefore(overlay, video.nextSibling);
-
   // ---------- estado ----------
-  let _rafId = 0;
-  let _stream = null;
-  let _running = false;
+  let _raf = 0, _stream = null, _running = false;
 
-  // ---------- utils ----------
+  // ---------- helpers ----------
   const extractId = (txt) => {
     try { const u = new URL(txt); return u.searchParams.get('id') || null; } catch {}
-    return /^[A-Za-z0-9_-]{8,}$/.test(txt) ? txt : null;
+    return /^[A-Za-z0-9_-]{8,}$/.test(String(txt||'')) ? txt : null;
   };
   const go = (id) => {
     if (!id) { alert('No se pudo leer el código'); return; }
@@ -86,174 +83,172 @@ document.addEventListener('DOMContentLoaded', () => {
   };
   const stopScan = () => {
     _running = false;
-    try { cancelAnimationFrame(_rafId); } catch {}
-    _rafId = 0;
-    try { if (_stream) { _stream.getTracks().forEach(t => t.stop()); _stream = null; } } catch {}
-    overlay.style.display = 'none';
+    try { cancelAnimationFrame(_raf); } catch {}
+    _raf = 0;
+    try { if (_stream) { _stream.getTracks().forEach(t=>t.stop()); _stream = null; } } catch {}
   };
 
-  async function ensureJsQR(maxWaitMs = 3000){
-  if (window.jsQR) return true;
-
-  // 1) Espera a que el <script defer> termine (si existe)
-  const tag = document.getElementById('jsqr-lib');
-  if (tag && !window.jsQR){
-    let waited = 0;
-    while (!window.jsQR && waited < maxWaitMs){
-      await new Promise(r=>setTimeout(r,150));
-      waited += 150;
-    }
+  async function ensureJsQR(maxWaitMs = 4000){
     if (window.jsQR) return true;
+
+    const tag = document.getElementById('jsqr-lib');
+    if (tag) {
+      let waited = 0;
+      while (!window.jsQR && waited < maxWaitMs) {
+        await new Promise(r=>setTimeout(r,150));
+        waited += 150;
+      }
+      if (window.jsQR) return true;
+    }
+    // inyección defensiva (CSP: mismo host)
+    await new Promise((res, rej) => {
+      const s = document.createElement('script');
+      s.src = '/vendor/jsqr.min.js?v=' + Date.now();
+      s.onload = res; s.onerror = rej;
+      document.head.appendChild(s);
+    });
+    return !!window.jsQR;
   }
 
-  // 2) Inyección defensiva (por si el defer no se cargó aún)
-  await new Promise((res, rej) => {
-    const s = document.createElement('script');
-    s.src = '/vendor/jsqr.min.js?v=' + Date.now(); // evita caché viejo
-    s.onload = res; s.onerror = rej;
-    document.head.appendChild(s);
-  });
-  return !!window.jsQR;
-}
-async function runWithBarcodeDetector(){
-  const det = new window.BarcodeDetector({ formats: ['qr_code'] });
-  const loop = async () => {
-    if (!_running) return;
-    try{
-      if (video.readyState >= 2){
-        const codes = await det.detect(video); // directo sobre <video>
-        if (codes && codes.length){
-          const raw = codes[0].rawValue || '';
-          const id  = extractId(raw) || raw;
-          stopScan();
-          return go(id);
-        }
-      }
-    }catch(e){
-      // si algo truena, simplemente seguimos al siguiente frame o caerá a jsQR
-    }
-    _rafId = requestAnimationFrame(loop);
-  };
-  _running = true;
-  _rafId   = requestAnimationFrame(loop);
-}
- 
-  
-  // ---------- lazo jsQR (con overlay) ----------
+  // ---------- overlay (marco verde de debug) ----------
+  function drawOverlayBox(loc){
+    const w = video.videoWidth|0, h = video.videoHeight|0;
+    if (!w || !h) return;
+    cnvOvl.width  = w; cnvOvl.height = h;
+    const ctx = cnvOvl.getContext('2d');
+    ctx.clearRect(0,0,w,h);
+    if (!loc) return;
+
+    const p = loc; // jsQR location
+    ctx.strokeStyle = 'lime';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(p.topLeftCorner.x,     p.topLeftCorner.y);
+    ctx.lineTo(p.topRightCorner.x,    p.topRightCorner.y);
+    ctx.lineTo(p.bottomRightCorner.x, p.bottomRightCorner.y);
+    ctx.lineTo(p.bottomLeftCorner.x,  p.bottomLeftCorner.y);
+    ctx.closePath();
+    ctx.stroke();
+  }
+
+  // ---------- loop con jsQR ----------
   function runJsQRLoop(){
-    if (!window.jsQR) { console.error('[SCAN] jsQR no cargado'); return; }
-    console.log('[SCAN] jsQR cargado, iniciando loop');
-
     const MAX_W = 640;
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d', { willReadFrequently: true });
-    const octx= overlay.getContext('2d');
+    const cnv = document.createElement('canvas');
+    const ctx = cnv.getContext('2d', { willReadFrequently: true });
 
-    const loop = () => {
+    const step = () => {
       if (!_running) return;
       try {
         const vw = video.videoWidth|0, vh = video.videoHeight|0;
-        if (vw > 0 && vh > 0) {
-          // sincroniza overlay al tamaño CSS del <video>
-          const rect = video.getBoundingClientRect();
-          overlay.width  = rect.width;
-          overlay.height = rect.height;
-          overlay.style.display = 'block';
-
+        if (vw && vh) {
           const scale = Math.min(1, MAX_W / vw);
           const w = Math.max(1, (vw * scale) | 0);
           const h = Math.max(1, (vh * scale) | 0);
-          if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
+          if (cnv.width !== w || cnv.height !== h) { cnv.width = w; cnv.height = h; }
 
           ctx.drawImage(video, 0, 0, w, h);
           const img = ctx.getImageData(0, 0, w, h);
-          const res = jsQR(img.data, w, h, { inversionAttempts: 'dontInvert' });
 
-          // limpia overlay
-          octx.clearRect(0,0,overlay.width,overlay.height);
+          // intenta ambos (mejor para impresos con brillo)
+          const res =
+            window.jsQR(img.data, w, h, { inversionAttempts:'attemptBoth' }) ||
+            window.jsQR(img.data, w, h, { inversionAttempts:'dontInvert' });
 
           if (res && res.data) {
-            // dibuja caja (mapea coords de canvas -> overlay)
-            const sx = overlay.width  / w;
-            const sy = overlay.height / h;
-            const pts = [res.location.topLeftCorner, res.location.topRightCorner, res.location.bottomRightCorner, res.location.bottomLeftCorner];
-
-            octx.lineWidth = 3; octx.strokeStyle = 'rgba(16,185,129,.9)'; octx.beginPath();
-            octx.moveTo(pts[0].x*sx, pts[0].y*sy);
-            for (let i=1;i<pts.length;i++) octx.lineTo(pts[i].x*sx, pts[i].y*sy);
-            octx.closePath(); octx.stroke();
-
-            const id = extractId(res.data) || res.data;
-            console.log('[SCAN] QR decodificado:', res.data, '→ id:', id);
+            drawOverlayBox(res.location);
             stopScan();
+            const id = extractId(res.data) || res.data;
             return go(id);
+          } else {
+            drawOverlayBox(null);
           }
         }
-      } catch (e) {
-        // no rompemos el loop
-      }
-      _rafId = requestAnimationFrame(loop);
+      } catch(e) { /* siguiente frame */ }
+      _raf = requestAnimationFrame(step);
     };
 
     _running = true;
-    _rafId = requestAnimationFrame(loop);
+    _raf = requestAnimationFrame(step);
+  }
+
+  // ---------- BarcodeDetector directo sobre <video> ----------
+  async function runBarcodeDetector(){
+    const det = new window.BarcodeDetector({ formats: ['qr_code'] });
+
+    const step = async () => {
+      if (!_running) return;
+      try{
+        if (video.readyState >= 2){
+          // detecta sobre el <video> (iOS-friendly)
+          const codes = await det.detect(video);
+          if (codes && codes.length){
+            stopScan();
+            const raw = codes[0].rawValue || '';
+            const id  = extractId(raw) || raw;
+            return go(id);
+          }
+        }
+      }catch(e){ /* caeremos a jsQR fuera */ }
+      _raf = requestAnimationFrame(step);
+    };
+
+    _running = true;
+    _raf = requestAnimationFrame(step);
   }
 
   // ---------- arrancar cámara ----------
-async function startScan(){
-  stopScan();
-  try{
-    console.log('[SCAN] solicitando cámara…');
-    const try1 = { video: { facingMode: { exact: 'environment' } }, audio:false };
-    const try2 = { video: { facingMode: { ideal: 'environment' } }, audio:false };
-    try { _stream = await navigator.mediaDevices.getUserMedia(try1); }
-    catch { _stream = await navigator.mediaDevices.getUserMedia(try2); }
+  async function startScan(){
+    stopScan();
+    try{
+      console.log('[SCAN] solicitando cámara…');
+      const c1 = { video: { facingMode: { exact:'environment' } }, audio:false };
+      const c2 = { video: { facingMode: { ideal:'environment' } }, audio:false };
+      try { _stream = await navigator.mediaDevices.getUserMedia(c1); }
+      catch { _stream = await navigator.mediaDevices.getUserMedia(c2); }
 
-    video.srcObject = _stream;
-    video.setAttribute('playsinline','true');
-    video.muted = true;
+      video.srcObject = _stream;
+      video.setAttribute('playsinline','true');
+      await video.play().catch(()=>{});
+      if (video.readyState < 2 || video.videoWidth === 0){
+        await new Promise(res=>{
+          const onPlaying = ()=>{ video.removeEventListener('playing', onPlaying); res(); };
+          video.addEventListener('playing', onPlaying, { once:true });
+        });
+      }
+      // iOS nudge
+      document.addEventListener('touchstart', () => { if (video.paused) video.play().catch(()=>{}); }, { once:true });
 
-    await video.play().catch(()=>{});
-    if (video.readyState < 2 || video.videoWidth === 0){
-      await new Promise(res=>{
-        const onPlaying = ()=>{ video.removeEventListener('playing', onPlaying); res(); };
-        video.addEventListener('playing', onPlaying, { once:true });
-      });
+      // Primero BD si existe; si no, jsQR asegurado
+      if ('BarcodeDetector' in window) {
+        console.log('[SCAN] usando BarcodeDetector');
+        runBarcodeDetector();
+      } else {
+        const ok = await ensureJsQR(4000);
+        if (!ok) { alert('No se pudo cargar el lector offline (jsQR).'); return; }
+        console.log('[SCAN] usando jsQR');
+        runJsQRLoop();
+      }
+    }catch(err){
+      console.warn('[SCAN] getUserMedia fail:', err);
+      const msg = String(err?.name||err?.message||'');
+      if (msg.includes('NotAllowed') || msg.includes('Permission')) {
+        alert('No hay permiso de cámara.\nAbre el candado → Cámara → Permitir. En iPhone: Ajustes > Safari > Cámara.');
+      } else if (msg.includes('NotFound')) {
+        alert('No se encontró cámara en este dispositivo.');
+      } else {
+        alert('No se pudo abrir la cámara. Usa “Escanear foto”.');
+      }
+      try { fileInp.click(); } catch {}
     }
-    console.log('[SCAN] cámara OK:', video.videoWidth, 'x', video.videoHeight);
-
-    document.addEventListener('touchstart', () => { if (video.paused) video.play().catch(()=>{}); }, { once:true });
-
-    if ('BarcodeDetector' in window){
-      console.log('[SCAN] usando BarcodeDetector');
-      return runWithBarcodeDetector();
-    }
-
-    // Sin BD → esperamos jsQR (y lo inyectamos si falta)
-    const ok = await ensureJsQR(3500);
-    if (!ok){ alert('No se pudo cargar el lector offline (jsQR).'); return; }
-    console.log('[SCAN] jsQR listo, iniciando loop');
-    return runJsQRLoop();
-  }catch(err){
-    console.warn('[SCAN] getUserMedia fail:', err);
-    const msg = String(err?.name||err?.message||'');
-    if (msg.includes('NotAllowed') || msg.includes('Permission')) {
-      alert('No hay permiso de cámara.\nAbre el candado → Cámara → Permitir. En iPhone: Ajustes > Safari > Cámara.');
-    } else if (msg.includes('NotFound')) {
-      alert('No se encontró cámara en este dispositivo.');
-    } else {
-      alert('No se pudo abrir la cámara. Usa “Escanear foto”.');
-    }
-    try { fileInput.click(); } catch {}
   }
-}
-
 
   // ---------- foto (fallback) ----------
   async function onPickImage(e){
-    const file = e.target.files && e.target.files[0];
+    const file = e.target.files?.[0];
     if (!file) return;
-    if (!window.jsQR) { alert('Lector offline no disponible.'); return; }
+    const ok = await ensureJsQR(4000);
+    if (!ok) { alert('No se pudo cargar jsQR.'); return; }
 
     const img = new Image();
     img.onload = () => {
@@ -262,7 +257,9 @@ async function startScan(){
       const cx = c.getContext('2d', { willReadFrequently: true });
       cx.drawImage(img, 0, 0);
       const data = cx.getImageData(0, 0, c.width, c.height);
-      const res = jsQR(data.data, c.width, c.height, { inversionAttempts: 'dontInvert' });
+      const res =
+        window.jsQR(data.data, c.width, c.height, { inversionAttempts:'attemptBoth' }) ||
+        window.jsQR(data.data, c.width, c.height, { inversionAttempts:'dontInvert' });
       if (res && res.data) {
         stopScan();
         const id = extractId(res.data) || res.data;
@@ -271,9 +268,9 @@ async function startScan(){
         alert('No se pudo leer el QR de la imagen. Intenta otra foto con mejor luz/enfoque.');
       }
       URL.revokeObjectURL(img.src);
-      fileInput.value = '';
+      fileInp.value = '';
     };
-    img.onerror = () => { alert('No se pudo abrir la imagen.'); fileInput.value=''; };
+    img.onerror = () => { alert('No se pudo abrir la imagen.'); fileInp.value=''; };
     img.src = URL.createObjectURL(file);
   }
 
@@ -286,16 +283,17 @@ async function startScan(){
 
   // ---------- bindings ----------
   btnScan.addEventListener('click', startScan, { capture:true });
-  fileInput.addEventListener('change', onPickImage, { capture:true });
+  btnFoto.addEventListener('click', () => fileInp.click(), { capture:true });
+  fileInp.addEventListener('change', onPickImage, { capture:true });
   btnAbrir && btnAbrir.addEventListener('click', (e)=>{ e.preventDefault(); abrirManual(); }, { capture:true });
   inputMan && inputMan.addEventListener('keydown', (e)=>{ if (e.key === 'Enter') abrirManual(); });
 
-  // Limpieza al salir
+  // Limpieza
   window.addEventListener('pagehide', stopScan);
   window.addEventListener('beforeunload', stopScan);
 
-  // Log del estado de jsQR
-  if (window.jsQR) console.log('[SCAN] jsQR presente');
-  else console.log('[SCAN] jsQR aún no disponible (defer), se intentará después');
+  // Log útil para saber si jsQR ya venía por el <script defer>
+  setTimeout(()=>{ console.log('[SCAN] jsQR presente?', !!window.jsQR); }, 800);
 });
 </script>
+
