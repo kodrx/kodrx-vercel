@@ -13,28 +13,29 @@
 
 
 <body>
-  <h2>Verificador de Recetas</h2>
+  <div class="kx-wrap">
+  <h2 class="kx-title">Verificador de Recetas</h2>
 
-  
-<!-- verificador.html (fragmento relevante) -->
-<section id="scanUI" hidden>
-  <video id="cam" autoplay muted playsinline style="width:100%;max-width:420px;border-radius:12px"></video>
+  <!-- scanUI -->
+  <section id="scanUI" hidden>
+    <div class="kx-card">
+      <video id="cam" class="kx-video" autoplay muted playsinline style="width:100%;max-width:420px"></video>
+      <div style="margin:10px 0; display:flex; gap:8px; flex-wrap:wrap">
+        <button id="btnScan" class="kx-btn kx-btn--brand">Iniciar cámara</button>
+        <input id="manual" class="kx-input" placeholder="Pega URL o ID" style="flex:1; min-width:200px">
+        <button id="btnAbrir" class="kx-btn kx-btn--ghost">Abrir</button>
+      </div>
+      <input id="fileQR" type="file" accept="image/*" capture="environment" style="display:none">
+      <button id="btnFoto" class="kx-btn kx-btn--ghost">Escanear foto</button>
+    </div>
+  </section>
 
-  <div style="margin:8px 0">
-    <button id="btnScan">Iniciar cámara</button>
-    <input id="manual" placeholder="Pega URL o ID" style="width:60%">
-    <button id="btnAbrir">Abrir</button>
-  </div>
+  <!-- detalleUI -->
+  <section id="detalleUI" hidden>
+    <div id="detalleReceta" class="kx-card"></div>
+  </section>
+</div>
 
-  <input id="fileQR" type="file" accept="image/*" capture="environment" style="display:none">
-  <button id="btnFoto">Escanear foto</button>
-  <!-- Canvas para overlay de marco verde (debug visual) -->
-  <canvas id="ovl" style="display:block;max-width:420px;width:100%;border-radius:12px;margin-top:6px"></canvas>
-</section>
-
-<section id="detalleUI" hidden>
-  <div id="detalleReceta">Cargando…</div>
-</section>
 </body>
 <!-- jsQR local; ponle id para que el loader pueda “esperarlo” -->
 <script defer src="/vendor/jsqr.min.js" id="jsqr-lib"></script>
