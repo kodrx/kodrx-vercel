@@ -17,7 +17,8 @@
 
   <!-- Bloque lector (sólo se muestra si NO hay ?id=) -->
   <section id="scanUI" hidden>
-    <video id="cam" playsinline style="width:100%;max-width:420px;border-radius:12px"></video>
+    <video id="cam" autoplay muted playsinline style="width:100%;max-width:420px;border-radius:12px"></video>
+
     <div style="margin:8px 0">
       <button id="btnScan">Iniciar cámara</button>
       <input id="manual" placeholder="Pega URL o ID" style="width:60%">
@@ -36,57 +37,71 @@
   <!-- Lector offline -->
   <script defer src="/vendor/jsqr.min.js"></script>
 
-<script>
-;(() => {
-  'use strict';
+<!-- Lector offline -->
+<script defer src="/vendor/jsqr.min.js"></script>
 
-  // --- helpers básicos ---
-  const $ = (s) => document.querySelector(s);
+<script>
+;(()=>{'use strict';
+
+  // ======== UI boot ========
+  const $ = s => document.querySelector(s);
+  const scanUI    = $('#scanUI');
+  const detalleUI = $('#detalleUI');
   const video     = $('#cam');
   const btnScan   = $('#btnScan');
-  const fileInput = $('#fileQR'); // input type="file" accept="image/*" capture="environment" (recomendado)
+  const btnAbrir  = $('#btnAbrir');
+  const btnFoto   = $('#btnFoto');
+  const inputMan  = $('#manual');
+  const fileInput = $('#fileQR');
 
-  const IS_IOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
-    || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  // muestra el bloque correcto según ?id
+  const idQ = new URLSearchParams(location.search).get('id');
+  if (idQ) {
+    // aquí puedes cargar la receta y mostrar detalleUI si quieres
+    scanUI.hidden    = true;
+    detalleUI.hidden = false;
+  } else {
+    scanUI.hidden    = false;
+    detalleUI.hidden = true;
+  }
 
-  let _rafId = 0;
-  let _stream = null;
+  // ======== helpers ========
+  const IS_IOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+                 (navigator.platform === 'MacIntel' && navigator.maxTouchPoints>1);
 
-  function extractId(txt){
-    try { const u = new URL(txt); return u.searchParams.get('id') || null; } catch {}
+  const extractId = (txt)=>{
+    try{ const u = new URL(txt); return u.searchParams.get('id') || null; }catch{}
     return /^[A-Za-z0-9_-]{8,}$/.test(txt) ? txt : null;
-  }
-
-  function go(id){
-    if (!id){ alert('No se pudo leer el código'); return; }
-    // Abre la receta del médico (flujo actual)
+  };
+  const go = (id)=>{
+    if (!id) { alert('No se pudo leer el código'); return; }
     location.href = `/medico/ver-receta.html?id=${encodeURIComponent(id)}`;
-  }
+  };
 
-  function stopScan(){
-    try { cancelAnimationFrame(_rafId); } catch {}
-    _rafId = 0;
-    try { if (_stream) { _stream.getTracks().forEach(t=>t.stop()); _stream = null; } } catch {}
-  }
+  let _rafId = 0, _stream = null;
+  const stopScan = ()=>{
+    try{ cancelAnimationFrame(_rafId); }catch{}
+    _rafId=0;
+    try{ if(_stream){ _stream.getTracks().forEach(t=>t.stop()); _stream=null; } }catch{}
+  };
 
-  // --- lector con BarcodeDetector (sin createImageBitmap) ---
+  // ======== detectores ========
   async function runWithBarcodeDetector(){
-    const det = new window.BarcodeDetector({ formats: ['qr_code'] });
-
-    const loop = async () => {
+    console.log('[SCAN] BarcodeDetector loop');
+    const det = new window.BarcodeDetector({ formats:['qr_code'] });
+    const loop = async ()=>{
       try{
-        if (video.readyState >= 2) {
-          // Detecta directamente sobre el <video> (evita pantallazo en iOS)
-          const codes = await det.detect(video);
+        if (video.readyState >= 2){
+          const codes = await det.detect(video); // sin createImageBitmap (iOS-friendly)
           if (codes && codes.length){
             const raw = codes[0].rawValue || '';
             const id = extractId(raw) || raw;
-            stopScan();
-            return go(id);
+            console.log('[SCAN] hit BD:', id);
+            stopScan(); return go(id);
           }
         }
       }catch(e){
-        // Si falla (algunos Android/implementaciones), cae a jsQR si está disponible
+        console.warn('[SCAN] BD fail, fallback jsQR', e);
         if (window.jsQR){ stopScan(); return runWithJsQR(); }
       }
       _rafId = requestAnimationFrame(loop);
@@ -94,49 +109,47 @@
     _rafId = requestAnimationFrame(loop);
   }
 
-  // --- lector con jsQR (canvas) ---
   function runWithJsQR(){
+    console.log('[SCAN] jsQR loop');
     const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d', { willReadFrequently: true });
-
-    const loop = () => {
+    const ctx = canvas.getContext('2d', { willReadFrequently:true });
+    const loop = ()=>{
       try{
-        const w = video.videoWidth, h = video.videoHeight;
+        const w=video.videoWidth, h=video.videoHeight;
         if (w && h){
-          canvas.width = w; canvas.height = h;
-          ctx.drawImage(video, 0, 0, w, h);
-          const img = ctx.getImageData(0, 0, w, h);
-          const res = window.jsQR(img.data, w, h, { inversionAttempts: 'dontInvert' });
+          canvas.width=w; canvas.height=h;
+          ctx.drawImage(video,0,0,w,h);
+          const img = ctx.getImageData(0,0,w,h);
+          const res = window.jsQR(img.data,w,h,{inversionAttempts:'dontInvert'});
           if (res?.data){
             const id = extractId(res.data) || res.data;
-            stopScan();
-            return go(id);
+            console.log('[SCAN] hit jsQR:', id);
+            stopScan(); return go(id);
           }
         }
-      }catch{}
+      }catch(e){ /* sigue */ }
       _rafId = requestAnimationFrame(loop);
     };
     _rafId = requestAnimationFrame(loop);
   }
 
-  // --- abrir cámara ---
+  // ======== cámara ========
   async function startScan(){
-    stopScan(); // por si estaba corriendo
-
+    stopScan();
     try{
-      const constraints = { video: { facingMode: { ideal: 'environment' } }, audio: false };
+      const constraints = { video:{ facingMode:{ideal:'environment'} }, audio:false };
+      console.log('[SCAN] getUserMedia…');
       _stream = await navigator.mediaDevices.getUserMedia(constraints);
+
+      // prepara video (autoplay en iOS necesita muted+playsinline)
       video.srcObject = _stream;
-      video.setAttribute('playsinline','true'); // iOS
+      video.setAttribute('playsinline','true');
       video.muted = true;
-      await video.play();
+      await video.play().catch(()=>{});
 
-      // nudge extra para iOS si pausa el video
-      document.addEventListener('touchstart', () => {
-        if (video.paused) video.play().catch(()=>{});
-      }, { once:true });
+      // nudge para iOS por si pausa
+      document.addEventListener('touchstart', ()=>{ if (video.paused) video.play().catch(()=>{}); }, {once:true});
 
-      // En iOS forzamos jsQR; en otros, BarcodeDetector si existe
       if (IS_IOS && window.jsQR){
         runWithJsQR();
       } else if ('BarcodeDetector' in window){
@@ -150,70 +163,57 @@
       console.warn('[SCAN] getUserMedia fail:', err);
       const msg = String(err?.name || err?.message || '');
       if (msg.includes('NotAllowedError') || msg.includes('Permission')){
-        alert(
-          'No hay permiso para usar la cámara.\n\n' +
-          '• Revisa el candado (Permisos → Cámara → Permitir)\n' +
-          '• En iPhone: Ajustes > Safari > Cámara → Permitir'
-        );
+        alert('No hay permiso para usar la cámara. Revisa el candado (Permisos → Cámara → Permitir). En iPhone: Ajustes > Safari > Cámara → Permitir');
       } else if (msg.includes('NotFoundError')){
-        alert('No se encontró ninguna cámara en este dispositivo.');
+        alert('No se encontró una cámara en este dispositivo.');
       } else {
-        alert('No se pudo acceder a la cámara. Usa “Subir foto/QR”.');
+        alert('No se pudo acceder a la cámara. Usa “Escanear foto”.');
       }
-      // Fallback: abre selector de imagen (usa cámara nativa en móviles)
-      try { fileInput?.click(); } catch {}
+      try{ fileInput?.click(); }catch{}
     }
   }
 
-  // --- fallback: leer foto/imagen con jsQR ---
+  // ======== foto (fallback) ========
   async function onPickImage(e){
     const file = e.target.files?.[0];
     if (!file) return;
     if (!window.jsQR){ alert('No se pudo cargar el lector offline (jsQR).'); return; }
 
     const img = new Image();
-    img.onload = () => {
+    img.onload = ()=>{
       const canvas = document.createElement('canvas');
       canvas.width = img.naturalWidth;
       canvas.height = img.naturalHeight;
-      const ctx = canvas.getContext('2d', { willReadFrequently: true });
-      ctx.drawImage(img, 0, 0);
-      const data = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const ctx = canvas.getContext('2d',{willReadFrequently:true});
+      ctx.drawImage(img,0,0);
+      const data = ctx.getImageData(0,0,canvas.width,canvas.height);
       const res = window.jsQR(data.data, canvas.width, canvas.height, { inversionAttempts:'dontInvert' });
       if (res?.data){
         const id = extractId(res.data) || res.data;
-        stopScan();
-        go(id);
+        console.log('[SCAN] hit photo:', id);
+        stopScan(); go(id);
       } else {
-        alert('No se pudo leer el QR de la imagen. Intenta otra foto con mejor enfoque/luz.');
+        alert('No se pudo leer el QR de la imagen.');
       }
       URL.revokeObjectURL(img.src);
     };
-    img.onerror = () => alert('No se pudo abrir la imagen seleccionada.');
+    img.onerror = ()=> alert('No se pudo abrir la imagen seleccionada.');
     img.src = URL.createObjectURL(file);
   }
 
-  // --- permisos (hint previo) ---
-  async function camPermissionState(){
-    if (!navigator.permissions) return 'unknown';
-    try{
-      const s = await navigator.permissions.query({ name: 'camera' });
-      return s.state; // 'granted' | 'denied' | 'prompt'
-    }catch{ return 'unknown'; }
-  }
-
-  // --- bindings ---
-  btnScan?.addEventListener('click', async () => {
-    const st = await camPermissionState();
-    if (st === 'denied'){
-      alert('La cámara está bloqueada. Habilítala en el candado de la barra de direcciones y vuelve a intentar.');
-    }
-    startScan();
+  // ======== bindings ========
+  btnScan?.addEventListener('click', startScan);
+  btnAbrir?.addEventListener('click', ()=>{
+    const v = (inputMan.value||'').trim();
+    const id = extractId(v) || v;
+    go(id);
   });
+  btnFoto?.addEventListener('click', ()=> fileInput?.click());
   fileInput?.addEventListener('change', onPickImage);
 
-  // Limpieza al salir
   window.addEventListener('pagehide', stopScan);
   window.addEventListener('beforeunload', stopScan);
-})();
-</script>
+
+  console.log('[VERIF] boot OK (scanUI:', !scanUI.hidden, ')');
+
+})();</script>
