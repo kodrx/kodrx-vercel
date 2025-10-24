@@ -43,6 +43,14 @@
 document.addEventListener('DOMContentLoaded', () => {
   'use strict';
 
+  // ---------- mostrar/ocultar UI según ?id= ----------
+  const params   = new URLSearchParams(location.search);
+  const hasId    = params.has('id');
+  const scanUI   = document.getElementById('scanUI');
+  const detalleUI= document.getElementById('detalleUI');
+  if (scanUI)   scanUI.hidden   = hasId;   // si NO hay id, mostramos el escáner
+  if (detalleUI)detalleUI.hidden= !hasId;  // si hay id, mostrar detalle (tu lógica de detalle va aparte)
+
   // ---------- refs ----------
   const $ = (s) => document.querySelector(s);
   const video     = $('#cam');
@@ -52,9 +60,14 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnAbrir  = $('#btnAbrir');
 
   if (!video || !btnScan || !fileInput) {
-    console.warn('[SCAN] faltan elementos requeridos');
+    console.warn('[SCAN] faltan elementos requeridos (#cam, #btnScan, #fileQR)');
     return;
   }
+
+  // overlay para dibujar caja del QR (debug visual)
+  const overlay = document.createElement('canvas');
+  overlay.style.cssText = 'position:absolute; top:0; left:0; width:100%; max-width:420px; border-radius:12px; pointer-events:none; display:none;';
+  video.parentNode.insertBefore(overlay, video.nextSibling);
 
   // ---------- estado ----------
   let _rafId = 0;
@@ -68,7 +81,6 @@ document.addEventListener('DOMContentLoaded', () => {
   };
   const go = (id) => {
     if (!id) { alert('No se pudo leer el código'); return; }
-    // Abre receta del médico (como tenían antes)
     location.href = `/medico/ver-receta.html?id=${encodeURIComponent(id)}`;
   };
   const stopScan = () => {
@@ -76,21 +88,30 @@ document.addEventListener('DOMContentLoaded', () => {
     try { cancelAnimationFrame(_rafId); } catch {}
     _rafId = 0;
     try { if (_stream) { _stream.getTracks().forEach(t => t.stop()); _stream = null; } } catch {}
+    overlay.style.display = 'none';
   };
 
-  // ---------- lazo jsQR (downscale para rendimiento) ----------
+  // ---------- lazo jsQR (con overlay) ----------
   function runJsQRLoop(){
     if (!window.jsQR) { console.error('[SCAN] jsQR no cargado'); return; }
+    console.log('[SCAN] jsQR cargado, iniciando loop');
 
     const MAX_W = 640;
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    const octx= overlay.getContext('2d');
 
     const loop = () => {
       if (!_running) return;
       try {
         const vw = video.videoWidth|0, vh = video.videoHeight|0;
         if (vw > 0 && vh > 0) {
+          // sincroniza overlay al tamaño CSS del <video>
+          const rect = video.getBoundingClientRect();
+          overlay.width  = rect.width;
+          overlay.height = rect.height;
+          overlay.style.display = 'block';
+
           const scale = Math.min(1, MAX_W / vw);
           const w = Math.max(1, (vw * scale) | 0);
           const h = Math.max(1, (vh * scale) | 0);
@@ -99,14 +120,29 @@ document.addEventListener('DOMContentLoaded', () => {
           ctx.drawImage(video, 0, 0, w, h);
           const img = ctx.getImageData(0, 0, w, h);
           const res = jsQR(img.data, w, h, { inversionAttempts: 'dontInvert' });
+
+          // limpia overlay
+          octx.clearRect(0,0,overlay.width,overlay.height);
+
           if (res && res.data) {
-            stopScan();
+            // dibuja caja (mapea coords de canvas -> overlay)
+            const sx = overlay.width  / w;
+            const sy = overlay.height / h;
+            const pts = [res.location.topLeftCorner, res.location.topRightCorner, res.location.bottomRightCorner, res.location.bottomLeftCorner];
+
+            octx.lineWidth = 3; octx.strokeStyle = 'rgba(16,185,129,.9)'; octx.beginPath();
+            octx.moveTo(pts[0].x*sx, pts[0].y*sy);
+            for (let i=1;i<pts.length;i++) octx.lineTo(pts[i].x*sx, pts[i].y*sy);
+            octx.closePath(); octx.stroke();
+
             const id = extractId(res.data) || res.data;
+            console.log('[SCAN] QR decodificado:', res.data, '→ id:', id);
+            stopScan();
             return go(id);
           }
         }
       } catch (e) {
-        // no rompemos: intentamos siguiente frame
+        // no rompemos el loop
       }
       _rafId = requestAnimationFrame(loop);
     };
@@ -117,9 +153,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // ---------- arrancar cámara ----------
   async function startScan(){
-    stopScan(); // limpia cualquier sesión previa
+    stopScan();
     try{
-      // algunos navegadores “exigen” exact y otros fallan con exact → probamos ambos
+      console.log('[SCAN] solicitando cámara…');
       const try1 = { video: { facingMode: { exact: 'environment' } }, audio: false };
       const try2 = { video: { facingMode: { ideal: 'environment' } }, audio: false };
 
@@ -130,10 +166,9 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       video.srcObject = _stream;
-      video.setAttribute('playsinline','true'); // iOS
+      video.setAttribute('playsinline','true');
       video.muted = true;
 
-      // Esperar a que haya frames reales
       await video.play().catch(()=>{});
       if (video.readyState < 2 || video.videoWidth === 0) {
         await new Promise(res => {
@@ -141,11 +176,16 @@ document.addEventListener('DOMContentLoaded', () => {
           video.addEventListener('playing', onPlaying, { once:true });
         });
       }
+      console.log('[SCAN] cámara OK:', video.videoWidth, 'x', video.videoHeight);
 
-      // Nudge iOS por si pausa
       document.addEventListener('touchstart', () => { if (video.paused) video.play().catch(()=>{}); }, { once:true });
 
-      runJsQRLoop();
+      if (!window.jsQR) {
+        console.warn('[SCAN] jsQR aún no está listo (¿caché/latencia?). Intentando en 300ms…');
+        setTimeout(() => runJsQRLoop(), 300);
+      } else {
+        runJsQRLoop();
+      }
     }catch(err){
       console.warn('[SCAN] getUserMedia fail:', err);
       const msg = String(err?.name || err?.message || '');
@@ -156,7 +196,6 @@ document.addEventListener('DOMContentLoaded', () => {
       } else {
         alert('No se pudo abrir la cámara. Usa “Escanear foto”.');
       }
-      // Fallback a foto
       try { fileInput.click(); } catch {}
     }
   }
@@ -205,6 +244,9 @@ document.addEventListener('DOMContentLoaded', () => {
   // Limpieza al salir
   window.addEventListener('pagehide', stopScan);
   window.addEventListener('beforeunload', stopScan);
+
+  // Log del estado de jsQR
+  if (window.jsQR) console.log('[SCAN] jsQR presente');
+  else console.log('[SCAN] jsQR aún no disponible (defer), se intentará después');
 });
 </script>
-
