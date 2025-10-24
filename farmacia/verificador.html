@@ -10,6 +10,194 @@
   <script src="/componentes/header.js" defer></script>
 
 </head>
+
+
+<body>
+  <h2>Verificador de Recetas</h2>
+
+  <!-- Bloque lector (sólo se muestra si NO hay ?id=) -->
+  <section id="scanUI" hidden>
+    <video id="cam" playsinline style="width:100%;max-width:420px;border-radius:12px"></video>
+    <div style="margin:8px 0">
+      <button id="btnScan">Iniciar cámara</button>
+      <input id="manual" placeholder="Pega URL o ID" style="width:60%">
+      <button id="btnAbrir">Abrir</button>
+    </div>
+    <input id="fileQR" type="file" accept="image/*" capture="environment" style="display:none">
+    <button id="btnFoto">Escanear foto</button>
+  </section>
+
+  <!-- Bloque detalle receta (sólo si HAY ?id=) -->
+  <section id="detalleUI" hidden>
+    <div id="detalleReceta">Cargando…</div>
+    <!-- aquí va tu checklist/surtido -->
+  </section>
+
+  <!-- Lector offline -->
+  <script defer src="/vendor/jsqr.min.js"></script>
+
+  <!-- Router + lector + carga de receta -->
+  <script type="module">
+    import { db } from '/firebase-init.js';
+    import { doc, getDoc, updateDoc } from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js';
+
+    const params = new URLSearchParams(location.search);
+    const id = params.get('id');
+
+    const scanUI    = document.getElementById('scanUI');
+    const detalleUI = document.getElementById('detalleUI');
+
+    if (!id) {
+      // ===== Modo ESCANEO =====
+      scanUI.hidden = false;
+
+      // --- lector (exacto el que te pasé) ---
+      const $ = s => document.querySelector(s);
+      const video   = $('#cam');
+      const btnScan = $('#btnScan');
+      const btnAbrir= $('#btnAbrir');
+      const manual  = $('#manual');
+      const fileInp = $('#fileQR');
+      const btnFoto = $('#btnFoto');
+
+      function extractId(txt){
+        try{ const u=new URL(txt); return u.searchParams.get('id')||u.searchParams.get('receta')||null; }
+        catch{}
+        return /^[A-Za-z0-9_-]{8,}$/.test(txt) ? txt : null;
+      }
+      function go(recetaId){
+        if (!recetaId){ alert('No se pudo leer el código'); return; }
+        location.href = `/farmacia/verificador.html?id=${encodeURIComponent(recetaId)}`;
+      }
+
+      let rafId = 0, stopped = false;
+      function stopLoop(){ stopped=true; cancelAnimationFrame(rafId); rafId=0; }
+
+      async function runWithBarcodeDetector(){
+        console.log('[SCAN] usando BarcodeDetector');
+        const det = new window.BarcodeDetector({ formats:['qr_code'] });
+        let tick=0;
+        const loop = async () => {
+          if (stopped) return;
+          try{
+            if (video.readyState >= 2){
+              const bmp = await createImageBitmap(video);
+              const codes = await det.detect(bmp);
+              bmp.close?.();
+              if ((tick++ % 30) === 0) console.log('[SCAN] BD frame ok, codes:', codes?.length||0);
+              if (codes?.length){
+                stopLoop();
+                const raw = codes[0].rawValue || '';
+                return go(extractId(raw)||raw);
+              }
+            }
+          }catch(e){
+            console.warn('[SCAN] BD falló, cambio a jsQR:', e?.message||e);
+            return runWithJsQR();
+          }
+          rafId = requestAnimationFrame(loop);
+        };
+        rafId = requestAnimationFrame(loop);
+      }
+
+      async function runWithJsQR(){
+        console.log('[SCAN] usando jsQR (fallback)');
+        if (!window.jsQR){ alert('No se pudo cargar jsQR.'); return; }
+        const c = document.createElement('canvas');
+        const x = c.getContext('2d', { willReadFrequently:true });
+        let tick=0;
+
+        const loop = () => {
+          if (stopped) return;
+          try{
+            const w=video.videoWidth,h=video.videoHeight;
+            if (w&&h){
+              c.width=w; c.height=h; x.drawImage(video,0,0,w,h);
+              const d=x.getImageData(0,0,w,h);
+              const res=window.jsQR(d.data,w,h,{inversionAttempts:'dontInvert'});
+              if ((tick++ % 30) === 0) console.log('[SCAN] jsQR frame ok, hit:', !!res);
+              if (res?.data){ stopLoop(); return go(extractId(res.data)||res.data); }
+            }
+          }catch{}
+          rafId = requestAnimationFrame(loop);
+        };
+        rafId = requestAnimationFrame(loop);
+      }
+
+      async function startScan(){
+        stopped=false;
+        try{
+          const stream = await navigator.mediaDevices.getUserMedia({
+            video:{ facingMode:{ideal:'environment'} }, audio:false
+          });
+          video.srcObject = stream;
+          video.setAttribute('playsinline','true');
+          video.muted = true;
+          await video.play();
+          console.log('[SCAN] video.play ok', video.videoWidth, video.videoHeight);
+
+          if ('BarcodeDetector' in window) await runWithBarcodeDetector();
+          else await runWithJsQR();
+        }catch(err){
+          console.warn('[SCAN] getUserMedia fail:', err);
+          const m=String(err?.name||err?.message||'');
+          if (m.includes('NotAllowed')) alert('Permite la cámara y vuelve a intentar.');
+          else if (m.includes('NotFound')) alert('No se encontró cámara.');
+          else alert('No se pudo iniciar la cámara. Usa “Escanear foto”.');
+        }
+      }
+
+      btnScan?.addEventListener('click', startScan);
+      btnAbrir?.addEventListener('click', (e)=>{
+        e.preventDefault();
+        const rid = extractId(manual.value.trim()) || manual.value.trim();
+        go(rid);
+      });
+      btnFoto?.addEventListener('click', ()=> fileInp?.click());
+      fileInp?.addEventListener('change', e=>{
+        const f = e.target.files?.[0]; if (!f) return;
+        if (!window.jsQR){ alert('No se pudo cargar jsQR.'); return; }
+        const img = new Image();
+        img.onload = ()=>{
+          const c=document.createElement('canvas'), x=c.getContext('2d',{willReadFrequently:true});
+          c.width=img.naturalWidth; c.height=img.naturalHeight; x.drawImage(img,0,0);
+          const d=x.getImageData(0,0,c.width,c.height);
+          const res=window.jsQR(d.data,c.width,c.height,{inversionAttempts:'dontInvert'});
+          if (res?.data){ go(extractId(res.data)||res.data); }
+          else alert('No se pudo leer el QR de la foto.');
+          URL.revokeObjectURL(img.src);
+        };
+        img.onerror = ()=> alert('No se pudo abrir la imagen.');
+        img.src = URL.createObjectURL(f);
+      });
+    } else {
+      // ===== Modo DETALLE (con id) =====
+      detalleUI.hidden = false;
+      const host = document.getElementById('detalleReceta');
+
+      try{
+        const snap = await getDoc(doc(db, 'recetas', id));
+        if (!snap.exists()){ host.textContent = 'Receta no encontrada.'; return; }
+        const r = snap.data();
+        // Render mínimo (ajústalo a tu diseño + checklist):
+        host.innerHTML = `
+          <h3>Paciente: ${r.nombrePaciente || '—'}</h3>
+          <p><b>Fecha:</b> ${r.timestamp?.toDate?.().toLocaleString?.('es-MX') || '—'}</p>
+          <p><b>Médico:</b> ${r.medicoNombre || '—'} · Cédula: ${r.medicoCedula || '—'}</p>
+          <h4>Medicamentos</h4>
+          <ul>${(r.medicamentos||[]).map(m=>`<li>${m.nombre} — ${m.dosis}, ${m.duracion}</li>`).join('')||'<li>—</li>'}</ul>
+          <p><a href="/medico/ver-receta.html?id=${encodeURIComponent(id)}" target="_blank">Abrir receta completa</a></p>
+        `;
+        // Aquí integras tu checklist y el updateDoc para “surtidoParcial”/“estado”.
+      }catch(e){
+        host.textContent = 'Error cargando receta.';
+        console.error('[VERIF]', e);
+      }
+    }
+  </script>
+</body>
+</html>
+
 <body>
   <main class="wrap" style="max-width:980px;margin:16px auto">
     <h1>Verificar / Surtir receta</h1>
