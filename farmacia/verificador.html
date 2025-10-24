@@ -35,7 +35,8 @@
   </section>
 
   <!-- Lector offline -->
-  <script defer src="/vendor/jsqr.min.js"></script>
+<script defer src="/vendor/jsqr.min.js" id="jsqr-lib"></script>
+
 
 
 
@@ -91,6 +92,53 @@ document.addEventListener('DOMContentLoaded', () => {
     overlay.style.display = 'none';
   };
 
+  async function ensureJsQR(maxWaitMs = 3000){
+  if (window.jsQR) return true;
+
+  // 1) Espera a que el <script defer> termine (si existe)
+  const tag = document.getElementById('jsqr-lib');
+  if (tag && !window.jsQR){
+    let waited = 0;
+    while (!window.jsQR && waited < maxWaitMs){
+      await new Promise(r=>setTimeout(r,150));
+      waited += 150;
+    }
+    if (window.jsQR) return true;
+  }
+
+  // 2) Inyección defensiva (por si el defer no se cargó aún)
+  await new Promise((res, rej) => {
+    const s = document.createElement('script');
+    s.src = '/vendor/jsqr.min.js?v=' + Date.now(); // evita caché viejo
+    s.onload = res; s.onerror = rej;
+    document.head.appendChild(s);
+  });
+  return !!window.jsQR;
+}
+async function runWithBarcodeDetector(){
+  const det = new window.BarcodeDetector({ formats: ['qr_code'] });
+  const loop = async () => {
+    if (!_running) return;
+    try{
+      if (video.readyState >= 2){
+        const codes = await det.detect(video); // directo sobre <video>
+        if (codes && codes.length){
+          const raw = codes[0].rawValue || '';
+          const id  = extractId(raw) || raw;
+          stopScan();
+          return go(id);
+        }
+      }
+    }catch(e){
+      // si algo truena, simplemente seguimos al siguiente frame o caerá a jsQR
+    }
+    _rafId = requestAnimationFrame(loop);
+  };
+  _running = true;
+  _rafId   = requestAnimationFrame(loop);
+}
+ 
+  
   // ---------- lazo jsQR (con overlay) ----------
   function runJsQRLoop(){
     if (!window.jsQR) { console.error('[SCAN] jsQR no cargado'); return; }
@@ -152,53 +200,54 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // ---------- arrancar cámara ----------
-  async function startScan(){
-    stopScan();
-    try{
-      console.log('[SCAN] solicitando cámara…');
-      const try1 = { video: { facingMode: { exact: 'environment' } }, audio: false };
-      const try2 = { video: { facingMode: { ideal: 'environment' } }, audio: false };
+async function startScan(){
+  stopScan();
+  try{
+    console.log('[SCAN] solicitando cámara…');
+    const try1 = { video: { facingMode: { exact: 'environment' } }, audio:false };
+    const try2 = { video: { facingMode: { ideal: 'environment' } }, audio:false };
+    try { _stream = await navigator.mediaDevices.getUserMedia(try1); }
+    catch { _stream = await navigator.mediaDevices.getUserMedia(try2); }
 
-      try {
-        _stream = await navigator.mediaDevices.getUserMedia(try1);
-      } catch {
-        _stream = await navigator.mediaDevices.getUserMedia(try2);
-      }
+    video.srcObject = _stream;
+    video.setAttribute('playsinline','true');
+    video.muted = true;
 
-      video.srcObject = _stream;
-      video.setAttribute('playsinline','true');
-      video.muted = true;
-
-      await video.play().catch(()=>{});
-      if (video.readyState < 2 || video.videoWidth === 0) {
-        await new Promise(res => {
-          const onPlaying = () => { video.removeEventListener('playing', onPlaying); res(); };
-          video.addEventListener('playing', onPlaying, { once:true });
-        });
-      }
-      console.log('[SCAN] cámara OK:', video.videoWidth, 'x', video.videoHeight);
-
-      document.addEventListener('touchstart', () => { if (video.paused) video.play().catch(()=>{}); }, { once:true });
-
-      if (!window.jsQR) {
-        console.warn('[SCAN] jsQR aún no está listo (¿caché/latencia?). Intentando en 300ms…');
-        setTimeout(() => runJsQRLoop(), 300);
-      } else {
-        runJsQRLoop();
-      }
-    }catch(err){
-      console.warn('[SCAN] getUserMedia fail:', err);
-      const msg = String(err?.name || err?.message || '');
-      if (msg.includes('NotAllowed') || msg.includes('Permission')) {
-        alert('No hay permiso de cámara.\nAbre el candado → Cámara → Permitir. En iPhone: Ajustes > Safari > Cámara.');
-      } else if (msg.includes('NotFound')) {
-        alert('No se encontró cámara en este dispositivo.');
-      } else {
-        alert('No se pudo abrir la cámara. Usa “Escanear foto”.');
-      }
-      try { fileInput.click(); } catch {}
+    await video.play().catch(()=>{});
+    if (video.readyState < 2 || video.videoWidth === 0){
+      await new Promise(res=>{
+        const onPlaying = ()=>{ video.removeEventListener('playing', onPlaying); res(); };
+        video.addEventListener('playing', onPlaying, { once:true });
+      });
     }
+    console.log('[SCAN] cámara OK:', video.videoWidth, 'x', video.videoHeight);
+
+    document.addEventListener('touchstart', () => { if (video.paused) video.play().catch(()=>{}); }, { once:true });
+
+    if ('BarcodeDetector' in window){
+      console.log('[SCAN] usando BarcodeDetector');
+      return runWithBarcodeDetector();
+    }
+
+    // Sin BD → esperamos jsQR (y lo inyectamos si falta)
+    const ok = await ensureJsQR(3500);
+    if (!ok){ alert('No se pudo cargar el lector offline (jsQR).'); return; }
+    console.log('[SCAN] jsQR listo, iniciando loop');
+    return runJsQRLoop();
+  }catch(err){
+    console.warn('[SCAN] getUserMedia fail:', err);
+    const msg = String(err?.name||err?.message||'');
+    if (msg.includes('NotAllowed') || msg.includes('Permission')) {
+      alert('No hay permiso de cámara.\nAbre el candado → Cámara → Permitir. En iPhone: Ajustes > Safari > Cámara.');
+    } else if (msg.includes('NotFound')) {
+      alert('No se encontró cámara en este dispositivo.');
+    } else {
+      alert('No se pudo abrir la cámara. Usa “Escanear foto”.');
+    }
+    try { fileInput.click(); } catch {}
   }
+}
+
 
   // ---------- foto (fallback) ----------
   async function onPickImage(e){
