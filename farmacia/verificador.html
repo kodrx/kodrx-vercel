@@ -371,56 +371,44 @@ function go(id){
     const surtidosPrev = Array.isArray(r.surtidoParcial) ? r.surtidoParcial : [];
     const yaSurtidos = new Set(surtidosPrev.map(x => (x?.nombre||'') + '||' + (x?.dosis||'')));
 
-    host.innerHTML = html`
-      <div class="card" style="padding:12px;border:1px solid #e5e7eb;border-radius:12px">
-        <h3 style="margin-top:0">Paciente: ${r.nombrePaciente ?? '—'}</h3>
-        <div style="font-size:13px;color:#374151;margin-bottom:8px">
-          <div><b>Fecha:</b> ${fmtFecha(r.timestamp)}</div>
-          <div><b>ID:</b> ${r.id}</div>
-          <div><b>Médico:</b> ${r.medicoNombre ?? '—'} &nbsp; <b>Cédula:</b> ${r.medicoCedula ?? '—'}</div>
-          <div><b>Especialidad:</b> ${r.medicoEspecialidad ?? '—'}</div>
-          <div><b>Domicilio consultorio:</b> ${r.medicoDomicilio ?? '—'}</div>
-          <div><b>Diagnóstico:</b> ${r.diagnostico ?? '—'}</div>
-        </div>
+   host.innerHTML = `
+  <div class="kx-head"><i class="dot"></i><div class="kx-sub">Validación médica en blockchain</div></div>
+  <h3 style="margin:0 0 6px;font-size:22px;font-weight:800">Paciente: ${r.nombrePaciente ?? '—'}</h3>
 
-        <h4 style="margin:12px 0 8px">Medicamentos</h4>
-        <div id="medList">
-          ${
-            meds.length
-              ? meds.map((m,i)=>{
-                  const key = (m?.nombre||'') + '||' + (m?.dosis||'');
-                  const ya  = yaSurtidos.has(key);
-                  const extra = ya
-                    ? (() => {
-                        const s = surtidosPrev.find(x => ((x?.nombre||'')+'||'+(x?.dosis||'')) === key) || {};
-                        const by = s.surtidoPor || '—';
-                        const tel = s.telefono || '—';
-                        const f  = s.fecha ? new Date(s.fecha).toLocaleString('es-MX') : '—';
-                        return `<div class="surtido-info" style="color:#065f46;font-size:12px">Surtido por: ${by} — Tel: ${tel} — ${f}</div>`;
-                      })()
-                    : '';
-                  return `
-                    <label style="display:block;padding:6px 0;border-bottom:1px dashed #e5e7eb">
-                      <input type="checkbox" data-index="${i}" ${ya?'checked disabled':''}>
-                      <b>${m?.nombre||'—'}</b> — ${m?.dosis||'—'} · ${m?.duracion||'—'}
-                      ${extra}
-                    </label>
-                  `;
-                }).join('')
-              : '<div>—</div>'
-          }
-        </div>
+  <div class="kx-pair"><b>Fecha:</b><span>${fmtFecha(r.timestamp)}</span></div>
+  <div class="kx-pair"><b>ID:</b><span>${r.id}</span></div>
+  <div class="kx-pair"><b>Médico:</b><span>${r.medicoNombre ?? '—'}</span></div>
+  <div class="kx-pair"><b>Cédula:</b><span>${r.medicoCedula ?? '—'}</span></div>
+  <div class="kx-pair"><b>Especialidad:</b><span>${r.medicoEspecialidad ?? '—'}</span></div>
+  <div class="kx-pair"><b>Domicilio consultorio:</b><span>${r.medicoDomicilio ?? '—'}</span></div>
+  <div class="kx-pair"><b>Diagnóstico:</b><span>${r.diagnostico ?? '—'}</span></div>
 
-        <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
-          <button id="btnSurtir" type="button">Registrar surtido</button>
-          <button id="btnImprimir" type="button" onclick="window.open('/medico/ver-receta.html?id=${encodeURIComponent(r.id)}','_blank')">Abrir receta</button>
-          <button type="button" onclick="history.length>1?history.back():location.href='/farmacia/panel.html'">Volver</button>
-        </div>
+  <div class="kx-section-title">Medicamentos</div>
+  <div id="medList" class="kx-list">
+    ${ /* …tu map de items… */ meds.map((m,i)=>{
+      const key = (m?.nombre||'')+'||'+(m?.dosis||'');
+      const ya  = yaSurtidos.has(key);
+      const extra = ya ? (()=>{ const s=surtidosPrev.find(x=>((x?.nombre||'')+'||'+(x?.dosis||''))===key)||{};
+        const by=s.surtidoPor||'—', tel=s.telefono||'—', f=s.fecha?new Date(s.fecha).toLocaleString('es-MX'):'—';
+        return `<div class="kx-surtido-info">Surtido por: ${by} — Tel: ${tel} — ${f}</div>`;
+      })(): '';
+      return `
+        <label class="kx-item">
+          <input type="checkbox" data-index="${i}" ${ya?'checked disabled':''}>
+          <b>${m?.nombre||'—'}</b> — ${m?.dosis||'—'} · ${m?.duracion||'—'}
+          ${extra}
+        </label>`;
+    }).join('')}
+  </div>
 
-        <div id="msg" style="margin-top:8px;font-size:13px;color:#6b7280"></div>
-      </div>
-    `;
-
+  <div class="kx-actions">
+    <button id="btnSurtir" class="kx-btn kx-btn--brand">Registrar surtido</button>
+    <button id="btnImprimir" class="kx-btn kx-btn--ghost"
+      onclick="window.open('/medico/ver-receta.html?id=${encodeURIComponent(r.id)}','_blank')">Abrir receta</button>
+    <button class="kx-btn kx-btn--ghost" onclick="history.length>1?history.back():location.href='/farmacia/panel.html'">Volver</button>
+  </div>
+  <div id="msg" class="kx-msg"></div>
+`;
     // 4) manejar "Registrar surtido"
     $('#btnSurtir')?.addEventListener('click', async ()=>{
       try{
