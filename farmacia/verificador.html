@@ -76,12 +76,10 @@ document.addEventListener('DOMContentLoaded', () => {
     try { const u = new URL(txt); return u.searchParams.get('id') || null; } catch {}
     return /^[A-Za-z0-9_-]{8,}$/.test(String(txt||'')) ? txt : null;
   };
-
-function go(id){
-  if (!id){ alert('No se pudo leer el código'); return; }
-  location.href = `/farmacia/verificador.html?id=${encodeURIComponent(id)}`; // 👈 cambia a farmacia
-}
-
+  const go = (id) => {
+    if (!id) { alert('No se pudo leer el código'); return; }
+    location.href = `/medico/ver-receta.html?id=${encodeURIComponent(id)}`;
+  };
   const stopScan = () => {
     _running = false;
     try { cancelAnimationFrame(_raf); } catch {}
@@ -297,6 +295,7 @@ function go(id){
   setTimeout(()=>{ console.log('[SCAN] jsQR presente?', !!window.jsQR); }, 800);
 });
 </script>
+
 
 <script>
 ;(() => {
