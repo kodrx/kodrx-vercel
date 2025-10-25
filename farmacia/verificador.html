@@ -371,7 +371,7 @@ function go(id){
     const yaSurtidos = new Set(surtidosPrev.map(x => (x?.nombre||'') + '||' + (x?.dosis||'')));
 
    host.innerHTML = `
-  <div class="kx-head"><i class="dot"></i><div class="kx-sub">Validación médica en blockchain</div></div>
+
   <h3 style="margin:0 0 6px;font-size:22px;font-weight:800">Paciente: ${r.nombrePaciente ?? '—'}</h3>
 
   <div class="kx-pair"><b>Fecha:</b><span>${fmtFecha(r.timestamp)}</span></div>
