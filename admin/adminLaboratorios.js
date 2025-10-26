@@ -1,227 +1,149 @@
-
-import { auth, db } from "../firebase-init.js";
-import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js";
+// /admin/adminLaboratorios.js (SDK 12 modular)
+import { auth, db } from '/firebase-init.js';
 import {
-  collection,
-  addDoc,
-  getDocs,
-  deleteDoc,
-  doc,
-  setDoc,
-  updateDoc,
-  serverTimestamp,
-  query,
-  where
-} from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
+  onAuthStateChanged, sendPasswordResetEmail, signOut
+} from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js';
+import {
+  collection, addDoc, serverTimestamp, getDocs, query, orderBy,
+  updateDoc, doc
+} from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js';
 
-// Aseguramos que la autenticación esté lista y el DOM cargado
-onAuthStateChanged(auth, (user) => {
-  if (user && user.email === "admin@kodrx.app") {
-    window.addEventListener("DOMContentLoaded", () => {
-      cargarLaboratorios();
-    });
-  } else {
-    window.location.href = "/admin/login.html";
-  }
-});
+const $ = (s) => document.querySelector(s);
+const elNombre = $('#inpNombre');
+const elContacto = $('#inpContacto');
+const elCorreo = $('#inpCorreo');
+const elTel = $('#inpTelefono');
+const elUbic = $('#inpUbicacion');
+const elBtnCrear = $('#btnCrear');
+const elMsgCrear = $('#msgCrear');
+const elList = $('#labs');
 
-// Registro de nuevo laboratorio
-const form = document.getElementById("formLab");
-form.addEventListener("submit", async (e) => {
-  e.preventDefault();
+function isAdminUser(user) {
+  // opción rápida por email mientras llegan los claims
+  if (!user) return false;
+  if (user.email === 'admin@kodrx.app') return true;
+  // si ya tienes custom claims, puedes leerlas desde el IdTokenResult:
+  // (no bloqueamos aquí por async; el guard abajo refuerza)
+  return false;
+}
 
-  const nombre = document.getElementById("nombre").value.trim();
-  const contacto = document.getElementById("contacto").value.trim();
-  const correo = document.getElementById("correo").value.trim();
-  const telefono = document.getElementById("telefono").value.trim();
-  const ubicacion = document.getElementById("ubicacion").value.trim();
-
+async function guardAdmin(user){
+  if (!user) { location.href = '/acceso?role=admin'; return false; }
   try {
-    await addDoc(collection(db, "laboratorios"), {
-      nombre,
-      contacto,
-      correo,
-      telefono,
-      ubicacion,
-      verificado: true,
-      fechaRegistro: serverTimestamp()
-    });
-
-    alert("Laboratorio registrado con éxito.");
-    form.reset();
-    cargarLaboratorios();
-  } catch (error) {
-    alert("Error al registrar laboratorio: " + error.message);
+    const token = await user.getIdTokenResult(true);
+    const ok = token.claims?.admin === true || user.email === 'admin@kodrx.app';
+    if (!ok) { await signOut(auth); location.href = '/acceso?role=admin&msg=sin_permiso'; return false; }
+    return true;
+  } catch {
+    await signOut(auth); location.href = '/acceso?role=admin'; return false;
   }
-});
+}
 
-// Mostrar lista de laboratorios
-async function cargarLaboratorios() {
-  const lista = document.getElementById("listaLabs");
-  lista.innerHTML = "Cargando...";
+function pillEstado({ suspendido, verificado, estadoCuenta }) {
+  if (suspendido) return `<span class="pill warn">Suspendido</span>`;
+  if (verificado === true) return `<span class="pill ok">Verificado</span>`;
+  const est = (estadoCuenta||'pendiente').toLowerCase();
+  if (est === 'activo') return `<span class="pill ok">Activo</span>`;
+  return `<span class="pill">Pendiente</span>`;
+}
 
-  try {
-    const querySnapshot = await getDocs(collection(db, "laboratorios"));
-    if (querySnapshot.empty) {
-      lista.innerHTML = "<p>No hay laboratorios registrados.</p>";
-      return;
-    }
+async function loadList(){
+  elList.textContent = 'Cargando…';
+  try{
+    const q = query(collection(db, 'laboratorios'), orderBy('createdAt','desc'));
+    const snap = await getDocs(q);
+    if (snap.empty){ elList.textContent = 'Sin registros aún.'; return; }
 
-    lista.innerHTML = "";
+    const frags = [];
+    snap.forEach(d => {
+      const x = { id: d.id, ...d.data() };
+      frags.push(`
+        <div class="lab" data-id="${x.id}">
+          <div>
+            <h4>${x.nombre || '—'}</h4>
+            <div class="muted">${x.contacto || '—'} · ${x.correo || '—'} · ${x.telefono || '—'}</div>
+            <div class="muted">${x.ubicacion || ''}</div>
+          </div>
+          <div class="actions">
+            ${pillEstado(x)}
+            <button class="btn" data-act="toggle-ver">${x.verificado ? 'Quitar verificación':'Verificar'}</button>
+            <button class="btn" data-act="toggle-sus">${x.suspendido ? 'Reactivar':'Suspender'}</button>
+            ${x.correo ? `<button class="btn" data-act="reset">Reset contraseña</button>` : ''}
+          </div>
+        </div>
+      `);
+    });
+    elList.innerHTML = frags.join('');
 
-    for (const docSnap of querySnapshot.docs) {
-      const lab = docSnap.data();
-      const labDiv = document.createElement("div");
-      labDiv.className = "lab-card";
+    // bind actions
+    elList.querySelectorAll('button[data-act]').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const card = e.currentTarget.closest('.lab');
+        const id = card?.dataset.id;
+        const act = e.currentTarget.dataset.act;
+        if (!id) return;
 
-      labDiv.innerHTML = `
-        <strong>${lab.nombre}</strong><br>
-        Contacto: ${lab.contacto}<br>
-        Correo: ${lab.correo}<br>
-        Teléfono: ${lab.telefono}<br>
-        Ubicación: ${lab.ubicacion || "No especificada"}<br>
-        Registrado: ${lab.fechaRegistro?.toDate().toLocaleString() || "N/D"}
-      `;
-
-      const btnGenerar = document.createElement("button");
-      btnGenerar.innerText = "Generar link de invitación";
-      btnGenerar.style.marginTop = "10px";
-
-      btnGenerar.onclick = async () => {
-        const tokenId = crypto.randomUUID();
-        const link = `https://kodrx.app/laboratorio/crear-password.html?token=${tokenId}`;
-        const docRef = doc(db, "laboratoriosPendientes", tokenId);
-
-        await setDoc(docRef, {
-          correo: lab.correo,
-          estado: "pendiente",
-          creado: new Date().toISOString(),
-          link: link
-        });
-
-        const etiqueta = crearEtiquetaEstado("pendiente");
-        labDiv.appendChild(etiqueta);
-        mostrarLink(link, labDiv);
-      };
-
-      const q = query(
-        collection(db, "laboratoriosPendientes"),
-        where("correo", "==", lab.correo)
-      );
-      const pendientes = await getDocs(q);
-
-      if (!pendientes.empty) {
-        const tokens = pendientes.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
-
-        const tokenActivo = tokens.find(t => t.estado === "pendiente");
-        const tokenUsado = tokens.find(t => t.estado === "usado");
-
-        if (tokenActivo) {
-          const creado = new Date(tokenActivo.creado);
-          const ahora = new Date();
-          const diferenciaHoras = (ahora - creado) / 1000 / 60 / 60;
-
-          if (diferenciaHoras > 48) {
-            await deleteDoc(doc(db, "laboratoriosPendientes", tokenActivo.id));
-            const etiqueta = crearEtiquetaEstado("expirado");
-            labDiv.appendChild(etiqueta);
-            labDiv.appendChild(btnGenerar);
-          } else {
-            const etiqueta = crearEtiquetaEstado("pendiente");
-            labDiv.appendChild(etiqueta);
-            mostrarLink(tokenActivo.link, labDiv);
+        try{
+          const ref = doc(db, 'laboratorios', id);
+          if (act === 'toggle-ver') {
+            const nowBtnTxt = e.currentTarget.textContent;
+            const to = nowBtnTxt.includes('Quitar') ? false : true;
+            await updateDoc(ref, { verificado: to, estadoCuenta: to ? 'activo' : 'pendiente' });
+          } else if (act === 'toggle-sus') {
+            const nowBtnTxt = e.currentTarget.textContent;
+            const to = nowBtnTxt === 'Suspender';
+            await updateDoc(ref, { suspendido: to });
+          } else if (act === 'reset') {
+            const email = card.querySelector('.muted')?.textContent?.split('·')[1]?.trim();
+            const correo = email || prompt('Correo del laboratorio para enviar el reset:');
+            if (correo) { await sendPasswordResetEmail(auth, correo); alert('Email de restablecimiento enviado.'); }
           }
-        } else if (tokenUsado) {
-          const etiqueta = crearEtiquetaEstado("usado");
-          labDiv.appendChild(etiqueta);
-        } else {
-          labDiv.appendChild(btnGenerar);
+          await loadList();
+        }catch(err){
+          console.error('[LAB/act]', err);
+          alert('No se pudo aplicar la acción.');
         }
-
-        const historialDiv = document.createElement("div");
-        historialDiv.style.marginTop = "8px";
-        historialDiv.innerHTML = "<strong>Historial de accesos generados:</strong><br>";
-
-        tokens.forEach(t => {
-          const item = document.createElement("div");
-          item.style.fontSize = "12px";
-          item.style.marginBottom = "4px";
-          item.innerHTML = `📎 <code>${t.link}</code> <br><small>Estado: ${t.estado} | Creado: ${new Date(t.creado).toLocaleString()}</small>`;
-          historialDiv.appendChild(item);
-        });
-
-        labDiv.appendChild(historialDiv);
-      } else {
-        labDiv.appendChild(btnGenerar);
-      }
-
-      lista.appendChild(labDiv);
-    }
-  } catch (error) {
-    lista.innerHTML = `<p>Error al cargar laboratorios: ${error.message}</p>`;
-  }
-}
-
-function mostrarLink(link, contenedor) {
-  const resultadoDiv = document.createElement("div");
-  resultadoDiv.style.marginTop = "10px";
-  resultadoDiv.style.padding = "10px";
-  resultadoDiv.style.border = "1px solid #ccc";
-  resultadoDiv.style.borderRadius = "6px";
-  resultadoDiv.style.backgroundColor = "#f9f9f9";
-
-  const input = document.createElement("input");
-  input.type = "text";
-  input.value = link;
-  input.readOnly = true;
-  input.style.width = "100%";
-  input.style.marginBottom = "5px";
-  input.style.padding = "8px";
-
-  const btnCopiar = document.createElement("button");
-  btnCopiar.innerText = "Copiar enlace";
-  btnCopiar.onclick = () => {
-    navigator.clipboard.writeText(link).then(() => {
-      btnCopiar.innerText = "¡Copiado!";
-      setTimeout(() => (btnCopiar.innerText = "Copiar enlace"), 2000);
+      });
     });
-  };
 
-  resultadoDiv.appendChild(input);
-  resultadoDiv.appendChild(btnCopiar);
-  contenedor.appendChild(resultadoDiv);
-}
-
-function crearEtiquetaEstado(estado) {
-  const span = document.createElement("span");
-  span.innerText = `Estado del link: ${estado}`;
-  span.style.display = "inline-block";
-  span.style.marginTop = "6px";
-  span.style.padding = "4px 8px";
-  span.style.borderRadius = "4px";
-  span.style.fontSize = "12px";
-  span.style.fontWeight = "bold";
-
-  switch (estado) {
-    case "pendiente":
-      span.style.backgroundColor = "#fff3cd";
-      span.style.color = "#856404";
-      break;
-    case "usado":
-      span.style.backgroundColor = "#d4edda";
-      span.style.color = "#155724";
-      break;
-    case "expirado":
-      span.style.backgroundColor = "#f8d7da";
-      span.style.color = "#721c24";
-      break;
-    default:
-      span.style.backgroundColor = "#e2e3e5";
-      span.style.color = "#6c757d";
+  }catch(err){
+    console.error('Error al cargar laboratorios:', err);
+    elList.textContent = 'Error al cargar laboratorios.';
   }
-
-  return span;
 }
+
+async function onCreate(){
+  elMsgCrear.textContent = '';
+  const nombre   = elNombre.value.trim();
+  const contacto = elContacto.value.trim();
+  const correo   = elCorreo.value.trim();
+  const telefono = elTel.value.trim();
+  const ubic     = elUbic.value.trim();
+  if (!nombre){ elMsgCrear.textContent = 'Falta nombre.'; return; }
+
+  try{
+    await addDoc(collection(db, 'laboratorios'), {
+      nombre, contacto, correo, telefono, ubicacion: ubic,
+      createdAt: serverTimestamp(),
+      // estado inicial
+      verificado: false,
+      suspendido: false,
+      estadoCuenta: 'pendiente'
+    });
+    elNombre.value = elContacto.value = elCorreo.value = elTel.value = elUbic.value = '';
+    elMsgCrear.textContent = 'Laboratorio registrado.';
+    await loadList();
+  }catch(err){
+    console.error('[LAB/create]', err);
+    elMsgCrear.textContent = 'No se pudo registrar.';
+  }
+}
+
+elBtnCrear?.addEventListener('click', onCreate, { capture:true });
+
+// Guard + boot
+onAuthStateChanged(auth, async (user) => {
+  const ok = await guardAdmin(user);
+  if (!ok) return;
+  loadList();
+});
