@@ -1,38 +1,58 @@
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" /> 
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Administrar Laboratorios - KodRx</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Administración de Laboratorios · KodRx</title>
   <link rel="stylesheet" href="/estilos/global.css" />
-  <!-- <script src="/componentes/header.js" defer></script> -->
-
   <script src="/componentes/header.js" defer></script>
+  <style>
+    .seccion{max-width:1100px;margin:24px auto;padding:0 14px}
+    .row{display:flex;gap:8px;flex-wrap:wrap}
+    .row > *{flex:1 1 160px}
+    .card{background:#fff;border:1px solid #e5e7eb;border-radius:12px;box-shadow:0 10px 25px rgba(0,0,0,.06);padding:14px}
+    .pill{display:inline-block;padding:4px 8px;border-radius:999px;font-size:12px}
+    .pill.ok{background:#dcfce7;color:#065f46}
+    .pill.warn{background:#fee2e2;color:#7f1d1d}
+    .list{margin-top:10px}
+    .lab{display:flex;gap:10px;align-items:center;justify-content:space-between;border-top:1px dashed #e5e7eb;padding:10px 0}
+    .lab h4{margin:0;font-size:15px}
+    .muted{color:#6b7280;font-size:12.5px}
+    .btn{appearance:none;border:1px solid #e5e7eb;background:#fff;border-radius:10px;padding:8px 12px;font-weight:700;cursor:pointer}
+    .btn.brand{background:#0b5bd3;color:#fff;border-color:transparent}
+    .btn.ghost{background:#fff}
+    .actions{display:flex;gap:8px;flex-wrap:wrap}
+  </style>
 </head>
 <body>
   <main class="seccion">
     <h2>Administración de Laboratorios</h2>
 
-    <form id="formLab" class="card">
+    <!-- Registrar -->
+    <div class="card">
       <h3>Registrar nuevo laboratorio</h3>
-      <input type="text" placeholder="Nombre del laboratorio" id="nombre" required />
-      <input type="text" placeholder="Persona de contacto" id="contacto" required />
-      <input type="email" placeholder="Correo electrónico" id="correo" required />
-      <input type="tel" placeholder="Teléfono" id="telefono" required />
-      <input type="text" placeholder="Ubicación / Ciudad" id="ubicacion" />
-      <button type="submit">Registrar laboratorio</button>
-    </form>
-
-    <div class="laboratorios card">
-      <h3>Laboratorios registrados</h3>
-      <div id="listaLabs">Cargando laboratorios...</div>
+      <div class="row" style="margin-top:6px">
+        <input id="inpNombre" placeholder="Nombre del laboratorio" />
+        <input id="inpContacto" placeholder="Persona de contacto" />
+        <input id="inpCorreo" placeholder="Correo electrónico" />
+        <input id="inpTelefono" placeholder="Teléfono" />
+        <input id="inpUbicacion" placeholder="Ubicación / Ciudad" />
+        <button id="btnCrear" class="btn brand">Registrar laboratorio</button>
+      </div>
+      <div id="msgCrear" class="muted" style="margin-top:6px"></div>
     </div>
 
-    <a class="volver" href="/admin/admin.html">← Volver al panel principal</a>
+    <!-- Listado -->
+    <div class="card" style="margin-top:14px">
+      <h3>Laboratorios registrados</h3>
+      <div id="labs" class="list">Cargando…</div>
+    </div>
+
+    <p style="margin-top:14px"><a class="btn ghost" href="/admin/panel.html">← Volver al panel</a></p>
   </main>
 
-  <script type="module" src="../firebase-init.js"></script>
-  <script type="module" src="adminLaboratorios-debug.js"></script>
+  <script type="module" src="/firebase-init.js"></script>
+  <script type="module" src="/admin/adminLaboratorios.js"></script>
 </body>
 </html>
+
