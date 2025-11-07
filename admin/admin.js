@@ -4,6 +4,8 @@ import { auth } from "../firebase-init.js";
 
 const adminEmail = "admin@kodrx.app";
 
+window.auth = auth;
+
 window.loginAdmin = function () {
   const email = document.getElementById("email").value.trim();
   const password = document.getElementById("password").value;
