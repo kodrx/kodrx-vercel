@@ -1,13 +1,15 @@
+
+
 // /firebase-init.js — SDK 12.2.1 (robusto)
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
 import {
   getAuth, setPersistence,
-  indexedDBLocalPersistence, browserLocalPersistence,
-  onAuthStateChanged
+  indexedDBLocalPersistence, browserLocalPersistence
 } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js";
 import {
   initializeFirestore, persistentLocalCache
 } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
+
 
 const firebaseConfig = {
   apiKey: "AIzaSyBIjaOe4HcGNDk0xrqen8etBv0RyjyOJHw",
@@ -23,20 +25,10 @@ export const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 auth.languageCode = "es";
 
-// 👇 Exponer para consola y otros módulos (necesario para el micro-servicio)
-window.auth = auth;
-// Promesa que resuelve cuando Firebase hidrata al usuario actual (evita 'auth undefined')
-window.waitAuthUser = new Promise((resolve) => {
-  onAuthStateChanged(auth, (u) => {
-    window.currentUser = u;
-    resolve(u);
-  });
-});
-
 // Persistencia robusta (no bloqueante)
 setPersistence(auth, indexedDBLocalPersistence)
-  .catch(() => setPersistence(auth, browserLocalPersistence))
-  .catch(() => {}); // última red
+  .catch(()=> setPersistence(auth, browserLocalPersistence))
+  .catch(()=>{}); // última red
 
 // Firestore con caché local persistente
 export const db = initializeFirestore(app, {
