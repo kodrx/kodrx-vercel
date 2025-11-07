@@ -7,11 +7,7 @@
   <title>Panel Administrador - KodRx</title>
   <link rel="stylesheet" href="/estilos/global.css" />
   <script src="/componentes/header.js" defer></script>
-  <script type="module">
-    if (sessionStorage.getItem("adminLoggedIn") !== "true") {
-      window.location.href = "/admin/login.html";
-    }
-  </script>
+
 </head>
 <body>
   <main class="seccion">
@@ -28,14 +24,27 @@
       <button onclick="logout()">Cerrar sesión</button>
     </div>
   </main>
-<script type="module" src="/admin/firebase-init.js"></script>
+  <!-- ✅ Usa el wrapper solo para admin -->
+  <script type="module" src="/admin/firebase-init-admin.js"></script>
 
+  <!-- ✅ Guard sin loops: espera sesión y valida admin -->
+  <script type="module">
+    const ADMIN_EMAIL = "admin@kodrx.app";
+    const u = await window.waitAuthUser; // espera hidratación
 
-  <script>
-    function logout() {
+    const ok = !!u && u.email === ADMIN_EMAIL &&
+               sessionStorage.getItem("adminLoggedIn") === "true";
+
+    if (!ok) {
       sessionStorage.removeItem("adminLoggedIn");
       window.location.href = "/admin/login.html";
     }
+
+    // logout
+    document.getElementById("btnLogout")?.addEventListener("click", () => {
+      sessionStorage.removeItem("adminLoggedIn");
+      window.location.href = "/admin/login.html";
+    });
   </script>
 </body>
 </html>
