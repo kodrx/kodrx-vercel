@@ -1,13 +1,11 @@
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Panel Administrador - KodRx</title>
   <link rel="stylesheet" href="/estilos/global.css" />
   <script src="/componentes/header.js" defer></script>
-
 </head>
 <body>
   <main class="seccion">
@@ -21,30 +19,36 @@
     </div>
 
     <div style="margin-top: 30px;">
-      <button onclick="logout()">Cerrar sesión</button>
+      <button id="btnLogout">Cerrar sesión</button>
+      <p id="guardLog" style="opacity:.7;margin-top:8px;"></p>
     </div>
   </main>
-  <!-- ✅ Usa el wrapper solo para admin -->
-  <script type="module" src="admin/firebase-init-admin.js"></script>
 
-  <!-- ✅ Guard sin loops: espera sesión y valida admin -->
+  <!-- Wrapper SOLO admin -->
+  <script type="module" src="/admin/firebase-init-admin.js"></script>
+
+  <!-- Guard que NO hace loop -->
   <script type="module">
     const ADMIN_EMAIL = "admin@kodrx.app";
-    const u = await window.waitAuthUser; // espera hidratación
 
-    const ok = !!u && u.email === ADMIN_EMAIL &&
-               sessionStorage.getItem("adminLoggedIn") === "true";
+    const u = await window.waitAuthUser;           // espera hidratación
+    const flag = sessionStorage.getItem("adminLoggedIn") === "true";
+    const ok = !!u && (u.email || "").toLowerCase() === ADMIN_EMAIL.toLowerCase() && flag;
+
+    // Log de diagnóstico útil
+    document.getElementById("guardLog").textContent =
+      `authUser=${u?.email || "null"} | flag=${flag} | ok=${ok}`;
 
     if (!ok) {
       sessionStorage.removeItem("adminLoggedIn");
-      window.location.href = "/admin/login.html";
+      window.location.replace("/admin/login.html");
     }
 
-    // logout
     document.getElementById("btnLogout")?.addEventListener("click", () => {
       sessionStorage.removeItem("adminLoggedIn");
-      window.location.href = "/admin/login.html";
+      window.location.replace("/admin/login.html");
     });
   </script>
 </body>
 </html>
+
