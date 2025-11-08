@@ -21,31 +21,32 @@
 <script type="module" src="firebase-init-admin.js"></script>
 
   <script type="module">
-    import { signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js";
-    import { auth } from "/admin/firebase-init-admin.js";
+   // admin-login.js
+import { auth } from "./firebase-init.js";
+import { signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js";
 
-    const adminEmail = "admin@kodrx.app";
+const adminEmail = "admin@kodrx.app";
 
-    document.getElementById("adminLoginForm").addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const email = document.getElementById("email").value.trim();
-      const password = document.getElementById("password").value;
-      const error = document.getElementById("error");
+window.loginAdmin = function () {
+  const email = document.getElementById("email").value.trim();
+  const password = document.getElementById("password").value;
+  const error = document.getElementById("error");
 
-      try {
-        const userCredential = await signInWithEmailAndPassword(auth, email, password);
-        const user = userCredential.user;
-
-        if (user.email === adminEmail) {
-          sessionStorage.setItem("adminLoggedIn", "true");
-          window.location.href = "/admin/admin.html";
-        } else {
-          error.textContent = "No tienes permisos de administrador.";
-        }
-      } catch (err) {
-        error.textContent = "Correo o contraseña incorrectos.";
+  signInWithEmailAndPassword(auth, email, password)
+    .then((cred) => {
+      const user = cred.user;
+      if (user.email === adminEmail) {
+        sessionStorage.setItem("adminLoggedIn", "true");
+        window.location.href = "/admin/admin.html";
+      } else {
+        error.textContent = "No tienes permisos de administrador.";
       }
+    })
+    .catch(() => {
+      error.textContent = "Correo o contraseña incorrectos.";
     });
+};
+
   </script>
 </body>
 </html>
