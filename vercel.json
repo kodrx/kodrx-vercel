@@ -19,6 +19,13 @@
     { "source": "/farmacia/login",       "destination": "/acceso?role=farmacia", "permanent": true },
     { "source": "/medico/login",         "destination": "/acceso?role=medico",   "permanent": true }
   ],
+ {
+  "rewrites": [
+    {
+      "source": "/api/verify-email",
+      "destination": "https://kodrx-verify-mail.vercel.app/api/verify-email"
+    }
+  ],
   "headers": [
     {
       "source": "/(.*)",
