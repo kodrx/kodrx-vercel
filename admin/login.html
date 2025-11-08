@@ -1,52 +1,53 @@
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Login Administrador</title>
+  <title>Panel Administrador - KodRx</title>
   <link rel="stylesheet" href="/estilos/global.css" />
-  <script type="module" src="/componentes/header.js" defer></script>
+  <script src="/componentes/header.js" defer></script>
 </head>
 <body>
-  <main>
-    <h2>Acceso Administrador KodRx</h2>
-    <form class="form-login" id="adminLoginForm">
-      <input type="email" id="email" placeholder="Correo electrónico" required />
-      <input type="password" id="password" placeholder="Contraseña" required />
-      <button type="submit">Iniciar sesión</button>
-      <p id="error" style="color: red; font-weight: bold;"></p>
-    </form>
+  <main class="seccion">
+    <h2>Panel Principal del Administrador</h2>
+    <p>Bienvenido al panel de administración. Elige una sección para gestionar:</p>
+
+    <div style="margin-top: 20px;">
+      <a href="/admin/medicos.html"><button>Ver Médicos</button></a>
+      <a href="/admin/farmacias.html"><button>Ver Farmacias</button></a>
+      <a href="/admin/laboratorios.html"><button>Ver Laboratorios</button></a>
+    </div>
+
+    <div style="margin-top: 30px;">
+      <button id="btnLogout">Cerrar sesión</button>
+      <p id="guardLog" style="opacity:.7;margin-top:8px;"></p>
+    </div>
   </main>
-<script type="module" src="firebase-init-admin.js"></script>
 
+  <!-- Wrapper SOLO admin -->
+  <script type="module" src="/admin/firebase-init-admin.js"></script>
+
+  <!-- Guard que NO hace loop -->
   <script type="module">
-   // admin-login.js
-import { auth } from "./firebase-init-admin.js";
-import { signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js";
+    const ADMIN_EMAIL = "admin@kodrx.app";
 
-const adminEmail = "admin@kodrx.app";
+    const u = await window.waitAuthUser;           // espera hidratación
+    const flag = sessionStorage.getItem("adminLoggedIn") === "true";
+    const ok = !!u && (u.email || "").toLowerCase() === ADMIN_EMAIL.toLowerCase() && flag;
 
-window.loginAdmin = function () {
-  const email = document.getElementById("email").value.trim();
-  const password = document.getElementById("password").value;
-  const error = document.getElementById("error");
+    // Log de diagnóstico útil
+    document.getElementById("guardLog").textContent =
+      `authUser=${u?.email || "null"} | flag=${flag} | ok=${ok}`;
 
-  signInWithEmailAndPassword(auth, email, password)
-    .then((cred) => {
-      const user = cred.user;
-      if (user.email === adminEmail) {
-        sessionStorage.setItem("adminLoggedIn", "true");
-        window.location.href = "/admin/admin.html";
-      } else {
-        error.textContent = "No tienes permisos de administrador.";
-      }
-    })
-    .catch(() => {
-      error.textContent = "Correo o contraseña incorrectos.";
+    if (!ok) {
+      sessionStorage.removeItem("adminLoggedIn");
+      window.location.replace("/admin/login.html");
+    }
+
+    document.getElementById("btnLogout")?.addEventListener("click", () => {
+      sessionStorage.removeItem("adminLoggedIn");
+      window.location.replace("/admin/login.html");
     });
-};
-
   </script>
 </body>
 </html>
