@@ -1,19 +1,21 @@
-// registroMedico.js — robusto: detecta form/botón/inputs por id o name
+// /medico/registroMedico.js — compatible con formRegistro + btnRegistro (type=submit)
 import { auth, db } from "../firebase-init.js";
 import { createUserWithEmailAndPassword, updateProfile } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js";
 import { setDoc, doc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
 
 document.addEventListener("DOMContentLoaded", () => {
-  // 1) Detectar el form y el botón de manera flexible
-  const form = document.querySelector("#formRegistroMedico, form[data-form='registro-medico']");
-  if (!form) { console.error("[Registro] No encontré el formulario"); return; }
-  const submitBtn = form.querySelector("#btnRegistrar, button[type=submit], input[type=submit]");
-  if (!submitBtn) { console.error("[Registro] No encontré el botón de enviar"); return; }
+  // --- refs según TU HTML ---
+  const form = document.getElementById("formRegistro");
+  const submitBtn = document.getElementById("btnRegistro");
+  if (!form || !submitBtn) {
+    console.error("[Registro] No encontré formRegistro o btnRegistro");
+    return;
+  }
 
-  // 2) Helper: buscar campo por id o name dentro del form
+  // Helper: buscar campo por id o name dentro del form
   const $f = (name) => form.querySelector(`#${name}, [name="${name}"]`);
 
-  // 3) UI errores (un solo nodo por campo)
+  // UI errores (sin duplicados)
   function ensureErrorNode(inputEl){
     let sib = inputEl.nextElementSibling;
     if (sib && sib.classList?.contains("field-error")) return sib;
@@ -29,11 +31,11 @@ document.addEventListener("DOMContentLoaded", () => {
     else     { node.textContent = "";  node.style.display = "none";  el.classList.remove("is-invalid"); }
   }
 
-  // 4) Sanitizar teléfono (solo dígitos, máx 10)
+  // Sanitizar teléfono (solo dígitos, máx 10)
   const tel = $f("telefono");
   if (tel) tel.addEventListener("input", ()=> tel.value = tel.value.replace(/\D+/g,"").slice(0,10));
 
-  // 5) Reglas
+  // Reglas
   const rules = [
     { key:"nombre",    msg:"Nombre requerido.",          test:v=>v.trim().length>1 },
     { key:"correo",    msg:"Correo inválido.",           test:v=>/^[^\s@]+@[^\s@]+(\.[^\s@]+)+$/.test(v) },
@@ -50,12 +52,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function validateField(key){
     const el = $f(key);
-    if (!el) return true; // si no existe, no bloquea
+    if (!el) return true;
     const rule = rules.find(r=>r.key===key);
     const ok = rule ? !!rule.test(el.value||"") : true;
     setFieldError(el, ok ? "" : rule.msg);
     return ok;
   }
+
   function validateForm(){
     let okAll = true, firstBadEl = null;
     for (const r of rules){
@@ -68,7 +71,7 @@ document.addEventListener("DOMContentLoaded", () => {
     return { ok: okAll, firstBadEl };
   }
 
-  // 6) Validación en tiempo real
+  // Validación en tiempo real
   for (const r of rules){
     const el = $f(r.key);
     if (!el) continue;
@@ -77,9 +80,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   validateForm();
 
-  // 7) Submit
-  form.addEventListener("submit", async (ev)=>{
-    ev.preventDefault();
+  async function doRegister(){
     const { ok, firstBadEl } = validateForm();
     if (!ok) {
       firstBadEl?.focus();
@@ -92,8 +93,8 @@ document.addEventListener("DOMContentLoaded", () => {
     submitBtn.disabled = true;
     submitBtn.textContent = "Registrando…";
 
-    // Tomar valores (por name o id)
     const v = (k)=> ($f(k)?.value || "").trim();
+
     try{
       const nombre   = v("nombre");
       const correo   = v("correo").toLowerCase();
@@ -109,11 +110,11 @@ document.addEventListener("DOMContentLoaded", () => {
       const cp       = v("cp");
       const especialidad = v("especialidad");
 
-      // Auth
+      // 1) Auth
       const { user } = await createUserWithEmailAndPassword(auth, correo, password);
       await updateProfile(user, { displayName: nombre });
 
-      // Firestore (defaults seguros)
+      // 2) Firestore (defaults seguros: suspendido/no verificado)
       const uid = user.uid;
       const medicoDomicilio = `${calle} ${numero}, ${colonia}, ${municipio}, ${estado}, CP ${cp}`;
       await setDoc(doc(db, "medicos", uid), {
@@ -138,6 +139,11 @@ document.addEventListener("DOMContentLoaded", () => {
       submitBtn.disabled = false;
       submitBtn.textContent = oldTxt;
     }
+  }
+
+  // ¡Aquí el submit del form!
+  form.addEventListener("submit", (ev) => {
+    ev.preventDefault();
+    doRegister();
   });
 });
-
