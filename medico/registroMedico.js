@@ -132,7 +132,7 @@ document.addEventListener("DOMContentLoaded", () => {
       });
 
       alert("Cuenta creada. Un administrador verificará y activará tu cuenta.");
-      window.location.href = "/espera_verificacion.html";
+      window.location.href = "/medico/espera_verificacion.html";
     }catch(e){
       console.error(e);
       alert("No se pudo registrar: " + (e?.message || e));
