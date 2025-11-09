@@ -1,152 +1,95 @@
-// /medico/registroMedico.js — v20250921f (SDK 12.2.1)
-import { auth, db } from "/firebase-init.js";
-import {
-  createUserWithEmailAndPassword,
-  sendEmailVerification,
-  deleteUser,
-  signOut
-} from "https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js";
-import { doc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
+import { auth, db } from "../firebase-init.js";
+import { createUserWithEmailAndPassword, updateProfile } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js";
+import { setDoc, doc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
 
-console.log("[REG] cargado"); auth.languageCode = "es";
-let SUBMITTING = false;
+// --- refs
+const f = document.getElementById("formRegistroMedico");
+const btn = document.getElementById("btnRegistrar");
 
-// Timeout helper
-const withTimeout = (p, ms, label) => Promise.race([
-  p, new Promise((_,rej)=> setTimeout(()=> rej(new Error(`TIMEOUT_${label}`)), ms))
-]);
+// valida en tiempo real
+const inputsReq = ["nombre","correo","password","cedula","telefono","calle","numero","colonia","municipio","estado","cp"];
+const g = (id)=> document.getElementById(id);
 
-function init(){
-  const form = document.getElementById("formRegistro") || document.querySelector("form");
-  const btn  = document.getElementById("btnRegistro") || form?.querySelector("button");
-  if (!form){ console.error("[REG] No hay <form>"); return; }
-  if (btn) btn.type = "submit";
-  form.addEventListener("submit", onSubmit);
-  console.log("[REG] bindings OK");
+function isValidEmail(v){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v); }
+function isValidPhone(v){ return /^\d{10}$/.test(v); }             // 10 dígitos exactos
+function nonEmpty(v){ return String(v||"").trim().length>0; }
+
+function validateForm(){
+  const ok =
+    nonEmpty(g("nombre").value) &&
+    isValidEmail(g("correo").value) &&
+    nonEmpty(g("password").value) &&
+    nonEmpty(g("cedula").value) &&
+    isValidPhone(g("telefono").value) &&
+    nonEmpty(g("calle").value) &&
+    nonEmpty(g("numero").value) &&
+    nonEmpty(g("colonia").value) &&
+    nonEmpty(g("municipio").value) &&
+    nonEmpty(g("estado").value) &&
+    nonEmpty(g("cp").value);
+  btn.disabled = !ok;
+  return ok;
 }
 
-async function onSubmit(e){
-  e.preventDefault();
-  if (SUBMITTING) return; SUBMITTING = true;
+// activa/desactiva botón mientras el usuario escribe
+[...inputsReq, "correo","password"].forEach(id=>{
+  g(id).addEventListener("input", validateForm);
+});
+validateForm();
 
-  const form = e.currentTarget;
-  const btn  = document.getElementById("btnRegistro") || form.querySelector("button[type=submit]");
-  const prevTxt = btn?.textContent;
-  if (btn){ btn.disabled = true; btn.textContent = "Registrando…"; }
+f.addEventListener("submit", async (ev)=>{
+  ev.preventDefault();
+  if (!validateForm()) return;
 
-  // helpers
-  const normTitle = s => (s||"").trim().toLowerCase().replace(/\s+/g," ").replace(/(^|\s)\S/g, m=>m.toUpperCase());
-  const normEmail = s => (s||"").trim().toLowerCase();
-  const normPhone = s => (s||"").replace(/\D/g,"").slice(-10);
-  const normCed   = s => (s||"").toUpperCase().replace(/[^A-Z0-9]/g,"");
-  const buildDom  = d => `${d.calle||""} ${d.numero||""}, ${d.colonia||""}, ${d.municipio||""}, ${d.estado||""}, CP ${(d.cp||"").replace(/\D/g,"").slice(0,5)}`
-                        .replace(/\s+,/g,",").replace(/,\s*,/g,", ").replace(/\s{2,}/g," ").trim();
-
-  // valores
-  const ids = ["nombre","especialidad","correo","telefono","cedula","calle","numero","colonia","municipio","estado","cp","password"];
-  const v = {};
-  for (const id of ids){
-    const el = document.getElementById(id);
-    if (!el){ alert(`Falta el campo '${id}'`); return reset(); }
-    v[id] = (el.value||"").trim();
-  }
-
-  v.nombre       = normTitle(v.nombre);
-  v.especialidad = normTitle(v.especialidad || "General");
-  v.correo       = normEmail(v.correo);
-  const tel      = normPhone(v.telefono);
-  const cp5      = (v.cp||"").replace(/\D/g,"").slice(0,5);
-  const cedNorm  = normCed(v.cedula);
-  const domicilio= buildDom(v);
-  const searchName = v.nombre.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
-
-  // validaciones
-  if (!v.nombre || !v.especialidad || !v.correo || !v.password){ alert("Completa todos los campos."); return reset(); }
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.correo)){ alert("Correo no válido."); return reset(); }
-  if (v.password.length < 8){ alert("La contraseña debe tener al menos 8 caracteres."); return reset(); }
-  if (tel.length !== 10){ alert("El teléfono debe tener 10 dígitos (MX)."); return reset(); }
-  if (cp5.length !== 5){ alert("El código postal debe tener 5 dígitos."); return reset(); }
-  if (!cedNorm){ alert("Cédula no válida."); return reset(); }
-
-  let cred = null;
-  let step = "INIT";
-  const watchdog = setInterval(()=> console.warn(`[REG][watchdog] at ${step}…`), 10000);
+  btn.disabled = true;
+  const oldTxt = btn.textContent;
+  btn.textContent = "Registrando…";
 
   try{
-    // 1) Crear usuario (con timeout duro)
-    step = "STEP1:createUser";
-    console.log("[REG] STEP1: creando usuario…");
-    cred = await withTimeout(createUserWithEmailAndPassword(auth, v.correo, v.password), 12000, "CREATE_USER");
-    console.log("[REG] STEP1 OK uid=", cred.user?.uid);
+    const nombre   = g("nombre").value.trim();
+    const correo   = g("correo").value.trim().toLowerCase();
+    const password = g("password").value;
+    const cedula   = g("cedula").value.trim();
+    const telefono = g("telefono").value.trim();
 
-    // 2) Reclamar cédula (create-only; si existe, falla y hacemos rollback)
-    step = "STEP2:claim-cedula";
-    await setDoc(doc(db, "indices_cedulas", cedNorm), {
-      uid: cred.user.uid, email: v.correo, telefono: tel, createdAt: serverTimestamp()
-    }, { merge: false });
-    console.log("[REG] STEP2 OK");
+    const calle    = g("calle").value.trim();
+    const numero   = g("numero").value.trim();
+    const colonia  = g("colonia").value.trim();
+    const municipio= g("municipio").value.trim();
+    const estado   = g("estado").value.trim();
+    const cp       = g("cp").value.trim();
+    const especialidad = (g("especialidad")?.value || "").trim();
 
-    // 3) Perfil del médico
-    step = "STEP3:perfil";
-    await setDoc(doc(db, "medicos", cred.user.uid), {
-      uid: cred.user.uid,
-      nombre: v.nombre,
-      displayName: v.nombre,
-      searchName,
-      especialidad: v.especialidad,
-      correo: v.correo,
-      telefono: tel,
-      cedula: cedNorm,
-      calle: v.calle, numero: v.numero, colonia: v.colonia,
-      municipio: v.municipio, estado: v.estado, cp: cp5,
-      medicoDomicilio: domicilio,
-      estadoCuenta: "activo",
-      verificado: false,
-      correoVerificado: false,
+    // 1) Crea usuario Auth
+    const { user } = await createUserWithEmailAndPassword(auth, correo, password);
+    await updateProfile(user, { displayName: nombre });
+
+    // 2) Doc Firestore con DEFAULTS SEGUROS (arranca suspendido y sin verificación)
+    const uid = user.uid;
+    const medicoDomicilio = `${calle} ${numero}, ${colonia}, ${municipio}, ${estado}, CP ${cp}`;
+    await setDoc(doc(db, "medicos", uid), {
+      uid, nombre, displayName:nombre, correo,
+      telefono, cedula, especialidad,
+      calle, numero, colonia, municipio, estado, cp,
+      medicoDomicilio,
+      searchName: nombre.toLowerCase(),
       createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp()
+      updatedAt: serverTimestamp(),
+
+      // --- estados por defecto:
+      estadoCuenta: "suspendido",
+      suspendido: true,
+      correoVerificado: false,
+      verificado: false
     });
-    console.log("[REG] STEP3 OK");
 
-    // 4) Email de verificación (best-effort)
-    step = "STEP4:email";
-    try{
-      await sendEmailVerification(cred.user, { url: `${location.origin}/medico/espera_verificacion.html`, handleCodeInApp: false });
-      console.log("[REG] STEP4 OK (email enviado)");
-    }catch(e){ console.warn("[REG] STEP4 WARN:", e?.message||e); }
-
-    alert("¡Registro exitoso! Revisa tu correo para verificar tu cuenta.");
-    location.href = "/medico/espera_verificacion.html";
-
-  }catch(err){
-    console.error("[REG] ERROR:", err?.code || err?.message || err);
-    const msg = String(err?.message||"");
-    if (msg.startsWith("TIMEOUT_CREATE_USER")){
-      alert("No pudimos contactar autenticación (timeout).\n\nRevisa:\n• Conexión de red\n• Authentication > Authorized domains: agrega kodrx.app y www.kodrx.app\n• API key del proyecto correcta\n• Desactiva adblock/CSP para identitytoolkit.googleapis.com y securetoken.googleapis.com");
-    } else if (err?.code === "auth/network-request-failed"){
-      alert("Falla de red al crear usuario. Verifica conexión/AdBlock/CSP.");
-    } else if (err?.code === "auth/unauthorized-domain"){
-      alert("Dominio no autorizado en Firebase Auth. Agrega kodrx.app y www.kodrx.app.");
-    } else if (err?.code === "auth/email-already-in-use"){
-      alert("Ese correo ya está registrado.");
-    } else if (err?.code){
-      alert(`Error de autenticación: ${err.code}`);
-    } else {
-      alert("No se pudo completar el registro. Intenta de nuevo.");
-    }
-    // Rollback si el user llegó a crearse
-    try{ if (cred?.user) await deleteUser(cred.user); }catch{}
-    try{ await signOut(auth); }catch{}
-  } finally {
-    clearInterval(watchdog);
-    SUBMITTING = false;
-    if (btn){ btn.disabled = false; btn.textContent = (prevTxt||"Registrarme"); }
+    // 3) Redirige a página de espera si así lo deseas
+    window.location.href = "/espera_verificacion.html";
+  }catch(e){
+    alert("No se pudo registrar: " + (e?.message || e));
+    btn.disabled = false;
+    btn.textContent = oldTxt;
+    return;
   }
-}
-
-if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", init, { once:true });
-} else {
-  init();
-}
+});
 
