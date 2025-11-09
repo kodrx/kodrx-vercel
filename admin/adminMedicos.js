@@ -1,105 +1,120 @@
-// Admin Médicos — SDK 12.2.1
-import { auth, db } from "/firebase-init.js";
-import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js";
+// --- IMPORTS (deja los que ya tengas) ---
+import { auth, db } from "../firebase-init.js";
 import {
-  collection, query, orderBy, limit, getDocs, updateDoc, doc, serverTimestamp
+  doc, updateDoc, serverTimestamp
 } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
 
-const UI = {
-  q: document.getElementById("q"),
-  grid: document.getElementById("grid"),
-  btnReload: document.getElementById("btnReload"),
-  btnSoloPend: document.getElementById("btnSoloPend"),
-};
-let soloPend = true;
+// --- CONSTS ---
+const VERIFY_EMAIL_ENDPOINT = "/api/verify-email"; // same-origin via vercel.json
 
-function isAdminEmail(user){
-  const email = (user?.email || "").toLowerCase();
-  return email === "admin@kodrx.app"; // igual a tu regla isAdmin()
-}
-
-function card(m){
-  const id = m.id, d = m.data() || {};
-  const ver = d.verificado === true;
-  const mailOK = d.correoVerificado === true;
-  const estado = d.estadoCuenta || "activo";
-  const pills = [
-    `<span class="pill ${mailOK?'ok':'warn'}">${mailOK?'Correo verificado':'Correo no verificado'}</span>`,
-    `<span class="pill ${ver?'ok':'warn'}">${ver?'Aprobado':'Pendiente admin'}</span>`,
-    `<span class="pill ${estado==='activo'?'ok':'bad'}">${estado}</span>`
-  ].join(" ");
-
-  const el = document.createElement("article");
-  el.className = "card";
-  el.innerHTML = `
-    <div class="row"><strong>${d.nombre || "(Sin nombre)"} · ${d.cedula || "—"}</strong></div>
-    <div class="muted">${d.especialidad || "General"}</div>
-    <div class="muted">${d.correo || "—"} · ${d.telefono||"—"}</div>
-    <div style="margin:8px 0">${pills}</div>
-    <div class="row">
-      <div>
-        <button class="btn btn--pri" data-act="aprobar">Aprobar</button>
-        <button class="btn" data-act="suspender">Suspender</button>
-        <button class="btn" data-act="revertir">Revertir</button>
+// --- RENDER: tarjeta de cada médico (ajusta a tu HTML) ---
+function tarjetaMedico(m) {
+  const verificado = !!m.correoVerificado || !!m.emailVerified;
+  return `
+    <div class="card-medico" data-uid="${m.uid}">
+      <div class="fila">
+        <div class="col">
+          <h3>${m.nombre || "Sin nombre"}</h3>
+          <p>${m.correo || ""}</p>
+          <p><small>Cédula: ${m.cedula || "—"}</small></p>
+        </div>
+        <div class="col estado">
+          <span class="pill-correo ${verificado ? "ok" : ""}">
+            ${verificado ? "Verificado ✅" : "No verificado"}
+          </span>
+        </div>
       </div>
-      <small class="muted">${d.createdAt?.toDate? d.createdAt.toDate().toLocaleDateString('es-MX'):''}</small>
+      <div class="acciones">
+        <button class="btn" data-act="verificarMail" ${verificado ? "disabled" : ""}>
+          ${verificado ? "Correo verificado" : "Verificar correo"}
+        </button>
+      </div>
     </div>
   `;
+}
 
-  el.addEventListener("click", async (ev)=>{
-    const act = ev.target?.dataset?.act;
-    if (!act) return;
-    const ref = doc(db,"medicos", id);
+// --- ACTION: marcar correo verificado usando micro-servicio ---
+async function marcarCorreoVerificado(uid) {
+  // espera sesión admin
+  await window.waitAuthUser;
+  const token = await auth.currentUser.getIdToken(true);
 
-    try{
-      if (act === "aprobar"){
-        if (!mailOK && !confirm("El correo no aparece verificado. ¿Aprobar de todos modos?")) return;
-        await updateDoc(ref, { verificado:true, estadoCuenta:"activo", verificadoPor: auth.currentUser.email||"", verificadoAt: serverTimestamp(), updatedAt: serverTimestamp() });
-      } else if (act === "suspender"){
-        await updateDoc(ref, { estadoCuenta:"suspendido", verificado:false, updatedAt: serverTimestamp() });
-      } else if (act === "revertir"){
-        await updateDoc(ref, { verificado:false, updatedAt: serverTimestamp() });
-      }
-      ev.target.closest(".card").style.opacity = .5;
-    }catch(e){
-      alert("No se pudo actualizar: " + (e?.message||e));
-    }
+  const r = await fetch(VERIFY_EMAIL_ENDPOINT, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${token}`
+    },
+    body: JSON.stringify({ uid })
   });
 
-  return el;
-}
+  // intenta leer JSON; si el proxy devolviera HTML por error, cae al catch del parse
+  const text = await r.text();
+  let data;
+  try { data = JSON.parse(text); } catch { throw new Error("Respuesta no JSON del servidor"); }
 
-async function load(){
-  UI.grid.innerHTML = "Cargando…";
-  // Para pocos docs: traemos 200 y filtramos cliente (simple y eficaz)
-  const snap = await getDocs(query(collection(db,"medicos"), orderBy("createdAt","desc"), limit(200)));
-  let docs = snap.docs;
-
-  const qtxt = (UI.q.value||"").trim().toLowerCase();
-  if (qtxt){
-    docs = docs.filter(d=>{
-      const x = JSON.stringify(d.data()||{}).toLowerCase();
-      return x.includes(qtxt);
-    });
-  }
-  if (soloPend){
-    docs = docs.sort((a,b)=>{
-      const av = (a.data()?.verificado===true) ? 1 : 0;
-      const bv = (b.data()?.verificado===true) ? 1 : 0;
-      return av - bv; // pendientes (0) primero
-    });
+  if (!r.ok || !data?.ok) {
+    throw new Error(data?.error || "No se pudo verificar el correo");
   }
 
-  UI.grid.innerHTML = "";
-  docs.forEach(d => UI.grid.appendChild(card(d)));
-  if (!docs.length) UI.grid.textContent = "Sin resultados.";
+  // espejo rápido en Firestore (opcional; la función ya lo hace servidor-side)
+  try {
+    await updateDoc(doc(db, "medicos", uid), {
+      correoVerificado: true,
+      verificadoPor: auth.currentUser.email || "admin",
+      updatedAt: serverTimestamp()
+    });
+  } catch (_) { /* no bloquear por espejo local */ }
+
+  return data;
 }
 
-UI.btnReload.onclick = load;
-UI.btnSoloPend.onclick = ()=>{ soloPend = !soloPend; UI.btnSoloPend.textContent = soloPend? "Pendientes primero":"Orden por fecha"; load(); };
-UI.q.addEventListener("keydown", (e)=>{ if (e.key === "Enter") load(); });
+// --- EVENT DELEGATION: click en botón verificar ---
+document.addEventListener("click", async (ev) => {
+  const act = ev.target?.dataset?.act;
+  if (act !== "verificarMail") return;
 
-onAuthStateChanged(auth, (user)=>{
-  if (!user || !isAdminEmail(user)){ location.href = "/acceso?role=admin"; return; }
-  load();
+  const card = ev.target.closest(".card-medico");
+  const uid  = card?.dataset?.uid;
+  if (!uid) return alert("UID no encontrado en la tarjeta.");
+
+  if (!confirm("¿Marcar el correo de este médico como verificado?")) return;
+
+  // UI: deshabilitar mientras procesa
+  const btn = ev.target;
+  btn.disabled = true;
+  const pill = card.querySelector(".pill-correo");
+
+  try {
+    await marcarCorreoVerificado(uid);
+
+    // UI: repintar estado
+    pill?.classList.add("ok");
+    if (pill) pill.textContent = "Verificado ✅";
+    btn.textContent = "Correo verificado";
+    alert("Correo verificado ✅");
+  } catch (e) {
+    console.error(e);
+    alert("Error: " + e.message);
+    btn.disabled = false; // reactivar botón si falló
+  }
 });
+
+// --- (Opcional) Estilos rápidos para el badge ---
+/* Puedes poner esto en tu CSS global:
+.pill-correo{
+  display:inline-block; padding:4px 8px; border-radius:999px;
+  background:#eee; color:#444; font-size:.85rem;
+}
+.pill-correo.ok{ background:#16a34a20; color:#166534; border:1px solid #16a34a; }
+.btn[disabled]{ opacity:.6; cursor:not-allowed; }
+*/
+
+// --- DONDE RENDERIZAS ---
+// Cuando cargues tu lista de médicos, usa `tarjetaMedico(m)`:
+async function pintarMedicos(lista) {
+  const cont = document.getElementById("listaMedicos");
+  cont.innerHTML = lista.map(tarjetaMedico).join("");
+}
+// llama pintarMedicos([...]) con tu data una vez obtenida
+
