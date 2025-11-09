@@ -1,148 +1,119 @@
-// registroMedico.js — FIX: DOM ready, botón no-nulo y errores sin duplicados
+// registroMedico.js — robusto: detecta form/botón/inputs por id o name
 import { auth, db } from "../firebase-init.js";
 import { createUserWithEmailAndPassword, updateProfile } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js";
 import { setDoc, doc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
 
 document.addEventListener("DOMContentLoaded", () => {
-  const $ = (id) => document.getElementById(id);
+  // 1) Detectar el form y el botón de manera flexible
+  const form = document.querySelector("#formRegistroMedico, form[data-form='registro-medico']");
+  if (!form) { console.error("[Registro] No encontré el formulario"); return; }
+  const submitBtn = form.querySelector("#btnRegistrar, button[type=submit], input[type=submit]");
+  if (!submitBtn) { console.error("[Registro] No encontré el botón de enviar"); return; }
 
-  // Refs seguros (ya existen en DOM)
-  const form = $("formRegistroMedico");
-  const btn  = $("btnRegistrar");
+  // 2) Helper: buscar campo por id o name dentro del form
+  const $f = (name) => form.querySelector(`#${name}, [name="${name}"]`);
 
-  // Si falta algo, no sigas
-  if (!form || !btn) {
-    console.error("[Registro] No se encontró formRegistroMedico o btnRegistrar");
-    return;
-  }
-
-  // ---------- helpers UI de error (sin duplicados) ----------
-  function ensureErrorNode(inputEl) {
-    // 1) Si hay un hermano inmediato con .field-error, úsalo
-    const sib = inputEl.nextElementSibling;
+  // 3) UI errores (un solo nodo por campo)
+  function ensureErrorNode(inputEl){
+    let sib = inputEl.nextElementSibling;
     if (sib && sib.classList?.contains("field-error")) return sib;
-
-    // 2) Si hay contenedor .campo y ya tiene uno, úsalo
-    const wrap = inputEl.closest(".campo");
-    if (wrap) {
-      const exist = wrap.querySelector(":scope > .field-error");
-      if (exist) return exist;
-    }
-
-    // 3) Crear uno nuevo (hermano inmediato)
     const node = document.createElement("div");
     node.className = "field-error";
     inputEl.insertAdjacentElement("afterend", node);
     return node;
   }
-
-  function setFieldError(inputId, msg) {
-    const el = $(inputId);
+  function setFieldError(el, msg){
     if (!el) return;
     const node = ensureErrorNode(el);
-    if (msg) {
-      node.textContent = msg;
-      node.style.display = "block";
-      el.classList.add("is-invalid");
-    } else {
-      node.textContent = "";
-      node.style.display = "none";
-      el.classList.remove("is-invalid");
-    }
+    if (msg) { node.textContent = msg; node.style.display = "block"; el.classList.add("is-invalid"); }
+    else     { node.textContent = "";  node.style.display = "none";  el.classList.remove("is-invalid"); }
   }
 
-  // ---------- sanitizar teléfono ----------
-  const tel = $("telefono");
-  if (tel) {
-    tel.addEventListener("input", () => {
-      tel.value = tel.value.replace(/\D+/g, "").slice(0, 10);
-    });
-  }
+  // 4) Sanitizar teléfono (solo dígitos, máx 10)
+  const tel = $f("telefono");
+  if (tel) tel.addEventListener("input", ()=> tel.value = tel.value.replace(/\D+/g,"").slice(0,10));
 
-  // ---------- validadores ----------
-  const rules = {
-    nombre      : { test:v=>v.trim().length>1,      msg:"Nombre requerido." },
-    correo      : { test:v=>/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v), msg:"Correo inválido." },
-    password    : { test:v=>v.length>=6,            msg:"Mínimo 6 caracteres." },
-    cedula      : { test:v=>v.trim().length>3,      msg:"Cédula requerida." },
-    telefono    : { test:v=>/^\d{10}$/.test(v),     msg:"Teléfono de 10 dígitos." },
-    calle       : { test:v=>v.trim().length>0,      msg:"Calle requerida." },
-    numero      : { test:v=>v.trim().length>0,      msg:"Número requerido." },
-    colonia     : { test:v=>v.trim().length>0,      msg:"Colonia requerida." },
-    municipio   : { test:v=>v.trim().length>0,      msg:"Municipio requerido." },
-    estado      : { test:v=>v.trim().length>0,      msg:"Estado requerido." },
-    cp          : { test:v=>v.trim().length>0,      msg:"CP requerido." }
-    // especialidad opcional
-  };
+  // 5) Reglas
+  const rules = [
+    { key:"nombre",    msg:"Nombre requerido.",          test:v=>v.trim().length>1 },
+    { key:"correo",    msg:"Correo inválido.",           test:v=>/^[^\s@]+@[^\s@]+(\.[^\s@]+)+$/.test(v) },
+    { key:"password",  msg:"Mínimo 6 caracteres.",       test:v=>v.length>=6 },
+    { key:"cedula",    msg:"Cédula requerida.",          test:v=>v.trim().length>3 },
+    { key:"telefono",  msg:"Teléfono de 10 dígitos.",    test:v=>/^\d{10}$/.test(v) },
+    { key:"calle",     msg:"Calle requerida.",           test:v=>v.trim().length>0 },
+    { key:"numero",    msg:"Número requerido.",          test:v=>v.trim().length>0 },
+    { key:"colonia",   msg:"Colonia requerida.",         test:v=>v.trim().length>0 },
+    { key:"municipio", msg:"Municipio requerido.",       test:v=>v.trim().length>0 },
+    { key:"estado",    msg:"Estado requerido.",          test:v=>v.trim().length>0 },
+    { key:"cp",        msg:"CP requerido.",              test:v=>v.trim().length>0 },
+  ];
 
-  function validateField(id) {
-    const el = $(id);
-    if (!el) return true; // si no existe el input, no bloquea
-    const rule = rules[id];
-    if (!rule) { setFieldError(id, ""); return true; }
-    const ok = !!rule.test(el.value || "");
-    setFieldError(id, ok ? "" : rule.msg);
+  function validateField(key){
+    const el = $f(key);
+    if (!el) return true; // si no existe, no bloquea
+    const rule = rules.find(r=>r.key===key);
+    const ok = rule ? !!rule.test(el.value||"") : true;
+    setFieldError(el, ok ? "" : rule.msg);
     return ok;
   }
-
-  function validateForm() {
-    let allOk = true;
-    let firstBad = null;
-    for (const id of Object.keys(rules)) {
-      const ok = validateField(id);
-      if (!ok && !firstBad) firstBad = id;
-      allOk = allOk && ok;
+  function validateForm(){
+    let okAll = true, firstBadEl = null;
+    for (const r of rules){
+      const el = $f(r.key);
+      const ok = validateField(r.key);
+      if (!ok && !firstBadEl) firstBadEl = el;
+      okAll = okAll && ok;
     }
-    btn.disabled = !allOk;
-    return { ok: allOk, firstBad };
+    submitBtn.disabled = !okAll;
+    return { ok: okAll, firstBadEl };
   }
 
-  // Eventos de validación (una sola vez)
-  for (const id of Object.keys(rules)) {
-    const el = $(id);
+  // 6) Validación en tiempo real
+  for (const r of rules){
+    const el = $f(r.key);
     if (!el) continue;
     el.addEventListener("input", validateForm);
-    el.addEventListener("blur",  () => validateField(id));
+    el.addEventListener("blur",  ()=>validateField(r.key));
   }
-  // Evalúa una vez ya con DOM listo
   validateForm();
 
-  // ---------- submit robusto ----------
-  form.addEventListener("submit", async (ev) => {
+  // 7) Submit
+  form.addEventListener("submit", async (ev)=>{
     ev.preventDefault();
-
-    const { ok, firstBad } = validateForm();
+    const { ok, firstBadEl } = validateForm();
     if (!ok) {
-      if (firstBad) $(firstBad).focus();
+      firstBadEl?.focus();
       alert("Faltan datos o hay errores. Revisa los campos marcados en rojo.");
       return;
     }
 
-    // Lock UI
-    const oldTxt = btn.textContent;
-    btn.disabled = true;
-    btn.textContent = "Registrando…";
+    // Lock UI seguro
+    const oldTxt = submitBtn.textContent;
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Registrando…";
 
-    try {
-      const nombre   = $("nombre").value.trim();
-      const correo   = $("correo").value.trim().toLowerCase();
-      const password = $("password").value;
-      const cedula   = $("cedula").value.trim();
-      const telefono = $("telefono").value.trim();
+    // Tomar valores (por name o id)
+    const v = (k)=> ($f(k)?.value || "").trim();
+    try{
+      const nombre   = v("nombre");
+      const correo   = v("correo").toLowerCase();
+      const password = v("password");
+      const cedula   = v("cedula");
+      const telefono = v("telefono");
 
-      const calle    = $("calle").value.trim();
-      const numero   = $("numero").value.trim();
-      const colonia  = $("colonia").value.trim();
-      const municipio= $("municipio").value.trim();
-      const estado   = $("estado").value.trim();
-      const cp       = $("cp").value.trim();
-      const especialidad = ($("especialidad")?.value || "").trim();
+      const calle    = v("calle");
+      const numero   = v("numero");
+      const colonia  = v("colonia");
+      const municipio= v("municipio");
+      const estado   = v("estado");
+      const cp       = v("cp");
+      const especialidad = v("especialidad");
 
-      // 1) Auth
+      // Auth
       const { user } = await createUserWithEmailAndPassword(auth, correo, password);
       await updateProfile(user, { displayName: nombre });
 
-      // 2) Firestore (defaults seguros)
+      // Firestore (defaults seguros)
       const uid = user.uid;
       const medicoDomicilio = `${calle} ${numero}, ${colonia}, ${municipio}, ${estado}, CP ${cp}`;
       await setDoc(doc(db, "medicos", uid), {
@@ -153,7 +124,6 @@ document.addEventListener("DOMContentLoaded", () => {
         searchName: nombre.toLowerCase(),
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
-        // defaults:
         estadoCuenta: "suspendido",
         suspendido: true,
         correoVerificado: false,
@@ -162,11 +132,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
       alert("Cuenta creada. Un administrador verificará y activará tu cuenta.");
       window.location.href = "/espera_verificacion.html";
-    } catch (e) {
+    }catch(e){
       console.error(e);
       alert("No se pudo registrar: " + (e?.message || e));
-      btn.disabled = false;
-      btn.textContent = oldTxt;
+      submitBtn.disabled = false;
+      submitBtn.textContent = oldTxt;
     }
   });
 });
+
