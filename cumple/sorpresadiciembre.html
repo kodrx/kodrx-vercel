@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Pista secreta 💙</title>
+  <style>
+    :root{
+      --bg:#0b1220; --card:#111a2b; --accent:#4ad1ff; --ok:#9effa3; --text:#e9f1ff;
+      --neon1:#00d4ff; --neon2:#5b8cff; --neon3:#0af; 
+    }
+    *{box-sizing:border-box}
+    body{ margin:0; min-height:100svh; background:radial-gradient(1200px 600px at 70% -10%, #20305055, transparent), var(--bg); color:var(--text);
+      font-family: ui-rounded, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji"; display:grid; place-items:center; overflow-x:hidden;}
+    .wrap{ width:min(880px, 92vw); margin:32px auto;}
+    .card{ background:linear-gradient(180deg, #142038, #0f1a2e); border:1px solid #2a3b60; border-radius:22px; padding:28px; box-shadow:0 10px 30px #0008, inset 0 1px 0 #ffffff10;}
+    h1{font-size:clamp(26px, 4.2vw, 42px); margin:0 0 12px}
+    p.lead{opacity:.9; margin:0 0 18px; font-size:clamp(15px, 2.8vw, 18px)}
+    .riddle{ font-size:clamp(16px, 3.4vw, 20px); line-height:1.5; background:#0c1628; border:1px solid #2a3b60; padding:18px; border-radius:16px; margin:16px 0 18px;}
+    .inputRow{display:flex; gap:10px; margin:6px 0 2px; flex-wrap:wrap}
+    input[type="text"]{ flex:1 1 240px; background:#081124; border:1px solid #2a3b60; border-radius:12px; color:var(--text); padding:14px 16px; font-size:16px; outline:none; }
+    button{ background:linear-gradient(180deg, #27b7ff, #1496da); color:#00243a; border:0; border-radius:12px; padding:14px 18px; font-weight:700; cursor:pointer; box-shadow:0 6px 20px #17a6ff44;}
+    .hint{margin-top:8px; opacity:.8; font-size:14px}
+    .hidden{display:none}
+    .reveal{ margin-top:22px; padding:18px; border-radius:16px; border:1px solid #2a3b60; background:linear-gradient(180deg, #0c172c, #0a1324);}
+    .ok{color:var(--ok); font-weight:700}
+    .tags{display:flex; gap:8px; flex-wrap:wrap; margin:12px 0 0}
+    .tag{background:#061022; border:1px solid #28405e; padding:8px 12px; border-radius:999px; font-size:14px}
+    .packing{display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:10px; margin-top:10px}
+    .pack{background:#091326; border:1px solid #28405e; padding:12px 14px; border-radius:14px}
+    .snow{position:fixed; inset:0; pointer-events:none; z-index:0}
+    .content{position:relative; z-index:1}
+    .footer{opacity:.6; font-size:12px; margin-top:18px}
+    .step{border-left:4px solid #2a3b60; padding-left:12px; margin-top:18px}
+    /* Neon blue transition overlay */
+    .transition{position:fixed; inset:0; pointer-events:none; z-index:2; opacity:0; transition:opacity .9s ease;}
+    .transition.active{opacity:1;}
+    .glow{
+      position:absolute; inset:-20%;
+      background:conic-gradient(from 0deg at 50% 50%, var(--neon1), var(--neon2), var(--neon3), var(--neon2), var(--neon1));
+      filter:blur(60px) saturate(160%);
+      animation: swirl 2.4s ease-in-out;
+      border-radius:50%;
+    }
+    .veil{position:absolute; inset:0; background:radial-gradient(120% 120% at 50% 50%, #0d1530f2, #071025f2 60%, #020812 100%);}
+    @keyframes swirl{ 
+      0%{transform:rotate(0deg) scale(.9);} 
+      100%{transform:rotate(120deg) scale(1.05);} 
+    }
+    .fade-in{animation: fadeIn .9s ease both}
+    @keyframes fadeIn{from{opacity:0; transform:translateY(10px)} to{opacity:1; transform:translateY(0)}}
+  </style>
+</head>
+<body>
+<canvas class="snow" id="snow"></canvas>
+<div class="transition" id="transition">
+  <div class="glow"></div>
+  <div class="veil"></div>
+</div>
+
+<div class="wrap content">
+  <div class="card">
+    <h1>🎁 Pistas del viaje</h1>
+    <p class="lead">Escanea el QR y resuelve los acertijos. Hay sorpresas… 💙</p>
+
+    <!-- STEP 1 -->
+    <div id="step1">
+      <div class="riddle step">
+        <strong>Acertijo 1:</strong><br>
+        “De día brilla el sol, pero no calienta; la carretera canta y el aliento pinta figuras en el aire.<br>
+        ¿Qué palabra describe el clima del lugar al que vamos?”
+      </div>
+      <div class="inputRow">
+        <input id="answer1" type="text" placeholder="Tu respuesta aquí… (ej. nieve, nevado, frío)">
+        <button id="btn1">Desbloquear Pista 2</button>
+      </div>
+      <div class="hint">Pista: piensa en 🧊, ❄️, 🏔️ …</div>
+
+      <div id="ok1" class="reveal hidden">
+        <h2 class="ok">¡Bien! 🔓</h2>
+        <p class="fade-in">Has desbloqueado la siguiente pista. Prepárate…</p>
+      </div>
+      <div id="bad1" class="reveal hidden">
+        <h3>Uyyy, casi…</h3>
+        <p>Prueba con palabras relacionadas a <em>nieve, nevado, frío, sierra, montaña</em>.</p>
+      </div>
+    </div>
+
+    <!-- STEP 2 (invisible al inicio) -->
+    <div id="step2" class="hidden">
+      <div class="riddle step fade-in">
+        <strong>Acertijo 2:</strong><br>
+        “¿Cuáles son las <em>iniciales</em> de la frase que más me gusta decir?”
+      </div>
+      <div class="inputRow">
+        <input id="answer2" type="text" placeholder="Escribe las 5 letras…">
+        <button id="btn2">Revelar pista final</button>
+      </div>
+      <div id="ok2" class="reveal hidden">
+        <h2 class="ok">¡Esooooo! 🔐</h2>
+        <p>Ahora sí: nuestro destino es de <strong>clima frío</strong>, con <strong>bosque</strong> y <strong>montañas</strong>. Roadtrip, paisajes y besos con <em>aliento de humo</em> 💨✨</p>
+        <div class="tags">
+          <span class="tag">🚗 Roadtrip</span>
+          <span class="tag">🏔️ Altura</span>
+          <span class="tag">❄️ Temperaturas bajas</span>
+          <span class="tag">🇲🇽 Nacional</span>
+        </div>
+        <div class="packing">
+          <div class="pack">🧥 Chamarra térmica</div>
+          <div class="pack">🧣 Bufanda &amp; guantes</div>
+          <div class="pack">🧢 Gorro/orejeras</div>
+          <div class="pack">🥾 Botas cómodas</div>
+          <div class="pack">🧦 Calcetines gruesos</div>
+          <div class="pack">💄 Labial/hidratante</div>
+        </div>
+        <p style="margin-top:10px">Bonus: lleva una prenda <strong>azul</strong> para la foto especial 😉.</p>
+      </div>
+      <div id="bad2" class="reveal hidden">
+        <p>Casi… son <strong>5 letras</strong> en minúsculas, juntas. Pista: <code>h d s p m</code>.</p>
+      </div>
+    </div>
+
+    <div class="footer">Hecho con ❤️ para ti.</div>
+  </div>
+</div>
+
+<script>
+  // nieve continua
+  const c=document.getElementById('snow'), x=c.getContext('2d');
+  let w,h; const flakes=[];
+  function size(){ w= c.width = innerWidth; h= c.height = innerHeight; }
+  addEventListener('resize', size); size();
+  for(let i=0;i<160;i++){ flakes.push({x:Math.random()*w, y:Math.random()*h, r:1+Math.random()*2, s:.5+Math.random()*1.2}); }
+  (function anim(){
+    x.clearRect(0,0,w,h);
+    x.fillStyle='#ffffffa6';
+    for(const f of flakes){
+      x.beginPath(); x.arc(f.x,f.y,f.r,0,Math.PI*2); x.fill();
+      f.y+=f.s; f.x+=Math.sin(f.y*.01)*.3;
+      if(f.y>h){ f.y=-5; f.x=Math.random()*w; }
+    }
+    requestAnimationFrame(anim);
+  })();
+
+  // elementos
+  const t = document.getElementById('transition');
+  const step1 = document.getElementById('step1');
+  const step2 = document.getElementById('step2');
+  const ok1 = document.getElementById('ok1');
+  const bad1 = document.getElementById('bad1');
+  const btn1 = document.getElementById('btn1');
+  const ans1 = document.getElementById('answer1');
+  const valid1 = new Set(['frio','frío','nieve','nevado','nevado.','montaña','sierra','hielo','helado','muy frio','muy frío']);
+
+  function showTransitionThen(next){
+    t.classList.add('active');
+    setTimeout(()=>{
+      next();
+      t.classList.remove('active');
+    }, 900); // igual al transition de .transition
+  }
+
+  function check1(){
+    const v = (ans1.value||'').trim().toLowerCase();
+    if(valid1.has(v)){
+      ok1.classList.remove('hidden');
+      bad1.classList.add('hidden');
+      btn1.disabled=true; ans1.disabled=true;
+
+      // tras breve pausa, hacemos la transición y mostramos step2
+      setTimeout(()=>{
+        showTransitionThen(()=>{
+          step1.classList.add('hidden');
+          step2.classList.remove('hidden');
+          // focus al segundo input
+          document.getElementById('answer2').focus();
+        });
+      }, 600);
+    }else{
+      bad1.classList.remove('hidden');
+    }
+  }
+  btn1.addEventListener('click', check1);
+  ans1.addEventListener('keydown', e=>{ if(e.key==='Enter') check1(); });
+
+  // Step 2
+  const ok2=document.getElementById('ok2');
+  const bad2=document.getElementById('bad2');
+  const btn2=document.getElementById('btn2');
+  const ans2=document.getElementById('answer2');
+  function check2(){
+    const v = (ans2.value||'').trim().toLowerCase();
+    if(v==='hdspm'){
+      ok2.classList.remove('hidden');
+      bad2.classList.add('hidden');
+      btn2.disabled=true; ans2.disabled=true;
+    }else{
+      bad2.classList.remove('hidden');
+    }
+  }
+  btn2.addEventListener('click', check2);
+  ans2.addEventListener('keydown', e=>{ if(e.key==='Enter') check2(); });
+</script>
+</body>
+</html>
