@@ -5,7 +5,7 @@ document.addEventListener("DOMContentLoaded", () => {
   header.innerHTML = `
     <div class="logo-container">
       <img src="/img/logo-kodrx-blanco.png" alt="KodRx Logo" class="logo-img" />
-      <span class="tagline">Validación médica en blockchain</span>
+      <span class="tagline">Trazabilidad digital para recetas médicas</span>
     </div>
   `;
 
