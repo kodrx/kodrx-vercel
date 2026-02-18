@@ -37,10 +37,11 @@ customElements.define('kodrx-verify-card', class extends HTMLElement{
       const raw = { id: snap.id, ...(snap.data()||{}) };
       const r = this.normalize(raw);
       this.render(r);
-    }catch(e){
-      console.error('[verify]', e);
-      this.renderError('No se pudo cargar la receta.');
-    }
+   }catch(e){
+  console.error('[verify]', e);
+  const msg = (e && (e.message || e.toString())) ? (e.message || e.toString()) : 'Error desconocido';
+  this.renderError('No se pudo cargar la receta. ' + msg);
+}
   }
 
   normalize(raw0){
