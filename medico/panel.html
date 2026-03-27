@@ -118,7 +118,7 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.2.1/fi
   async function fs(){
     if (window.__fs) return window.__fs;
     const mod = await import('https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js');
-    const { collection, addDoc, updateDoc, getDoc, doc, serverTimestamp, Timestamp } = mod;
+    const { collection, addDoc, updateDoc, setDoc, getDoc, doc, serverTimestamp, Timestamp } = mod;
     return (window.__fs = { collection, addDoc, updateDoc, getDoc, doc, serverTimestamp, Timestamp });
   }
 
@@ -296,6 +296,47 @@ const medicamentos = [...document.querySelectorAll('#medicamentosContainer .medi
       const ref = await addDoc(collection(window.db, 'recetas'), recetaData);
       console.log('[panel] receta creada:', ref.id);
 
+      // 🔹 ESPEJO PÚBLICO MÍNIMO (sin datos sensibles)
+try {
+  const recetaPublica = {
+    recetaId: ref.id,
+
+    medico: {
+      nombre: recetaData.medicoNombre || '',
+      genero: recetaData.medicoGenero || '',
+      cedula: recetaData.medicoCedula || '',
+      especialidad: recetaData.medicoEspecialidad || ''
+    },
+
+    paciente: {
+      edad: recetaData.edad || '',
+      sexo: recetaData.sexo || ''
+    },
+
+    medicamentos: Array.isArray(recetaData.medicamentos)
+      ? recetaData.medicamentos.map(m => ({
+          nombre: m.nombre || '',
+          dosis: m.dosis || '',
+          duracion: m.duracion || ''
+        }))
+      : [],
+
+    estado: 'vigente',
+    surtidoParcial: false,
+
+    hash: null,
+    bloque: null,
+
+    createdAt: serverTimestamp(),
+    timestamp: (Timestamp?.now?.() ?? new Date())
+  };
+
+  await setDoc(doc(window.db, 'recetas_publicas', ref.id), recetaPublica);
+
+  console.log('[panel] receta_publica creada:', ref.id);
+} catch (e) {
+  console.warn('[panel] error creando receta_publica:', e);
+}
       // 5) Sellado vía proxy (no bloqueante)
       try{
         const recetaResumen = medicamentos.map(m => `${m.nombre} ${m.dosis} por ${m.duracion}`).join(', ');
