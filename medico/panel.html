@@ -86,7 +86,7 @@ console.log('[panel] boot');
 
 import { db, auth } from "/firebase-init.js";
 import {
-  collection, addDoc, doc, getDoc, updateDoc, 
+  collection, addDoc, doc, getDoc, updateDoc, setDoc,
   serverTimestamp, Timestamp
 } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js";
@@ -94,7 +94,7 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.2.1/fi
   // Exponer a window para que los vea el script inline clásico:
   window.db = db;
   window.auth = auth;
-  window.__fs = { collection, addDoc, updateDoc, doc, getDoc, serverTimestamp, Timestamp };
+window.__fs = { collection, addDoc, updateDoc, setDoc, doc, getDoc, serverTimestamp, Timestamp };
   
 
 
@@ -119,7 +119,7 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.2.1/fi
     if (window.__fs) return window.__fs;
     const mod = await import('https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js');
     const { collection, addDoc, updateDoc, setDoc, getDoc, doc, serverTimestamp, Timestamp } = mod;
-    return (window.__fs = { collection, addDoc, updateDoc, getDoc, doc, serverTimestamp, Timestamp });
+return (window.__fs = { collection, addDoc, updateDoc, setDoc, getDoc, doc, serverTimestamp, Timestamp });
   }
 
   // IMC auxiliar
@@ -246,7 +246,7 @@ const medicamentos = [...document.querySelectorAll('#medicamentosContainer .medi
       // 2) Usuario y Firestore
       const usr = window.auth?.currentUser;
       if (!usr){ alert('No hay sesión. Inicia sesión de nuevo.'); return; }
-      const { collection, addDoc, updateDoc, getDoc, doc, serverTimestamp, Timestamp } = await fs();
+      const { collection, addDoc, updateDoc, setDoc, getDoc, doc, serverTimestamp, Timestamp } = await fs();
       if (!window.db){ alert('Firestore no inicializado. Recarga la página.'); return; }
 
       // 3) Datos del médico (opcional)
