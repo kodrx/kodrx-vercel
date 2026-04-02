@@ -300,6 +300,7 @@ const medicamentos = [...document.querySelectorAll('#medicamentosContainer .medi
 try {
   const recetaPublica = {
     recetaId: ref.id,
+     medicoUid: recetaData.medicoUid || '',
 
     medico: {
       nombre: recetaData.medicoNombre || '',
