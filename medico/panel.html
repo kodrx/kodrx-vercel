@@ -63,6 +63,13 @@
       <label for="diagnostico">Diagnóstico:</label>
       <textarea id="diagnostico"></textarea>
 
+      <label for="indicaciones">Indicaciones:</label>
+<textarea 
+  id="indicaciones" 
+  rows="4"
+  placeholder="Ej. Reposo relativo por 48 horas. No consumir alcohol. Tomar medicamentos con alimentos."
+></textarea>
+
       <h3>Medicamentos</h3>
       <div id="medicamentosContainer"></div>
 
@@ -218,6 +225,7 @@ return (window.__fs = { collection, addDoc, updateDoc, setDoc, getDoc, doc, serv
       const presion        = byId('presion')?.value || '';
       const observaciones  = byId('observaciones')?.value?.trim() || '';
       const diagnostico    = byId('diagnostico')?.value?.trim() || '';
+      const indicaciones = byId('indicaciones')?.value?.trim() || '';
 
       if (!nombrePaciente){ alert('Falta el nombre del paciente'); byId('nombrePaciente')?.focus(); return; }
 
@@ -269,7 +277,7 @@ const medicamentos = [...document.querySelectorAll('#medicamentosContainer .medi
   pacienteNombre: nombrePaciente,     // alias para el historial
 
   edad, sexo, peso, talla, imc, temperatura, presion,
-  observaciones, diagnostico,
+  observaciones, diagnostico, indicaciones,
   medicamentos, medsIniciales,
 
   medicoNombre: m.nombre || usr.displayName || '',
@@ -321,7 +329,7 @@ try {
           duracion: m.duracion || ''
         }))
       : [],
-
+    indicaciones, 
     estado: 'vigente',
     surtidoParcial: false,
 
