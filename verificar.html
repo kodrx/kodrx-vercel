@@ -102,10 +102,7 @@ customElements.define('kodrx-verify-card', class extends HTMLElement{
             <div class="lbl">MEDICAMENTOS</div>
             <div class="val"><ul><li>—</li></ul></div>
 
-            <div class="lbl">OBSERVACIONES</div>
-            <div class="val">—</div>
-
-            <div class="lbl">DIAGNÓSTICO</div>
+           <div class="lbl">Indicaciones</div>
             <div class="val">—</div>
 
             <div class="lbl">ID / FECHA</div>
@@ -167,6 +164,9 @@ customElements.define('kodrx-verify-card', class extends HTMLElement{
 
             <div class="lbl">DIAGNÓSTICO</div>
             <div class="val break">${r.diagnostico ?? '—'}</div>
+
+             <div class="lbl">DIAGNÓSTICO</div>
+            <div class="val break">${r.indicaciones ?? '—'}</div>
 
             <div class="lbl">ID / FECHA</div>
             <div class="idline">
