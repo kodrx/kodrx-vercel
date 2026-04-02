@@ -11,209 +11,361 @@
 </head>
 <body>
   <kodrx-verify-card style="display:block; max-width:920px; margin:16px auto; padding:0 12px;"></kodrx-verify-card>
-
-</body>
-  <script>
-customElements.define('kodrx-verify-card', class extends HTMLElement{
-  constructor(){
+<script>
+customElements.define('kodrx-verify-card', class extends HTMLElement {
+  constructor() {
     super();
-    this.$ = this.attachShadow({mode:'open'});
+    this.$ = this.attachShadow({ mode: 'open' });
   }
 
-  connectedCallback(){ this.init(); }
+  connectedCallback() {
+    this.init();
+  }
 
-  async init(){
+  async init() {
     this.renderSkeleton();
-    try{
+
+    try {
       const id = new URLSearchParams(location.search).get('id');
       if (!id) return this.renderError('Falta id de receta en la URL.');
 
-      // Carga Firestore “on demand”
       const core = await import('/firebase-init.js');
-      const fs   = await import('https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js');
-     const snap = await fs.getDoc(fs.doc(core.db, 'recetas_publicas', id));
+      const fs = await import('https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js');
+
+      const snap = await fs.getDoc(fs.doc(core.db, 'recetas_publicas', id));
       if (!snap.exists()) return this.renderError('Receta no encontrada o no disponible.');
 
-      const raw = { id: snap.id, ...(snap.data()||{}) };
+      const raw = { id: snap.id, ...(snap.data() || {}) };
       const r = this.normalize(raw);
       this.render(r);
-   }catch(e){
-  console.error('[verify]', e);
-  const msg = (e && (e.message || e.toString())) ? (e.message || e.toString()) : 'Error desconocido';
-  this.renderError('No se pudo cargar la receta. ' + msg);
-}
+    } catch (e) {
+      console.error('[verify]', e);
+      const msg = (e && (e.message || e.toString()))
+        ? (e.message || e.toString())
+        : 'Error desconocido';
+      this.renderError('No se pudo cargar la receta. ' + msg);
+    }
   }
 
-  normalize(raw0){
+  normalize(raw0) {
     const raw = raw0 || {};
-    const bc  = raw.blockchain || {};
-    const bloque = Number.isFinite(raw.bloque) ? raw.bloque : (bc.block ?? null);
-    const hash   = bc.hash ?? raw.hash ?? null;
+    const bc = raw.blockchain || {};
+
+    const bloque = Number.isFinite(raw.bloque)
+      ? raw.bloque
+      : (bc.block ?? null);
+
+    const hash = bc.hash ?? raw.hash ?? null;
+
     const status = bc.status || (bloque ? 'ok' : (hash ? 'simulado' : 'pendiente'));
-    const medico = raw.medico || {
-      nombre: raw.medicoNombre, genero: raw.medicoGenero, cedula: raw.medicoCedula,
-      especialidad: raw.medicoEspecialidad, telefono: raw.medicoTelefono, direccion: raw.medicoDomicilio
+
+    const medico = {
+      nombre: raw.medico?.nombre ?? raw.medicoNombre ?? '—',
+      genero: raw.medico?.genero ?? raw.medicoGenero ?? '',
+      cedula: raw.medico?.cedula ?? raw.medicoCedula ?? '—',
+      especialidad: raw.medico?.especialidad ?? raw.medicoEspecialidad ?? '—'
     };
-    const nombrePaciente = raw.nombrePaciente ?? raw.pacienteNombre ?? raw.paciente?.nombre ?? raw.paciente ?? '—';
+
     return {
       ...raw,
-      nombrePaciente,
       medico,
+      indicaciones: raw.indicaciones ?? '—',
       bloque,
       hash,
-      blockchain: { ...bc, status, block:(bc.block ?? bloque) ?? null, hash }
+      blockchain: {
+        ...bc,
+        status,
+        block: (bc.block ?? bloque) ?? null,
+        hash
+      }
     };
   }
 
-  pillInfo(r){
-    const bc = r.blockchain||{};
-    const hasBlock = r.bloque!=null || bc.block!=null;
-    if (bc.status==='ok' || hasBlock) return {cls:'pill ok',   txt:'SELLADO EN BLOCKCHAIN'};
-    if (bc.status==='simulado' || r.hash) return {cls:'pill warn', txt:'SELLADO SIMULADO'};
-    return {cls:'pill warn', txt:'PENDIENTE'};
+  pillInfo(r) {
+    const bc = r.blockchain || {};
+    const hasBlock = r.bloque != null || bc.block != null;
+
+    if (bc.status === 'ok' || hasBlock) {
+      return { cls: 'pill ok', txt: 'SELLADO EN BLOCKCHAIN' };
+    }
+
+    if (bc.status === 'simulado' || r.hash) {
+      return { cls: 'pill warn', txt: 'SELLADO SIMULADO' };
+    }
+
+    return { cls: 'pill warn', txt: 'PENDIENTE' };
   }
 
-  fecha(ts){
-    try{
-      if (ts && typeof ts.toDate==='function') ts = ts.toDate();
-      else if (ts && typeof ts.seconds==='number') ts = new Date(ts.seconds*1000 + Math.floor((ts.nanoseconds||0)/1e6));
-      else if (!(ts instanceof Date)) ts = new Date(ts);
-      return ts.toLocaleString('es-MX',{year:'numeric',month:'long',day:'numeric',hour:'2-digit',minute:'2-digit'});
-    }catch{ return '—'; }
+  fecha(ts) {
+    try {
+      if (ts && typeof ts.toDate === 'function') {
+        ts = ts.toDate();
+      } else if (ts && typeof ts.seconds === 'number') {
+        ts = new Date(ts.seconds * 1000 + Math.floor((ts.nanoseconds || 0) / 1e6));
+      } else if (!(ts instanceof Date)) {
+        ts = new Date(ts);
+      }
+
+      return ts.toLocaleString('es-MX', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch {
+      return '—';
+    }
   }
 
-  renderSkeleton(){
-    this.$.innerHTML = `
-      <style>${this.styles()}</style>
-      <div class="card">
-        <div class="head">
-          <h1>Verificar receta</h1>
-          <span class="pill warn">CARGANDO…</span>
-        </div>
-        <div class="row">
-          <section>
-            <div class="lbl">MÉDICO</div>
-            <div class="val">—</div>
-            <div class="muted">Cédula: —</div>
-
-            <div class="lbl">PACIENTE</div>
-            <div class="val">—</div>
-
-            <div class="lbl">MEDICAMENTOS</div>
-            <div class="val"><ul><li>—</li></ul></div>
-
-           <div class="lbl">Indicaciones</div>
-            <div class="val">—</div>
-
-            <div class="lbl">ID / FECHA</div>
-            <div class="idline">
-              <span class="chip">ID: —</span>
-              <span class="chip">—</span>
-            </div>
-          </section>
-          <aside>
-            <div class="lbl">Estado</div>
-            <p class="muted">Cargando…</p>
-          </aside>
-        </div>
-      </div>
-    `;
+  renderSkeleton() {
+    this.$.innerHTML = this.baseCard({
+      pillClass: 'pill warn',
+      pillText: 'CARGANDO…',
+      medicoNombre: '—',
+      medicoCedula: '—',
+      medicamentosHtml: '<ul><li>—</li></ul>',
+      indicaciones: '—',
+      recetaId: '—',
+      fecha: '—',
+      asideText: 'Cargando información...'
+    });
   }
 
-  renderError(msg){
+  renderError(msg) {
     this.$.innerHTML = `
       <style>${this.styles()}</style>
       <div class="card error">❌ ${msg}</div>
     `;
   }
 
-  render(r){
+  render(r) {
     const pill = this.pillInfo(r);
     const meds = Array.isArray(r.medicamentos) ? r.medicamentos : [];
-    const pref = (n,g)=> (!n?'—': ((String(g||'').toLowerCase().startsWith('f')?'Dra. ':'Dr. ') + n));
+
+    const pref = (n, g) => (
+      !n
+        ? '—'
+        : (String(g || '').toLowerCase().startsWith('f') ? 'Dra. ' : 'Dr. ') + n
+    );
+
     const fecha = this.fecha(r.timestamp);
 
-    this.$.innerHTML = `
+    const medicamentosHtml = meds.length
+      ? `<ul>${meds.map(m => `
+          <li>
+            <strong>${m.nombre || '—'}</strong><br>
+            Dosis: ${m.dosis || '—'}<br>
+            Duración: ${m.duracion || '—'}
+          </li>
+        `).join('')}</ul>`
+      : '<ul><li>—</li></ul>';
+
+    this.$.innerHTML = this.baseCard({
+      pillClass: pill.cls,
+      pillText: pill.txt,
+      medicoNombre: pref(r.medico?.nombre, r.medico?.genero),
+      medicoCedula: r.medico?.cedula ?? '—',
+      medicamentosHtml,
+      indicaciones: String(r.indicaciones || '—').replace(/\n/g, '<br>'),
+      recetaId: r.id || '—',
+      fecha,
+      asideText: `
+        Esta es una vista pública de la receta. La información mostrada ha sido
+        filtrada para proteger datos sensibles del paciente.
+      `
+    });
+  }
+
+  baseCard({
+    pillClass,
+    pillText,
+    medicoNombre,
+    medicoCedula,
+    medicamentosHtml,
+    indicaciones,
+    recetaId,
+    fecha,
+    asideText
+  }) {
+    return `
       <style>${this.styles()}</style>
+
       <div class="card">
         <div class="head">
           <h1>Verificar receta</h1>
-          <span class="${pill.cls}">${pill.txt}</span>
+          <span class="${pillClass}">${pillText}</span>
         </div>
 
         <div class="row">
           <section>
             <div class="lbl">MÉDICO</div>
-            <div class="val break">${pref(r.medico?.nombre ?? r.medicoNombre, r.medico?.genero ?? r.medicoGenero)}</div>
-            <div class="muted">Cédula: ${r.medico?.cedula ?? r.medicoCedula ?? '—'}</div>
-
-            <div class="lbl">PACIENTE</div>
-            <div class="val break">${r.paciente?.nombre ?? r.nombrePaciente ?? '—'}</div>
+            <div class="val break">${medicoNombre}</div>
+            <div class="muted">Cédula: ${medicoCedula}</div>
 
             <div class="lbl">MEDICAMENTOS</div>
             <div class="val">
-              ${
-                meds.length
-                ? `<ul>${meds.map(m=>`<li>${m.nombre} — Dosis: ${m.dosis} — Duración: ${m.duracion}</li>`).join('')}</ul>`
-                : '<ul><li>—</li></ul>'
-              }
+              ${medicamentosHtml}
             </div>
 
-          
-
-             <div class="lbl">INDICACIONES</div>
-            <div class="val break">${r.indicaciones ?? '—'}</div>
+            <div class="lbl">INDICACIONES</div>
+            <div class="val break">${indicaciones}</div>
 
             <div class="lbl">ID / FECHA</div>
             <div class="idline">
-              <span class="chip break">ID: ${r.id || '—'}</span>
+              <span class="chip break">ID: ${recetaId}</span>
               <span class="chip">${fecha}</span>
             </div>
           </section>
 
           <aside>
             <div class="lbl">Estado</div>
-            <p class="muted" style="margin:6px 0 0">
-              Esta es la vista pública de la receta. El sello de blockchain indica si ya fue anclada
-              en la cadena. Para más detalles, consulta al emisor.
-            </p>
+            <p class="muted">${asideText}</p>
           </aside>
         </div>
       </div>
     `;
   }
 
-  styles(){
+  styles() {
     return `
       :host { all: initial; display:block; }
       *, *::before, *::after { box-sizing:border-box; }
-      :host { font: 400 14px/1.45 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji"; color:#111827; }
 
-      .card { background:#fff; border:1px solid #e5e7eb; border-radius:14px; padding:18px 18px 20px; box-shadow:0 1px 2px rgba(0,0,0,.04); }
-      .card.error { border-color:#fecaca; background:#fff1f2; color:#b91c1c; }
+      :host {
+        font: 400 14px/1.55 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+        color:#111827;
+      }
 
-      .head { display:flex; align-items:center; justify-content:space-between; gap:12px; }
-      h1 { all: unset; display:block; font-weight:700; font-size: clamp(18px, 4.8vw, 22px); line-height:1.2; color:#111827; }
+      .card {
+        background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
+        border:1px solid #e5e7eb;
+        border-radius:18px;
+        padding:20px 20px 22px;
+        box-shadow:0 8px 24px rgba(15,23,42,.06);
+      }
 
-      .pill { display:inline-block; padding:6px 10px; border-radius:999px; font-weight:700; font-size:12px; }
-      .ok   { background:#16a34a; color:#fff; }
-      .warn { background:#f59e0b; color:#111; }
+      .card.error {
+        border-color:#fecaca;
+        background:#fff1f2;
+        color:#b91c1c;
+      }
 
-      .lbl  { color:#6b7280; font-weight:700; font-size:12px; margin-top:12px }
-      .val  { margin:4px 0 10px; white-space:pre-wrap }
-      .muted{ color:#6b7280 }
-      ul{ margin:6px 0 0 18px; padding:0 } li{ margin:4px 0 }
+      .head {
+        display:flex;
+        justify-content:space-between;
+        gap:12px;
+        margin-bottom:6px;
+        align-items:flex-start;
+      }
 
-      .row{ display:grid; grid-template-columns: 1fr; gap:16px; }
-      @media (min-width:840px){ .row{ grid-template-columns: 1fr 1fr; } }
+      h1 {
+        all:unset;
+        font-weight:800;
+        font-size:clamp(18px,4.8vw,24px);
+        color:#0f172a;
+        line-height:1.2;
+      }
 
-      .idline{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
-      .chip{ background:#f3f4f6; color:#111827; border:1px solid #e5e7eb; border-radius:8px; padding:6px 10px; font-size:12px; }
+      .pill {
+        padding:7px 12px;
+        border-radius:999px;
+        font-weight:800;
+        font-size:12px;
+        display:inline-flex;
+        align-items:center;
+        justify-content:center;
+        white-space:nowrap;
+      }
 
-      .break{ overflow-wrap:anywhere; word-break:break-word; }
+      .ok {
+        background:#16a34a;
+        color:#fff;
+      }
+
+      .warn {
+        background:#f59e0b;
+        color:#111;
+      }
+
+      .lbl {
+        color:#6b7280;
+        font-weight:800;
+        font-size:11px;
+        text-transform:uppercase;
+        letter-spacing:.04em;
+        margin-top:14px;
+      }
+
+      .val {
+        margin:5px 0 12px;
+        white-space:pre-wrap;
+        line-height:1.6;
+      }
+
+      .muted {
+        color:#6b7280;
+        font-size:13px;
+        line-height:1.55;
+      }
+
+      .row {
+        display:grid;
+        grid-template-columns:1fr;
+        gap:18px;
+        margin-top:10px;
+      }
+
+      @media (min-width:840px){
+        .row {
+          grid-template-columns:1.25fr .75fr;
+        }
+      }
+
+      aside {
+        background:#f8fafc;
+        border:1px solid #e5e7eb;
+        border-radius:14px;
+        padding:14px;
+      }
+
+      .idline {
+        display:flex;
+        gap:10px;
+        flex-wrap:wrap;
+      }
+
+      .chip {
+        background:#f3f4f6;
+        border:1px solid #e5e7eb;
+        border-radius:10px;
+        padding:6px 10px;
+        font-size:12px;
+      }
+
+      .break {
+        overflow-wrap:anywhere;
+        word-break:break-word;
+      }
+
+      ul {
+        list-style:none;
+        padding:0;
+        margin:8px 0 0;
+        display:grid;
+        gap:10px;
+      }
+
+      li {
+        padding:10px 12px;
+        border:1px solid #e5e7eb;
+        border-radius:12px;
+        background:#fff;
+        margin:0;
+      }
     `;
   }
 });
 </script>
-
-</html>
+</body>
+  </html>
