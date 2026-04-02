@@ -346,48 +346,74 @@ try {
 } catch (e) {
   console.warn('[panel] error creando receta_publica:', e);
 }
-      // 5) Sellado vía proxy (no bloqueante)
-      try{
-        const recetaResumen = medicamentos.map(m => `${m.nombre} ${m.dosis} por ${m.duracion}`).join(', ');
-        const payload = {
-          receta: recetaResumen,
-          medico: recetaData.medicoNombre || '',
-          cedula: recetaData.medicoCedula || '',
-          medicamentos,
-          iniciales: medicamentos.map(x=>x.ini),
-          idReceta: ref.id,
-          timestamp: Math.floor(Date.now()/1000)
-        };
+// 5) Sellado vía proxy (no bloqueante)
+try {
+  const recetaResumen = medicamentos.map(m => `${m.nombre} ${m.dosis} por ${m.duracion}`).join(', ');
+  const payload = {
+    receta: recetaResumen,
+    medico: recetaData.medicoNombre || '',
+    cedula: recetaData.medicoCedula || '',
+    medicamentos,
+    iniciales: medicamentos.map(x => x.ini),
+    idReceta: ref.id,
+    timestamp: Math.floor(Date.now() / 1000)
+  };
 
-        const resp = await fetch('/api/bloques', {
-          method:'POST', headers:{'Content-Type':'application/json'},
-          body: JSON.stringify(payload)
-        });
+  const resp = await fetch('/api/bloques', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
 
-        let raw = {}; try{ raw = await resp.json(); }catch{}
-        console.log('[BC][raw]', raw);
+  let raw = {};
+  try { raw = await resp.json(); } catch {}
+  console.log('[BC][raw]', raw);
 
-        const toNum = v => (typeof v==='number'&&Number.isFinite(v)) ? v : (/^\d+$/.test(String(v??'')) ? Number(v) : NaN);
-        const block = [raw?.bloque?.index, raw?.index, raw?.bloqueIndex, raw?.block].map(toNum).find(Number.isFinite);
-        const hash  = raw?.bloque?.hash || raw?.hash || raw?.blockHash || raw?.txid || null;
+  const toNum = v =>
+    (typeof v === 'number' && Number.isFinite(v))
+      ? v
+      : (/^\d+$/.test(String(v ?? '')) ? Number(v) : NaN);
 
-        const updates = {};
-        if (resp.ok && Number.isFinite(block) && hash) {
-          updates.blockchain = { status:'ok', block, hash, at: serverTimestamp() };
-          updates.bloque = block; updates.hash = hash;
-        } else if (raw?.url || raw?.consultaUrl) {
-          updates.urlBlockchain = raw.url || raw.consultaUrl;
-          updates.blockchain = { status:'simulado' };
-        }
+  const block = [raw?.bloque?.index, raw?.index, raw?.bloqueIndex, raw?.block]
+    .map(toNum)
+    .find(Number.isFinite);
 
-        if (Object.keys(updates).length){
-          try{ await updateDoc(doc(window.db, 'recetas', ref.id), updates); }
-          catch(e){ console.warn('[BC] Firestore update falló (UI igual se actualiza):', e?.message||e); }
-        }
-      }catch(e){
-        console.error('[BC] error /api/bloques:', e?.message||e);
+  const hash = raw?.bloque?.hash || raw?.hash || raw?.blockHash || raw?.txid || null;
+
+  const updates = {};
+  if (resp.ok && Number.isFinite(block) && hash) {
+    updates.blockchain = { status: 'ok', block, hash, at: serverTimestamp() };
+    updates.bloque = block;
+    updates.hash = hash;
+  } else if (raw?.url || raw?.consultaUrl) {
+    updates.urlBlockchain = raw.url || raw.consultaUrl;
+    updates.blockchain = { status: 'simulado' };
+  }
+
+  if (Object.keys(updates).length) {
+    try {
+      // privada
+      await updateDoc(doc(window.db, 'recetas', ref.id), updates);
+
+      // pública: solo reflejar lo necesario
+      const publicUpdates = {};
+      if ('blockchain' in updates) publicUpdates.blockchain = updates.blockchain;
+      if ('bloque' in updates) publicUpdates.bloque = updates.bloque;
+      if ('hash' in updates) publicUpdates.hash = updates.hash;
+      if ('urlBlockchain' in updates) publicUpdates.urlBlockchain = updates.urlBlockchain;
+
+      if (Object.keys(publicUpdates).length) {
+        await updateDoc(doc(window.db, 'recetas_publicas', ref.id), publicUpdates);
       }
 
+      console.log('[BC] actualizado en recetas y recetas_publicas:', ref.id, publicUpdates);
+    } catch (e) {
+      console.warn('[BC] Firestore update falló (privada o pública):', e?.message || e);
+    }
+  }
+} catch (e) {
+  console.error('[BC] error /api/bloques:', e?.message || e);
+}
       // 6) Redirección
       const goto = new URL(VER_RECETA_PATH, location.origin);
       goto.searchParams.set('id', ref.id);
