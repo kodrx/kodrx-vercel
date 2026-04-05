@@ -1,140 +1,353 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>KodRx | Receta Digital</title>
+
   <script type="module">
-  import { db } from "/firebase-init.js";
-  import {
-    doc, updateDoc, serverTimestamp
-  } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
+    import { db } from "/firebase-init.js";
+    import {
+      doc, updateDoc, serverTimestamp
+    } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
 
-  // expón a window para que los vea el script inline clásico
-  window.db = db;
-  window.__fs = { doc, updateDoc, serverTimestamp };
-</script>
+    window.db = db;
+    window.__fs = { doc, updateDoc, serverTimestamp };
+  </script>
 
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>KodRx | Receta Digital</title>
+  <style>
+    html, body {
+      height: 100%;
+      margin: 0;
+    }
 
-<style>
-/* ===== Layout general ===== */
-html, body { height: 100%; }
-body { min-height: 100svh; margin: 0; display: block; } /* ← quitamos flex aquí */
+    body {
+      min-height: 100svh;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      background: #f3f6fb;
+      color: #111827;
+    }
 
-/* Contenedor raíz: 2 filas → [contenido flexible][footer auto] */
-.receta-root{
-  min-height: 100svh;
-  display: grid;
-  grid-template-rows: 1fr auto;
-}
-.receta-wrap{
-  /* lo que ya tenías */
-  flex:1 0 auto;
-  max-width:940px;
-  margin:16px auto;
-  padding:12px;
+    .receta-root {
+      min-height: 100svh;
+      display: grid;
+      grid-template-rows: 1fr auto;
+    }
 
-  /* lo que faltaba → grid de 2 columnas */
-  display:grid !important;
-  grid-template-columns: minmax(0,1fr) 340px;
-  gap:16px;
-  align-items:start;
-}
-/* evita que el contenido rompa el grid */
-.col-left, .col-right{ min-width:0; }
-/* Header */
-.receta-header{grid-column:1/-1;background:#F0F5FF;color:#0b1b2b;padding:14px 16px;border-radius:12px;font-weight:700}
-.badge{display:inline-block;padding:4px 10px;border-radius:999px;font-size:12px;font-weight:700;margin-left:8px}
-.badge.ok{background:#e7f6e8;color:#0b8b2b}
-.badge.warn{background:#fff3cd;color:#7a5a00}
+    .receta-wrap {
+      max-width: 940px;
+      margin: 16px auto;
+      padding: 12px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 340px;
+      gap: 16px;
+      align-items: start;
+      width: 100%;
+    }
 
-/* Acciones */
-.actions{grid-column:1/-1;display:flex;gap:12px;padding:8px 0;flex-wrap:wrap}
-button{appearance:none;border:0;border-radius:12px;padding:10px 14px;font-weight:700;cursor:pointer}
-.primary{background:#0b5bd3;color:#fff}
-.ghost{background:#eef2ff;color:#0b1b2b;border:1px solid #dbe3ff}
+    .col-left,
+    .col-right {
+      min-width: 0;
+    }
 
-/* Cards / contenido */
-.card{background:#f8fafc;border:1px solid #e0e7f0;border-radius:14px;padding:12px}
-.card .title{color:#6b7280;font-weight:800;letter-spacing:.02em;margin:2px 0 8px;text-transform:uppercase}
-.kv{color:#111827;font-size:14px;line-height:1.35}
-.kv b{color:#6b7280;margin-right:6px}
-.card,.kv,.sub{overflow-wrap:anywhere;word-break:break-word}
+    .col-left {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
 
-/* Columna derecha */
-.col-right{display:flex;flex-direction:column;gap:16px}
-.meds{white-space:pre-wrap;font-size:14px;line-height:1.35;color:#111827}
+    .col-right {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
 
-/* QRs */
-.qr-frame{border:2px solid #0b5bd3;border-radius:12px;padding:8px;display:flex;align-items:center;justify-content:center;background:#fff}
-.qr-legend{color:#0b5bd3;font-weight:700;font-size:12px;text-align:center;margin-top:6px}
-.qr-main img{width:220px;height:220px}
-.qr-chain img{width:110px;height:110px}
+    .receta-header {
+      grid-column: 1 / -1;
+      background: #f0f5ff;
+      color: #0b1b2b;
+      padding: 14px 16px;
+      border-radius: 12px;
+      font-weight: 700;
+      border: 1px solid #dbe7ff;
+    }
 
-/* Código de barras (pantalla) */
-#panelBarcode canvas{max-width:100%}
+    .badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      margin-left: 8px;
+    }
 
-/* Hash + footer */
-.hash{background:#f3f4f6;border:1px solid #e5e7eb;border-radius:10px;padding:6px 8px;color:#374151;font-size:12px}
+    .badge.ok {
+      background: #e7f6e8;
+      color: #0b8b2b;
+    }
 
+    .badge.warn {
+      background: #fff3cd;
+      color: #7a5a00;
+    }
 
-  .footer{
-  /* si el padre es grid, ocupa todo; si no, también :) */
-  grid-column: 1 / -1;
+    .actions {
+      grid-column: 1 / -1;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      padding: 12px;
+    }
 
-  background:#0b5bd3;
-  color:#fff;
-  border-radius:12px;
-  padding:12px 16px;
-  text-align:center;
-  font-weight:700;
+    .btn {
+      appearance: none;
+      border: 1px solid #dbe3ff;
+      border-radius: 12px;
+      padding: 10px 14px;
+      font-weight: 700;
+      cursor: pointer;
+      background: #eef2ff;
+      color: #0b1b2b;
+      transition: transform .06s ease, background .15s ease;
+    }
 
-  /* claves para que quede pegado abajo en layout flex-col */
-  margin-top:auto;
-  display:block;
-  width:100%;
-  align-self:stretch;
-}
-.qr-frame.qr-main  { width:260px; height:260px; }
-  .qr-frame.qr-chain { width:220px; height:220px; }
-  #barcodeCanvas     { width:300px; height:80px; display:block; }
-/* Responsive */
-@media (max-width:920px){
-  .receta-wrap{ grid-template-columns:1fr; }
-  .qr-main img{width:200px;height:200px}
-  .qr-chain img{width:100px;height:100px}
-}
-@media (max-width:520px){
-  .qr-main img{width:180px;height:180px}
-  .qr-chain img{width:90px;height:90px}
-}
+    .btn:hover {
+      background: #e6ecff;
+    }
 
-/* En impresión ocultamos botones; preferimos imprimir el PDF generado */
-@media print{ .actions{display:none!important} }
-</style>
+    .btn:active {
+      transform: translateY(1px);
+    }
+
+    .btn.primary {
+      background: #0b5bd3;
+      color: #fff;
+      border-color: #0b5bd3;
+    }
+
+    .card {
+      background: #f8fafc;
+      border: 1px solid #e0e7f0;
+      border-radius: 14px;
+      padding: 12px;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+
+    .title {
+      color: #6b7280;
+      font-weight: 800;
+      letter-spacing: .02em;
+      margin: 2px 0 8px;
+      text-transform: uppercase;
+      font-size: 12px;
+    }
+
+    .kv {
+      color: #111827;
+      font-size: 14px;
+      line-height: 1.4;
+    }
+
+    .kv b {
+      color: #6b7280;
+      margin-right: 6px;
+    }
+
+    .sub {
+      color: #6b7280;
+      font-size: 13px;
+      line-height: 1.35;
+    }
+
+    .meds {
+      white-space: pre-wrap;
+      font-size: 14px;
+      line-height: 1.4;
+      color: #111827;
+      margin: 0;
+      font-family: inherit;
+    }
+
+    .qr-frame {
+      border: 2px solid #0b5bd3;
+      border-radius: 12px;
+      padding: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #fff;
+      margin: 0 auto;
+    }
+
+    .qr-main {
+      width: 260px;
+      height: 260px;
+    }
+
+    .qr-chain {
+      width: 220px;
+      height: 220px;
+    }
+
+    .qr-main img,
+    .qr-main canvas {
+      width: 220px !important;
+      height: 220px !important;
+    }
+
+    .qr-chain img,
+    .qr-chain canvas {
+      width: 180px !important;
+      height: 180px !important;
+    }
+
+    .qr-legend {
+      color: #0b5bd3;
+      font-weight: 700;
+      font-size: 12px;
+      text-align: center;
+      margin-top: 6px;
+      line-height: 1.35;
+    }
+
+    #panelBarcode canvas {
+      max-width: 100%;
+    }
+
+    .hash {
+      background: #f3f4f6;
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      padding: 6px 8px;
+      color: #374151;
+      font-size: 12px;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 32px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 800;
+      line-height: 1;
+    }
+
+    .pill.verificando {
+      background: #fff3cd;
+      color: #7a5a00;
+    }
+
+    .footer {
+      background: #0b5bd3;
+      color: #fff;
+      border-radius: 12px;
+      padding: 12px 16px;
+      text-align: center;
+      font-weight: 700;
+      margin: 0 12px 12px;
+    }
+
+    @media (max-width: 920px) {
+      .receta-wrap {
+        grid-template-columns: 1fr;
+      }
+
+      .qr-main {
+        width: 240px;
+        height: 240px;
+      }
+
+      .qr-chain {
+        width: 200px;
+        height: 200px;
+      }
+
+      .qr-main img,
+      .qr-main canvas {
+        width: 200px !important;
+        height: 200px !important;
+      }
+
+      .qr-chain img,
+      .qr-chain canvas {
+        width: 160px !important;
+        height: 160px !important;
+      }
+    }
+
+    @media (max-width: 520px) {
+      .actions {
+        flex-direction: column;
+      }
+
+      .btn {
+        width: 100%;
+      }
+
+      .qr-main {
+        width: 220px;
+        height: 220px;
+      }
+
+      .qr-chain {
+        width: 180px;
+        height: 180px;
+      }
+
+      .qr-main img,
+      .qr-main canvas {
+        width: 180px !important;
+        height: 180px !important;
+      }
+
+      .qr-chain img,
+      .qr-chain canvas {
+        width: 140px !important;
+        height: 140px !important;
+      }
+    }
+
+    @media print {
+      .actions,
+      #verifyScope {
+        display: none !important;
+      }
+
+      body {
+        background: #fff;
+      }
+
+      .receta-wrap {
+        margin: 0 auto;
+        padding: 0;
+      }
+
+      .footer {
+        margin: 0;
+      }
+    }
+  </style>
 </head>
 
-
 <body>
-  <div class="receta-root"><!-- wrapper para sticky footer -->
+  <div class="receta-root">
+    <div class="receta-wrap">
+      <section class="card actions">
+        <button id="btnVolver" type="button" class="btn">Regresar</button>
+        <button id="btnDescargar" type="button" class="btn primary">Descargar PDF</button>
+        <button id="btnImprimir" type="button" class="btn">Imprimir</button>
+      </section>
 
-    <div class="receta-wrap"><!-- ÚNICO grid de 2 columnas -->
-
-      <!-- Acciones (ocupa ambas columnas) -->
-     <section class="card actions" style="gap:8px; padding:12px">
-  <button id="btnVolver" type="button" class="btn">Regresar</button>
-  <button id="btnDescargar" type="button" class="btn">Descargar PDF</button>
-  <button id="btnImprimir"  type="button" class="btn">Imprimir</button>
-</section>
-      <!-- Header (ocupa ambas columnas) -->
       <div class="receta-header">
         KodRx — Receta médica digital
         <span id="badgeOrigen" class="badge warn">MOCK</span>
       </div>
 
-
-      <!-- Columna IZQUIERDA -->
-      <div class="col-left" style="display:flex;flex-direction:column;gap:16px">
+      <div class="col-left">
         <section class="card">
           <div class="title">MÉDICO</div>
           <div class="kv" id="doctorNombre">—</div>
@@ -158,6 +371,11 @@ button{appearance:none;border:0;border-radius:12px;padding:10px 14px;font-weight
         </section>
 
         <section class="card">
+          <div class="title">INDICACIONES</div>
+          <div class="kv" id="indicacionesTexto">—</div>
+        </section>
+
+        <section class="card">
           <div class="title">OBSERVACIONES</div>
           <div class="kv" id="obsTexto">—</div>
         </section>
@@ -166,9 +384,8 @@ button{appearance:none;border:0;border-radius:12px;padding:10px 14px;font-weight
           <div class="title">DIAGNÓSTICO</div>
           <div class="kv" id="diagTexto">—</div>
         </section>
-      </div><!-- /.col-left -->
+      </div>
 
-      <!-- Columna DERECHA -->
       <div class="col-right">
         <section class="card">
           <div class="title">MEDICAMENTOS</div>
@@ -203,638 +420,779 @@ button{appearance:none;border:0;border-radius:12px;padding:10px 14px;font-weight
             <span class="sub" style="color:#6b7280;font-weight:400">Para consultar bloque visitar kodrx.app</span>
           </div>
         </section>
-      </div><!-- /.col-right -->
-    </div><!-- /.receta-wrap -->
+      </div>
+    </div>
 
-    <!-- Pill de estado (lo ocultamos desde JS al terminar verificación) -->
-    <div id="verifyScope" data-role="verificando">
-  <p id="bcStatus" class="pill verificando">Verificando blockchain…</p>
-  <div id="panelVerificando" class="verificando spinner-verify">…spinner…</div>
-</div>
+    <div id="verifyScope" data-role="verificando" style="padding:0 12px 12px;">
+      <p id="bcStatus" class="pill verificando">Verificando blockchain…</p>
+      <div id="panelVerificando" class="verificando spinner-verify">…spinner…</div>
+    </div>
 
-    <!-- Footer -->
     <div class="footer">
       Creada con KodRx. Plataforma digital de recetas verificadas con trazabilidad tecnológica.
     </div>
-  </div><!-- /.receta-root -->
+  </div>
 
+  <script defer src="/vendor/qrcode.min.js?v=20250923a"></script>
+  <script defer src="/vendor/JsBarcode.all.min.js?v=20250923a"></script>
+  <script defer src="/vendor/jspdf.umd.min.js?v=20250923a"></script>
+
+  <script>
+    ;(() => {
+      const DEBUG = false;
+      if (!DEBUG) {
+        const DROP = ['[paint]', '[panel]', '[ver]', '[bc]', '[sanity]', '[submit-fixer]', '[panel][hotfix]'];
+        for (const m of ['log', 'info', 'debug', 'warn']) {
+          const orig = console[m];
+          console[m] = function (...a) {
+            const s = typeof a[0] === 'string' ? a[0] : '';
+            if (DROP.some(p => s.startsWith(p))) return;
+            return orig.apply(this, a);
+          };
+        }
+      }
+    })();
+  </script>
+
+  <script>
+    ;(() => {
+      'use strict';
+
+      const BC_BASE = 'https://blockchain.kodrx.app';
+      const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+      const QR_RECETA_URL = id => `https://kodrx.app/verificar.html?id=${encodeURIComponent(id)}`;
+
+      const setText = (keyOrEl, val) => {
+        const el = (typeof keyOrEl === 'string')
+          ? (
+              document.getElementById(keyOrEl) ||
+              document.querySelector(`[data-bind="${keyOrEl}"]`) ||
+              document.querySelector('.' + keyOrEl) ||
+              document.querySelector(keyOrEl)
+            )
+          : keyOrEl;
+
+        if (!el) {
+          console.warn('[bind] no el for', keyOrEl);
+          return;
+        }
+        el.textContent = (val ?? '—');
+      };
+
+      function normalize(raw0) {
+        const raw = raw0 || {};
+        const bc = raw.blockchain || {};
+        const bloque = Number.isFinite(raw.bloque) ? raw.bloque : (bc.block ?? null);
+        const hash = bc.hash ?? raw.hash ?? null;
+        const status = bc.status || (bloque ? 'ok' : (hash ? 'simulado' : 'pendiente'));
+        const nombrePaciente = raw.nombrePaciente ?? raw.pacienteNombre ?? raw.paciente?.nombre ?? raw.paciente ?? '—';
+        const medico = raw.medico || {
+          nombre: raw.medicoNombre,
+          genero: raw.medicoGenero,
+          cedula: raw.medicoCedula,
+          especialidad: raw.medicoEspecialidad,
+          telefono: raw.medicoTelefono,
+          direccion: raw.medicoDomicilio
+        };
+
+        return {
+          ...raw,
+          nombrePaciente,
+          medico,
+          bloque,
+          hash,
+          blockchain: { ...bc, status, block: (bc.block ?? bloque) ?? null, hash }
+        };
+      }
+
+      function loadScript(src) {
+        return new Promise((res, rej) => {
+          const s = document.createElement('script');
+          s.src = src;
+          s.defer = true;
+          s.onload = res;
+          s.onerror = () => rej(new Error('No se pudo cargar: ' + src));
+          document.head.appendChild(s);
+        });
+      }
+
+      async function ensureLibs() {
+        const jobs = [];
+        if (!window.QRCode && !window.qrcode) jobs.push(loadScript('/vendor/qrcode.min.js?v=20250923a'));
+        if (!window.JsBarcode && !(window.JsBarcode?.default)) jobs.push(loadScript('/vendor/JsBarcode.all.min.js?v=20250923a'));
+        if (!(window.jspdf && window.jspdf.jsPDF)) jobs.push(loadScript('/vendor/jspdf.umd.min.js?v=20250923a'));
+        if (jobs.length) await Promise.all(jobs);
+      }
+
+      async function ensureJsPDF() {
+        if (window.jspdf?.jsPDF) return window.jspdf.jsPDF;
+        await loadScript('/vendor/jspdf.umd.min.js?v=20250923a');
+        return window.jspdf?.jsPDF;
+      }
+
+      async function ensureJsBarcode() {
+        if (window.JsBarcode || window.JsBarcode?.default) return (window.JsBarcode || window.JsBarcode.default);
+        await loadScript('/vendor/JsBarcode.all.min.js?v=20250923a');
+        return (window.JsBarcode || window.JsBarcode?.default);
+      }
+
+      function makeQR(host, text, size) {
+        if (!host) return false;
+        const QR = window.QRCode || window.qrcode;
+        if (!QR) return false;
+        host.innerHTML = '';
+        if (window.QRCode) {
+          new QRCode(host, { text, width: size, height: size, correctLevel: QRCode.CorrectLevel.M });
+          return true;
+        }
+        try {
+          if (QR.toCanvas) {
+            const c = document.createElement('canvas');
+            host.appendChild(c);
+            QR.toCanvas(c, text, { width: size });
+            return true;
+          }
+        } catch {}
+        return false;
+      }
+
+      async function makeQRDataURLCompat(text, size = 220) {
+        await ensureLibs();
+        try {
+          if (window.qrcode?.toDataURL) return await window.qrcode.toDataURL(text, { width: size, margin: 1 });
+          if (window.QRCode) {
+            const div = document.createElement('div');
+            new QRCode(div, { text, width: size, height: size, correctLevel: (window.QRCode.CorrectLevel?.M ?? 1) });
+            await Promise.resolve();
+            const img = div.querySelector('img');
+            if (img?.src) return img.src;
+            const c = div.querySelector('canvas');
+            if (c) return c.toDataURL('image/png');
+          }
+        } catch {}
+        return '';
+      }
+
+      async function hydrateIfNeeded() {
+        if (window.RECETA_ACTUAL && (window.RECETA_ACTUAL.blockchain || window.RECETA_ACTUAL.hash || window.RECETA_ACTUAL.bloque)) return;
+        try {
+          const id = new URLSearchParams(location.search).get('id');
+          if (!id) return;
+          const core = await import('/firebase-init.js');
+          const fs = await import('https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js');
+          const snap = await fs.getDoc(fs.doc(core.db, 'recetas', id));
+          if (snap.exists()) window.RECETA_ACTUAL = { id: snap.id, ...(window.RECETA_ACTUAL || {}), ...(snap.data() || {}) };
+        } catch (e) {
+          console.warn('[ver] hydrate warn', e);
+        }
+      }
+
+      function updateBadgeFromReceta(r) {
+        const el = document.getElementById('badgeOrigen');
+        if (!el) return;
+        const hasBlock = (r?.blockchain?.block ?? r?.bloque) != null;
+        const hasHash = !!(r?.blockchain?.hash ?? r?.hash);
+        const S = hasBlock
+          ? { txt: 'SELLADO EN BLOCKCHAIN', cls: 'badge ok', bg: '#16a34a', fg: '#fff' }
+          : hasHash
+            ? { txt: 'SELLADO SIMULADO', cls: 'badge warn', bg: '#f59e0b', fg: '#111' }
+            : { txt: 'PENDIENTE', cls: 'badge warn', bg: '#9ca3af', fg: '#111' };
+
+        el.textContent = S.txt;
+        el.className = S.cls;
+        el.style.background = S.bg;
+        el.style.color = S.fg;
+      }
+
+      async function setChainQR(block) {
+        const host = document.getElementById('qrChain');
+        if (!host) return;
+        await ensureLibs();
+        const url = `${BC_BASE}/verificar.html?id=${encodeURIComponent(block)}`;
+        makeQR(host, url, 220);
+        const bn = document.getElementById('blockNum');
+        if (bn) bn.textContent = String(block || '—');
+      }
+
+      async function getQRSources(receta) {
+        const out = {};
+        const mainNode = document.querySelector('#qrMain canvas, #qrMain img');
+        const chainNode = document.querySelector('#qrChain canvas, #qrChain img');
+
+        if (mainNode) out.main = mainNode.tagName === 'IMG' ? mainNode.src : mainNode.toDataURL('image/png');
+        if (chainNode) out.chain = chainNode.tagName === 'IMG' ? chainNode.src : chainNode.toDataURL('image/png');
+
+        if (!out.main) {
+          const verURL = QR_RECETA_URL(receta?.id || '');
+          out.main = await makeQRDataURLCompat(verURL, 220);
+        }
+
+        if (!out.chain) {
+          const blk = receta?.blockchain?.block ?? receta?.bloque ?? null;
+          if (blk) out.chain = await makeQRDataURLCompat(`${BC_BASE}/verificar.html?id=${encodeURIComponent(blk)}`, 220);
+        }
+
+        return out;
+      }
+
+      window.getQRSources = getQRSources;
+
+      async function renderOnce() {
+        for (let i = 0; i < 100; i++) {
+          if (window.RECETA_ACTUAL) break;
+          await sleep(60);
+        }
+
+        await hydrateIfNeeded();
+
+        const r0 = window.RECETA_ACTUAL;
+        if (!r0) return;
+
+        const r = window.RECETA_ACTUAL = normalize(r0);
+
+        const pref = (n, g) => !n ? '—' : (String(g || '').toLowerCase().startsWith('f') ? 'Dra. ' : 'Dr. ') + n;
+
+        setText('doctorNombre', pref(r.medico?.nombre ?? r.medicoNombre, r.medico?.genero ?? r.medicoGenero));
+        setText('doctorCedula', r.medico?.cedula ?? r.medicoCedula ?? '—');
+        setText('doctorEsp', r.medico?.especialidad ?? r.medicoEspecialidad ?? '—');
+        setText('doctorTel', r.medico?.telefono ?? r.medicoTelefono ?? '—');
+        setText('doctorDir', r.medico?.direccion ?? r.medicoDomicilio ?? '—');
+
+        setText('pacienteNombre', r.paciente?.nombre ?? r.nombrePaciente ?? '—');
+
+        setText('pacEdad', r.paciente?.edad ?? r.edad ?? '—');
+        setText('pacSexo', r.paciente?.sexo ?? r.sexo ?? '—');
+        setText('pacPeso', r.paciente?.peso ?? r.peso ?? '—');
+        setText('pacTalla', r.paciente?.talla ?? r.talla ?? '—');
+        setText('pacTemp', r.paciente?.temperatura ?? r.temperatura ?? '—');
+        setText('pacPresion', r.paciente?.presion ?? r.presion ?? '—');
+        setText('pacIMC', r.paciente?.imc ?? r.imc ?? '—');
+
+        setText('obsTexto', r.observaciones ?? '—');
+        setText('diagTexto', r.diagnostico ?? '—');
+        setText('indicacionesTexto', r.indicaciones ?? '—');
+        setText('recetaId', 'ID: ' + (r.id || '—'));
+
+        try {
+          if (r.timestamp) {
+            let ts = r.timestamp;
+            if (ts && typeof ts.toDate === 'function') ts = ts.toDate();
+            else if (ts && typeof ts.seconds === 'number') ts = new Date(ts.seconds * 1000 + Math.floor((ts.nanoseconds || 0) / 1e6));
+            else if (!(ts instanceof Date)) ts = new Date(ts);
+
+            document.getElementById('fechaEmision').textContent = ts.toLocaleString('es-MX', {
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit'
+            });
+          }
+        } catch {}
+
+        {
+          const meds = Array.isArray(r.medicamentos) ? r.medicamentos : [];
+          const medsTxt = meds.length
+            ? meds.map((m, i) => `${i + 1}. ${m.nombre}\n   Dosis: ${m.dosis}\n   Duración: ${m.duracion}`).join('\n\n')
+            : '—';
+          const medsEl = document.getElementById('listaMedsDerecha');
+          if (medsEl) medsEl.textContent = medsTxt;
+        }
+
+        await ensureLibs();
+
+        const host = document.getElementById('qrMain');
+        if (host && !host.querySelector('canvas,img')) {
+          const verURL = QR_RECETA_URL(r.id);
+          makeQR(host, verURL, 260);
+        }
+
+        const canvas = document.getElementById('barcodeCanvas');
+        const label = document.getElementById('barcodeLabel');
+        const JsBarcodeFn = await ensureJsBarcode();
+
+        if (canvas && typeof JsBarcodeFn === 'function') {
+          try {
+            const dpr = Math.max(1, window.devicePixelRatio || 1);
+            const cssW = 300, cssH = 80;
+            canvas.width = cssW * dpr;
+            canvas.height = cssH * dpr;
+            canvas.style.width = cssW + 'px';
+            canvas.style.height = cssH + 'px';
+            const ctx = canvas.getContext('2d');
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            JsBarcodeFn(canvas, String(r.id || ''), {
+              format: 'CODE128',
+              width: 2,
+              height: 40,
+              margin: 4,
+              displayValue: false
+            });
+            if (label) label.textContent = r.id || '—';
+          } catch (e) {
+            if (label) label.textContent = r.id || '—';
+          }
+        }
+
+        const hashTxt = (r.hash ?? r.blockchain?.hash)
+          ? `hash (BC): ${r.hash ?? r.blockchain?.hash}`
+          : (r.id ? `hash (local): ${String(r.id).slice(0, 8)}` : 'hash: —');
+
+        setText('hashTexto', hashTxt);
+        updateBadgeFromReceta(r);
+
+        const blk = r?.blockchain?.block ?? r?.bloque ?? null;
+        if (blk) await setChainQR(blk);
+
+        const legendHolder = document.querySelector('.qr-legend .sub');
+        const legend = 'Para consultar bloque visitar kodrx.app';
+        if (legendHolder) legendHolder.textContent = legend;
+
+        window.QRS = await getQRSources(r);
+
+        ['#verifyScope', '#badgeVerificando', '#spinnerVerificando', '#panelVerificando', '[data-role="verificando"]', '.verificando', '.spinner-verify']
+          .forEach(sel => document.querySelectorAll(sel).forEach(el => el.style.display = 'none'));
+      }
+
+      window.renderOnce = renderOnce;
+
+      window.generarPDF = async function generarPDF(rIn, qrsIn, { mode = 'save' } = {}) {
+        const jsPDF = await (window.ensureJsPDF ? window.ensureJsPDF() : (window.jspdf?.jsPDF));
+        const { jsPDF: Cls } = window.jspdf || {};
+        if (!Cls) {
+          alert('No se pudo cargar jsPDF');
+          return;
+        }
+
+        const adapt = (x = {}) => {
+          const m = {
+            nombre: x.medico?.nombre ?? x.medicoNombre ?? '—',
+            genero: x.medico?.genero ?? x.medicoGenero ?? '',
+            cedula: x.medico?.cedula ?? x.medicoCedula ?? '—',
+            especialidad: x.medico?.especialidad ?? x.medicoEspecialidad ?? 'General',
+            telefono: x.medico?.telefono ?? x.medicoTelefono ?? '',
+            direccion: x.medico?.direccion ?? x.medicoDomicilio ?? ''
+          };
+          const p = {
+            nombre: x.paciente?.nombre ?? x.nombrePaciente ?? x.pacienteNombre ?? '—',
+            edad: x.paciente?.edad ?? x.edad ?? '—',
+            sexo: x.paciente?.sexo ?? x.sexo ?? '—',
+            peso: x.paciente?.peso ?? x.peso ?? '—',
+            talla: x.paciente?.talla ?? x.talla ?? '—',
+            temperatura: x.paciente?.temperatura ?? x.temperatura ?? '—',
+            presion: x.paciente?.presion ?? x.presion ?? '—',
+            imc: x.paciente?.imc ?? x.imc ?? '—',
+          };
+          const bloque = (x.blockchain?.block ?? x.bloque ?? null);
+          const hash = x.hash ?? x.blockchain?.hash ?? null;
+          return { ...x, medico: m, paciente: p, bloque, hash };
+        };
+
+        const r = adapt(rIn || {});
+        const qrs = (qrsIn && (qrsIn.main || qrsIn.chain))
+          ? qrsIn
+          : (window.QRS || (window.getQRSources ? await window.getQRSources(r) : {}));
+
+        const doc = new Cls({ unit: 'pt', format: 'letter', compress: true });
+        const W = doc.internal.pageSize.getWidth();
+        const H = doc.internal.pageSize.getHeight();
+
+        const COLORS = {
+          bgPanel: [248, 250, 252],
+          stPanel: [224, 231, 240],
+          brand: [11, 91, 211],
+          text: [17, 24, 39],
+          sub: [55, 65, 81],
+          label: [107, 114, 128]
+        };
+
+        const FONT = 'helvetica';
+        doc.setFont(FONT, 'normal');
+
+        const Mx = 40, My = 50, gutter = 16;
+        const CW = W - 2 * Mx, colW = (CW - gutter) / 2;
+        const leftX = Mx, rightX = Mx + colW + gutter;
+        const footerH = 52, availYMax = H - My - footerH - 10;
+
+        const wrap = (t, w) => doc.splitTextToSize(String(t ?? '—'), w);
+        const lineH = 11;
+
+        function sectionBox(x, y, w, contentH, title) {
+          const padX = 10, padY = 10, titleH = 18, boxH = contentH + padY * 2 + titleH;
+          const yClamp = Math.min(y, availYMax - boxH);
+
+          doc.setFillColor(...COLORS.bgPanel);
+          doc.setDrawColor(...COLORS.stPanel);
+          doc.setLineWidth(0.8);
+          doc.roundedRect(x, yClamp, w, boxH, 8, 8, 'FD');
+
+          doc.setTextColor(...COLORS.label);
+          doc.setFont(FONT, 'bold');
+          doc.setFontSize(10.5);
+          doc.text(title, x + padX, yClamp + 14);
+
+          doc.setFont(FONT, 'normal');
+          doc.setFontSize(10);
+          doc.setTextColor(...COLORS.text);
+          return { cx: x + padX, cy: yClamp + 14 + padY, ny: yClamp + boxH + 10, innerH: contentH };
+        }
+
+        function drawClamp(x, y, maxW, maxH, text) {
+          const lines = wrap(text, maxW);
+          let used = 0, lastY = y;
+          for (let i = 0; i < lines.length; i++) {
+            if (used + lineH > maxH) {
+              if (i > 0) {
+                const prev = lines[i - 1];
+                doc.text((prev.length > 1 ? prev.slice(0, prev.length - 1) : prev) + '…', x, lastY);
+              }
+              return;
+            }
+            lastY = y + used + lineH;
+            doc.text(lines[i], x, lastY);
+            used += lineH;
+          }
+        }
+
+        function fechaStr(ts) {
+          try {
+            if (ts && typeof ts.toDate === 'function') ts = ts.toDate();
+            else if (ts && typeof ts.seconds === 'number') ts = new Date(ts.seconds * 1000 + Math.floor((ts.nanoseconds || 0) / 1e6));
+            else if (!(ts instanceof Date)) ts = new Date(ts);
+            return ts.toLocaleString('es-MX', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+          } catch { return ''; }
+        }
+
+        (function header() {
+          const headY = 18, headH = 50;
+          doc.setFillColor(240, 245, 255);
+          doc.roundedRect(18, headY, W - 36, headH, 9, 9, 'F');
+          doc.setTextColor(11, 27, 43);
+          doc.setFont(FONT, 'bold');
+          doc.setFontSize(12);
+          doc.text('KodRx — Receta médica digital', Mx, headY + 30);
+        })();
+
+        let yL = 18 + 50 + 12;
+        let yR = yL;
+
+        {
+          const s = sectionBox(leftX, yL, colW, 92, 'MÉDICO');
+          const prefijo = (nom, gen) => {
+            if (!nom) return '—';
+            const g = String(gen || '').toLowerCase();
+            return (g.startsWith('f') ? 'Dra. ' : 'Dr. ') + nom;
+          };
+          doc.setFont(FONT, 'bold');
+          doc.setFontSize(10);
+          drawClamp(s.cx, s.cy, colW - 16, 26, prefijo(r.medico.nombre, r.medico.genero));
+
+          doc.setFont(FONT, 'normal');
+          doc.setFontSize(9);
+          doc.setTextColor(...COLORS.sub);
+          let cy = s.cy + 28;
+          drawClamp(s.cx, cy, colW - 16, 14, `Cédula: ${r.medico.cedula || '—'}   Esp: ${r.medico.especialidad || '—'}`); cy += 14;
+          drawClamp(s.cx, cy, colW - 16, 14, `Tel: ${r.medico.telefono || '—'}`); cy += 14;
+          drawClamp(s.cx, cy, colW - 16, 28, `Dirección: ${r.medico.direccion || '—'}`);
+          yL = s.ny;
+        }
+
+        {
+          const s = sectionBox(leftX, yL, colW, 114, 'PACIENTE');
+          doc.setFont(FONT, 'bold');
+          doc.setFontSize(10);
+          doc.setTextColor(...COLORS.text);
+          drawClamp(s.cx, s.cy, colW - 16, 24, String(r.paciente.nombre || '—'));
+
+          doc.setFont(FONT, 'normal');
+          doc.setFontSize(9);
+          doc.setTextColor(...COLORS.sub);
+          let cy = s.cy + 26;
+          drawClamp(s.cx, cy, colW - 16, 14, `Fecha: ${fechaStr(r.timestamp)}`); cy += 14;
+          drawClamp(s.cx, cy, colW - 16, 14, `ID: ${r.id || '—'}`); cy += 18;
+
+          const label = (lbl, val) => `${lbl}: ${String(val ?? '—')}`;
+          drawClamp(s.cx, cy, colW - 16, 14, `${label('Edad', r.paciente.edad)}   ${label('Sexo', r.paciente.sexo)}`); cy += 14;
+          drawClamp(s.cx, cy, colW - 16, 14, `${label('Peso', r.paciente.peso)}   ${label('Talla', r.paciente.talla)}`); cy += 14;
+          drawClamp(s.cx, cy, colW - 16, 14, `${label('Temp', r.paciente.temperatura)}   ${label('PA', r.paciente.presion)}   ${label('IMC', r.paciente.imc)}`);
+          yL = s.ny;
+        }
+
+        {
+          const SEP = 16;
+          const MIN_IND = 56, MIN_OBS = 56, MIN_DX = 56;
+
+          const leftSpace = Math.max(0, availYMax - yL);
+          const contentSpace = Math.max(0, leftSpace - (SEP * 2));
+
+          const indText = String(r.indicaciones ?? '—');
+          const obsText = String(r.observaciones ?? '—');
+          const dxText = String(r.diagnostico ?? '—');
+
+          const indLines = wrap(indText, colW - 16).length || 1;
+          const obsLines = wrap(obsText, colW - 16).length || 1;
+          const dxLines = wrap(dxText, colW - 16).length || 1;
+
+          const totalLines = indLines + obsLines + dxLines;
+
+          let allocInd = Math.max(MIN_IND, Math.round(contentSpace * (indLines / totalLines)));
+          let allocObs = Math.max(MIN_OBS, Math.round(contentSpace * (obsLines / totalLines)));
+          let allocDx = Math.max(MIN_DX, contentSpace - allocInd - allocObs);
+
+          const overflow = allocInd + allocObs + allocDx - contentSpace;
+          if (overflow > 0) allocDx = Math.max(MIN_DX, allocDx - overflow);
+
+          const sInd = sectionBox(leftX, yL, colW, allocInd, 'INDICACIONES');
+          doc.setFont(FONT, 'normal');
+          doc.setFontSize(9);
+          doc.setTextColor(...COLORS.text);
+          drawClamp(sInd.cx, sInd.cy, colW - 16, sInd.innerH, indText);
+          yL = sInd.ny;
+
+          doc.setDrawColor(...COLORS.stPanel);
+          doc.setLineWidth(0.8);
+          let midY = yL - 2 + SEP / 2;
+          doc.line(leftX + 6, midY, leftX + colW - 6, midY);
+          yL = yL - 2 + SEP + 6;
+
+          const sObs = sectionBox(leftX, yL, colW, allocObs, 'OBSERVACIONES');
+          drawClamp(sObs.cx, sObs.cy, colW - 16, sObs.innerH, obsText);
+          yL = sObs.ny;
+
+          midY = yL - 2 + SEP / 2;
+          doc.line(leftX + 6, midY, leftX + colW - 6, midY);
+          yL = yL - 2 + SEP + 6;
+
+          const sDx = sectionBox(leftX, yL, colW, Math.min(allocDx, availYMax - yL), 'DIAGNÓSTICO');
+          drawClamp(sDx.cx, sDx.cy, colW - 16, sDx.innerH, dxText);
+          yL = sDx.ny;
+        }
+
+        {
+          const medsTxt = (Array.isArray(r.medicamentos) && r.medicamentos.length)
+            ? r.medicamentos.map((m, i) => `${i + 1}. ${m.nombre}\n   Dosis: ${m.dosis}\n   Duración: ${m.duracion}`).join('\n\n')
+            : '—';
+
+          const lines = wrap(medsTxt, colW - 16);
+          const need = Math.max(100, lines.length * lineH + 6);
+
+          const s = sectionBox(rightX, yR, colW, Math.min(need, Math.max(100, availYMax - yR)), 'MEDICAMENTOS');
+          doc.setFont(FONT, 'normal');
+          doc.setFontSize(9);
+          doc.setTextColor(...COLORS.text);
+          drawClamp(s.cx, s.cy, colW - 16, s.innerH, medsTxt);
+          yR = s.ny;
+        }
+
+        {
+          const box = 120, pad = 10;
+          const y = yR;
+          const x = rightX + (colW - box) / 2;
+          if (qrs?.main) {
+            doc.setDrawColor(...COLORS.brand);
+            doc.setLineWidth(2.2);
+            doc.roundedRect(x, y, box, box, 10, 10, 'S');
+            doc.addImage(qrs.main, 'PNG', x + pad, y + pad, box - 2 * pad, box - 2 * pad, undefined, 'FAST');
+            doc.setTextColor(...COLORS.brand);
+            doc.setFont(FONT, 'bold');
+            doc.setFontSize(9.5);
+            doc.text('Receta', x + box / 2, y + box + 12, { align: 'center' });
+            yR = y + box + 20;
+          }
+        }
+
+        {
+          const JsBarcodeFn = (window.JsBarcode || window.JsBarcode?.default);
+          if (JsBarcodeFn && r.id) {
+            const cv = document.createElement('canvas');
+            cv.width = 300;
+            cv.height = 40;
+            try {
+              JsBarcodeFn(cv, String(r.id), { format: 'CODE128', width: 2, height: 32, margin: 4, displayValue: false });
+              const barUrl = cv.toDataURL('image/png');
+
+              const imgW = Math.min(colW - 20, 300);
+              const imgH = 40 * (imgW / 300);
+              const x = rightX + (colW - imgW) / 2;
+              const y = yR + 6;
+
+              doc.setFillColor(...COLORS.bgPanel);
+              doc.setDrawColor(...COLORS.stPanel);
+              doc.setLineWidth(0.8);
+              doc.roundedRect(rightX, y, colW, imgH + 26, 8, 8, 'FD');
+              doc.addImage(barUrl, 'PNG', x, y + 8, imgW, imgH, undefined, 'FAST');
+              doc.setFont(FONT, 'bold');
+              doc.setFontSize(9);
+              doc.setTextColor(...COLORS.sub);
+              doc.text('Código de barras (ID)', rightX + colW / 2, y + imgH + 20, { align: 'center' });
+              yR = y + imgH + 36;
+            } catch {}
+          }
+        }
+
+        {
+          const hashLabel = r.hash ? `hash (BC): ${r.hash}` : 'hash (local): —';
+          const hashLines = wrap(hashLabel, colW - 16).length || 1;
+          const hashNeed = Math.max(56, hashLines * lineH + 12);
+
+          const mini = 90, pad = 8, qrCaptionH = 38;
+          const qrReserve = (qrs?.chain) ? (mini + qrCaptionH + 12) : 0;
+
+          if (qrs?.chain && (yR + hashNeed + qrReserve > availYMax)) {
+            const qrX = rightX + colW - mini;
+            let qrY = yR + 6;
+            if (qrY + mini + qrCaptionH > availYMax) qrY = Math.max(yR + 6, availYMax - mini - qrCaptionH);
+
+            doc.setDrawColor(...COLORS.brand);
+            doc.setLineWidth(2.0);
+            doc.roundedRect(qrX, qrY, mini, mini, 8, 8, 'S');
+            doc.addImage(qrs.chain, 'PNG', qrX + pad, qrY + pad, mini - 2 * pad, mini - 2 * pad, undefined, 'FAST');
+
+            doc.setTextColor(...COLORS.brand);
+            doc.setFont(FONT, 'bold');
+            doc.setFontSize(9);
+            doc.text('Blockchain', qrX + mini / 2, qrY + mini + 12, { align: 'center' });
+
+            const bn = (r.bloque != null) ? String(r.bloque)
+              : (r.blockchain?.block != null) ? String(r.blockchain.block) : '—';
+
+            doc.setTextColor(...COLORS.text);
+            doc.setFont(FONT, 'bold');
+            doc.setFontSize(10);
+            doc.text('Bloque: ' + bn, qrX + mini / 2, qrY + mini + 26, { align: 'center' });
+
+            doc.setTextColor(...COLORS.sub);
+            doc.setFont(FONT, 'normal');
+            doc.setFontSize(8.5);
+            doc.text('Para consultar bloque visitar kodrx.app', qrX + mini / 2, qrY + mini + 38, { align: 'center' });
+
+            yR = qrY + mini + qrCaptionH + 10;
+
+            const remaining = Math.max(44, availYMax - yR);
+            const s = sectionBox(rightX, yR, colW, Math.min(hashNeed, remaining), 'HASH');
+            doc.setFont(FONT, 'normal');
+            doc.setFontSize(9.8);
+            doc.setTextColor(...COLORS.sub);
+            drawClamp(s.cx, s.cy, colW - 16, s.innerH, hashLabel);
+            yR = s.ny;
+          } else {
+            const s = sectionBox(rightX, yR, colW, hashNeed, 'HASH');
+            doc.setFont(FONT, 'normal');
+            doc.setFontSize(9.8);
+            doc.setTextColor(...COLORS.sub);
+            drawClamp(s.cx, s.cy, colW - 16, s.innerH, hashLabel);
+            yR = s.ny;
+
+            if (qrs?.chain) {
+              const qrX = rightX + colW - mini;
+              let qrY = yR + 6;
+              if (qrY + mini + qrCaptionH > availYMax) qrY = Math.max(yR + 6, availYMax - mini - qrCaptionH);
+
+              doc.setDrawColor(...COLORS.brand);
+              doc.setLineWidth(2.0);
+              doc.roundedRect(qrX, qrY, mini, mini, 8, 8, 'S');
+              doc.addImage(qrs.chain, 'PNG', qrX + pad, qrY + pad, mini - 2 * pad, mini - 2 * pad, undefined, 'FAST');
+
+              doc.setTextColor(...COLORS.brand);
+              doc.setFont(FONT, 'bold');
+              doc.setFontSize(9);
+              doc.text('Blockchain', qrX + mini / 2, qrY + mini + 12, { align: 'center' });
+
+              const bn = (r.bloque != null) ? String(r.bloque)
+                : (r.blockchain?.block != null) ? String(r.blockchain.block) : '—';
+
+              doc.setTextColor(...COLORS.text);
+              doc.setFont(FONT, 'bold');
+              doc.setFontSize(10);
+              doc.text('Bloque: ' + bn, qrX + mini / 2, qrY + mini + 26, { align: 'center' });
+
+              doc.setTextColor(...COLORS.sub);
+              doc.setFont(FONT, 'normal');
+              doc.setFontSize(8.5);
+              doc.text('Para consultar bloque visitar kodrx.app', qrX + mini / 2, qrY + mini + 38, { align: 'center' });
+
+              yR = qrY + mini + qrCaptionH + 10;
+            }
+          }
+        }
+
+        (function footer() {
+          doc.setFillColor(...COLORS.brand);
+          doc.rect(18, H - 18 - footerH, W - 36, footerH, 'F');
+          doc.setTextColor(255, 255, 255);
+          doc.setFont(FONT, 'bold');
+          doc.setFontSize(10.5);
+          doc.text('Creada con KodRx. Tecnología que verifica, salud que protege.', W / 2, H - 22, { align: 'center' });
+        })();
+
+        const filename = `receta_${r.id || 'sin-id'}.pdf`;
+
+        if (mode === 'print') {
+          try {
+            doc.autoPrint();
+            doc.output('dataurlnewwindow');
+          } catch {
+            doc.save(filename);
+          }
+        } else if (mode === 'open') {
+          const url = doc.output('bloburl');
+          window.open(url, '_blank');
+        } else {
+          doc.save(filename);
+        }
+      };
+
+      window.ensureJsPDF = ensureJsPDF;
+
+      function bindButtons() {
+        const btnD = document.getElementById('btnDescargar');
+        const btnP = document.getElementById('btnImprimir');
+        const btnB = document.getElementById('btnVolver');
+
+        const onPDF = (mode) => async (e) => {
+          e?.preventDefault?.();
+          if (!window.RECETA_ACTUAL) await renderOnce();
+          const r = window.RECETA_ACTUAL || {};
+          const qrs = window.QRS || await getQRSources(r);
+          await window.generarPDF(r, qrs, { mode });
+        };
+
+        if (btnD && !btnD.__b) {
+          btnD.type = 'button';
+          btnD.disabled = false;
+          btnD.addEventListener('click', onPDF('save'), { capture: true });
+          btnD.__b = true;
+        }
+
+        if (btnP && !btnP.__b) {
+          btnP.type = 'button';
+          btnP.disabled = false;
+          btnP.addEventListener('click', onPDF('print'), { capture: true });
+          btnP.__b = true;
+        }
+
+        if (btnB && !btnB.__b) {
+          btnB.type = 'button';
+          btnB.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (history.length > 1) history.back();
+            else location.href = '/medico/panel.html';
+          }, { capture: true });
+          btnB.__b = true;
+        }
+      }
+
+      function start() {
+        try { renderOnce(); } catch {}
+        try { bindButtons(); } catch (e) { console.warn('bindButtons err', e); }
+      }
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', start, { once: true });
+      } else {
+        start();
+      }
+    })();
+  </script>
 </body>
 </html>
-
-
-<!-- Libs locales (permitidas por tu CSP) -->
-<script defer src="/vendor/qrcode.min.js?v=20250923a"></script>
-<script defer src="/vendor/JsBarcode.all.min.js?v=20250923a"></script>
-<script defer src="/vendor/jspdf.umd.min.js?v=20250923a"></script>
-
-<script>
-;(()=>{ // silenciar logs opcionales
-  const DEBUG=false;
-  if(!DEBUG){
-    const DROP=['[paint]','[panel]','[ver]','[bc]','[sanity]','[submit-fixer]','[panel][hotfix]'];
-    for(const m of ['log','info','debug','warn']){
-      const orig=console[m];
-      console[m]=function(...a){ const s=typeof a[0]==='string'?a[0]:''; if(DROP.some(p=>s.startsWith(p)))return; return orig.apply(this,a); };
-    }
-  }
-})();
-</script>
-
-<script>
-;(()=>{
-  'use strict';
-
-  /* ================== Config / Utils ================== */
-  const BC_BASE = 'https://blockchain.kodrx.app';
-  const sleep = (ms)=>new Promise(r=>setTimeout(r,ms));
-  const setText = (keyOrEl, val) => {
-  const el = (typeof keyOrEl === 'string')
-    ? (document.getElementById(keyOrEl)
-       || document.querySelector(`[data-bind="${keyOrEl}"]`)
-       || document.querySelector('.' + keyOrEl)
-       || document.querySelector(keyOrEl)) // por si te pasan "#id" o ".clase"
-    : keyOrEl;
-
-  if (!el) { console.warn('[bind] no el for', keyOrEl); return; }
-  el.textContent = (val ?? '—');
-};
-  const QR_RECETA_URL = id => `https://kodrx.app/verificar.html?id=${encodeURIComponent(id)}`;
-
-  // Normalizador (compat)
-  window.normalize = function normalize(raw0){
-    const raw = raw0 || {}; const bc = raw.blockchain || {};
-    const bloque = Number.isFinite(raw.bloque) ? raw.bloque : (bc.block ?? null);
-    const hash   = bc.hash ?? raw.hash ?? null;
-    const status = bc.status || (bloque ? 'ok' : (hash ? 'simulado' : 'pendiente'));
-    const nombrePaciente = raw.nombrePaciente ?? raw.pacienteNombre ?? raw.paciente?.nombre ?? raw.paciente ?? '—';
-    const medico = raw.medico || {
-      nombre: raw.medicoNombre, genero: raw.medicoGenero, cedula: raw.medicoCedula,
-      especialidad: raw.medicoEspecialidad, telefono: raw.medicoTelefono, direccion: raw.medicoDomicilio
-    };
-    return { ...raw, nombrePaciente, medico,
-      bloque, hash, blockchain:{ ...bc, status, block:(bc.block ?? bloque) ?? null, hash } };
-  };
-
-  /* ================== Carga de libs (correcta) ================== */
-  function loadScript(src){
-    return new Promise((res,rej)=>{
-      const s=document.createElement('script'); s.src=src; s.defer=true;
-      s.onload=res; s.onerror=()=>rej(new Error('No se pudo cargar: '+src));
-      document.head.appendChild(s);
-    });
-  }
-  async function ensureLibs(){
-    const jobs=[];
-    if(!window.QRCode && !window.qrcode) jobs.push(loadScript('/vendor/qrcode.min.js?v=20250923a'));
-    if(!window.JsBarcode && !(window.JsBarcode?.default)) jobs.push(loadScript('/vendor/JsBarcode.all.min.js?v=20250923a'));
-    if(!(window.jspdf && window.jspdf.jsPDF)) jobs.push(loadScript('/vendor/jspdf.umd.min.js?v=20250923a'));
-    if(jobs.length) await Promise.all(jobs);
-  }
-  async function ensureJsPDF(){
-    if(window.jspdf?.jsPDF) return window.jspdf.jsPDF;
-    await loadScript('/vendor/jspdf.umd.min.js?v=20250923a');
-    return window.jspdf?.jsPDF;
-  }
-  async function ensureJsBarcode(){
-    if(window.JsBarcode || window.JsBarcode?.default) return (window.JsBarcode || window.JsBarcode.default);
-    await loadScript('/vendor/JsBarcode.all.min.js?v=20250923a');
-    return (window.JsBarcode || window.JsBarcode?.default);
-  }
-
-  /* ================== QR helpers ================== */
-  function makeQR(host, text, size){
-    if(!host) return false;
-    const QR = window.QRCode || window.qrcode;
-    if(!QR)  return false;
-    host.innerHTML='';
-    if(window.QRCode){ new QRCode(host,{text,width:size,height:size,correctLevel:QRCode.CorrectLevel.M}); return true; }
-    try{
-      if(QR.toCanvas){ const c=document.createElement('canvas'); host.appendChild(c); QR.toCanvas(c,text,{width:size}); return true; }
-    }catch{}
-    return false;
-  }
-  async function makeQRDataURLCompat(text,size=220){
-    await ensureLibs();
-    try{
-      if(window.qrcode?.toDataURL) return await window.qrcode.toDataURL(text,{width:size,margin:1});
-      if(window.QRCode){
-        const div=document.createElement('div');
-        new QRCode(div,{text,width:size,height:size,correctLevel:(window.QRCode.CorrectLevel?.M ?? 1)});
-        await Promise.resolve();
-        const img=div.querySelector('img'); if(img?.src) return img.src;
-        const c=div.querySelector('canvas'); if(c) return c.toDataURL('image/png');
-      }
-    }catch{}
-    return '';
-  }
-
-  /* ================== Firestore hydrate ================== */
-  async function hydrateIfNeeded(){
-    if(window.RECETA_ACTUAL && (window.RECETA_ACTUAL.blockchain || window.RECETA_ACTUAL.hash || window.RECETA_ACTUAL.bloque)) return;
-    try{
-      const id = new URLSearchParams(location.search).get('id'); if(!id) return;
-      const core = await import('/firebase-init.js');
-      const fs = await import('https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js');
-      const snap = await fs.getDoc(fs.doc(core.db,'recetas',id));
-      if(snap.exists()) window.RECETA_ACTUAL = { id:snap.id, ...(window.RECETA_ACTUAL||{}), ...(snap.data()||{}) };
-    }catch(e){ console.warn('[ver] hydrate warn', e); }
-  }
-
-  /* ================== Badge ================== */
-  function updateBadgeFromReceta(r){
-    const el=document.getElementById('badgeOrigen'); if(!el) return;
-    const hasBlock=(r?.blockchain?.block ?? r?.bloque) != null;
-    const hasHash=!!(r?.blockchain?.hash ?? r?.hash);
-    const S = hasBlock ? {txt:'SELLADO EN BLOCKCHAIN', cls:'badge ok',   bg:'#16a34a', fg:'#fff'}
-            : hasHash  ? {txt:'SELLADO SIMULADO',      cls:'badge warn', bg:'#f59e0b', fg:'#111'}
-                       : {txt:'PENDIENTE',             cls:'badge warn', bg:'#9ca3af', fg:'#111'};
-    el.textContent=S.txt; el.className=S.cls; el.style.background=S.bg; el.style.color=S.fg;
-  }
-
-  /* ================== QR de cadena ================== */
-  async function setChainQR(block){
-    const host=document.getElementById('qrChain'); if(!host) return;
-    await ensureLibs();
-    const url=`${BC_BASE}/verificar.html?id=${encodeURIComponent(block)}`;
-    makeQR(host,url,220);
-    const bn=document.getElementById('blockNum'); if(bn) bn.textContent=String(block||'—');
-  }
-
-  /* ================== QRs para PDF ================== */
-  async function getQRSources(receta){
-    const out={};
-    const mainNode  = document.querySelector('#qrMain  canvas, #qrMain  img');
-    const chainNode = document.querySelector('#qrChain canvas, #qrChain img');
-    if(mainNode)  out.main  = mainNode.tagName==='IMG'? mainNode.src  : mainNode.toDataURL('image/png');
-    if(chainNode) out.chain = chainNode.tagName==='IMG'? chainNode.src : chainNode.toDataURL('image/png');
-    if(!out.main){
-      const verURL = QR_RECETA_URL(receta?.id || '');
-      out.main = await makeQRDataURLCompat(verURL, 220);
-    }
-    if(!out.chain){
-      const blk = receta?.blockchain?.block ?? receta?.bloque ?? null;
-      if(blk) out.chain = await makeQRDataURLCompat(`${BC_BASE}/verificar.html?id=${encodeURIComponent(blk)}`, 220);
-    }
-    return out;
-  }
-  window.getQRSources = getQRSources;
-
-  /* ================== Render principal ================== */
-  async function renderOnce(){
-    for(let i=0;i<100;i++){ if(window.RECETA_ACTUAL) break; await sleep(60); }
-    await hydrateIfNeeded();
-
-    const r0 = window.RECETA_ACTUAL; if(!r0) return;
-    const r  = window.RECETA_ACTUAL = normalize(r0);
-
-    // Médico
-    const pref=(n,g)=>!n?'—':(String(g||'').toLowerCase().startsWith('f')?'Dra. ':'Dr. ')+n;
-    setText('doctorNombre', pref(r.medico?.nombre ?? r.medicoNombre, r.medico?.genero ?? r.medicoGenero));
-    setText('doctorCedula', r.medico?.cedula ?? r.medicoCedula ?? '—');
-    setText('doctorEsp',    r.medico?.especialidad ?? r.medicoEspecialidad ?? '—');
-    setText('doctorTel',    r.medico?.telefono ?? r.medicoTelefono ?? '—');
-    setText('doctorDir',    r.medico?.direccion ?? r.medicoDomicilio ?? '—');
-
-    setText('pacienteNombre', r.paciente?.nombre ?? r.nombrePaciente ?? '—');
-setText('pacEdad',  r.paciente?.edad ?? r.edad ?? '—');
-setText('pacSexo',  r.paciente?.sexo ?? r.sexo ?? '—');
-setText('pacPeso',  r.paciente?.peso ?? r.peso ?? '—');
-setText('pacTalla', r.paciente?.talla ?? r.talla ?? '—');
-setText('pacTemp',  r.paciente?.temperatura ?? r.temperatura ?? '—');
-setText('pacPresion', r.paciente?.presion ?? r.presion ?? '—');
-setText('pacIMC',     r.paciente?.imc ?? r.imc ?? '—');
-setText('obsTexto',  r.observaciones ?? '—');
-setText('diagTexto', r.diagnostico   ?? '—');
-setText('recetaId', 'ID: ' + (r.id || '—'));
-
-{
-  const meds = Array.isArray(r.medicamentos) ? r.medicamentos : [];
-  const medsTxt = meds.length
-    ? meds.map((m,i)=>`${i+1}. ${m.nombre}\n   Dosis: ${m.dosis}\n   Duración: ${m.duracion}`).join('\n\n')
-    : '—';
-  const medsEl = document.getElementById('listaMedsDerecha');
-  if (medsEl) medsEl.textContent = medsTxt;
-}
-
-
-    // Libs + QR receta
-    await ensureLibs();
-    const host = document.getElementById('qrMain');
-    if(host && !host.querySelector('canvas,img')){
-      const verURL = QR_RECETA_URL(r.id);
-      makeQR(host, verURL, 260);
-    }
-
-    // Código de barras (canvas)
-    const canvas = document.getElementById('barcodeCanvas');
-    const label  = document.getElementById('barcodeLabel');
-    const JsBarcodeFn = await ensureJsBarcode();
-    if(canvas && typeof JsBarcodeFn==='function'){
-      try{
-        const dpr=Math.max(1,window.devicePixelRatio||1), cssW=300, cssH=80;
-        canvas.width=cssW*dpr; canvas.height=cssH*dpr;
-        canvas.style.width=cssW+'px'; canvas.style.height=cssH+'px';
-        const ctx=canvas.getContext('2d'); ctx.setTransform(dpr,0,0,dpr,0,0);
-        JsBarcodeFn(canvas, String(r.id||''), { format:'CODE128', width:2, height:40, margin:4, displayValue:false });
-        if(label) label.textContent = r.id || '—';
-      }catch(e){ if(label) label.textContent = r.id || '—'; }
-    }
-
-    // Hash / badge
-    const hashTxt = (r.hash ?? r.blockchain?.hash) ? `hash (BC): ${r.hash ?? r.blockchain?.hash}` : (r.id ? `hash (local): ${String(r.id).slice(0,8)}` : 'hash: —');
-    setText('hashTexto', hashTxt);
-    updateBadgeFromReceta(r);
-
-    // QR blockchain + leyenda
-    const blk = r?.blockchain?.block ?? r?.bloque ?? null;
-    if(blk) await setChainQR(blk);
-    const legendHolder = document.querySelector('.qr-legend .sub');
-    const legend='Para consultar bloque visitar kodrx.app';
-    if(legendHolder) legendHolder.textContent=legend;
-    else document.getElementById('blockNum')?.insertAdjacentHTML('afterend','<br><span class="sub" style="color:#6b7280;font-weight:400">'+legend+'</span>');
-
-    // QRs para PDF
-    window.QRS = await getQRSources(r);
-
-    // quita overlays de “verificando”
-    ['#verifyScope','#badgeVerificando','#spinnerVerificando','#panelVerificando','[data-role="verificando"]','.verificando','.spinner-verify']
-      .forEach(sel=>document.querySelectorAll(sel).forEach(el=>el.style.display='none'));
-
-    console.log('[ver] render ok');
-  }
-  window.renderOnce = renderOnce;
-
-  /* ================== PDF ================== */
-  window.generarPDF = async function generarPDF(rIn, qrsIn, { mode = 'save' } = {}) {
-  // 1) jsPDF listo
-  const jsPDF = await (window.ensureJsPDF ? window.ensureJsPDF() : (window.jspdf?.jsPDF));
-  const { jsPDF: Cls } = window.jspdf || {};
-  if (!Cls) { alert('No se pudo cargar jsPDF'); return; }
-
-  // 2) Adaptación de objeto receta
-  const adapt = (x = {}) => {
-    const m = {
-      nombre:       x.medico?.nombre ?? x.medicoNombre ?? '—',
-      genero:       x.medico?.genero ?? x.medicoGenero ?? '',
-      cedula:       x.medico?.cedula ?? x.medicoCedula ?? '—',
-      especialidad: x.medico?.especialidad ?? x.medicoEspecialidad ?? 'General',
-      telefono:     x.medico?.telefono ?? x.medicoTelefono ?? '',
-      direccion:    x.medico?.direccion ?? x.medicoDomicilio ?? ''
-    };
-    const p = {
-      nombre: x.paciente?.nombre ?? x.nombrePaciente ?? x.pacienteNombre ?? '—',
-      edad:   x.paciente?.edad   ?? x.edad ?? '—',
-      sexo:   x.paciente?.sexo   ?? x.sexo ?? '—',
-      peso:   x.paciente?.peso   ?? x.peso ?? '—',
-      talla:  x.paciente?.talla  ?? x.talla ?? '—',
-      temperatura: x.paciente?.temperatura ?? x.temperatura ?? '—',
-      presion:     x.paciente?.presion     ?? x.presion ?? '—',
-      imc:         x.paciente?.imc         ?? x.imc ?? '—',
-    };
-    const bloque = (x.blockchain?.block ?? x.bloque ?? null);
-    const hash   = x.hash ?? x.blockchain?.hash ?? null;
-    return { ...x, medico: m, paciente: p, bloque, hash };
-  };
-  const r = adapt(rIn || {});
-
-  // 3) QRs (usa cache o regenera)
-  const qrs = (qrsIn && (qrsIn.main || qrsIn.chain))
-    ? qrsIn
-    : (window.QRS || (window.getQRSources ? await window.getQRSources(r) : {}));
-
-  // 4) Documento y layout base
-  const doc = new Cls({ unit: 'pt', format: 'letter', compress: true }); // 612×792
-  const W = doc.internal.pageSize.getWidth();
-  const H = doc.internal.pageSize.getHeight();
-
-  // Paleta y tipografía
-  const COLORS = {
-  bgPanel:   [248,250,252],
-  stPanel:   [224,231,240],
-  brand:     [11,91,211],
-  text:      [17,24,39],
-  sub:       [55,65,81],
-  label:     [107,114,128]
-};
-const FONT = 'helvetica';
-doc.setFont(FONT, 'normal');
-
-  // Márgenes / columnas
-  const Mx = 40, My = 50, gutter = 16;
-  const CW = W - 2 * Mx, colW = (CW - gutter) / 2;
-  const leftX = Mx, rightX = Mx + colW + gutter;
-  const footerH = 52, availYMax = H - My - footerH - 10;
-
-  // Helpers de texto y cajas
-  const wrap  = (t, w) => doc.splitTextToSize(String(t ?? '—'), w);
-  const lineH = 11; // interlínea base PDF
-  function sectionBox(x, y, w, contentH, title) {
-    const padX = 10, padY = 10, titleH = 18, boxH = contentH + padY * 2 + titleH;
-    const yClamp = Math.min(y, availYMax - boxH);
-
-    doc.setFillColor(...COLORS.bgPanel);
-    doc.setDrawColor(...COLORS.stPanel); doc.setLineWidth(0.8);
-    doc.roundedRect(x, yClamp, w, boxH, 8, 8, 'FD');
-
-    doc.setTextColor(...COLORS.label); doc.setFont(FONT, 'bold'); doc.setFontSize(10.5);
-    doc.text(title, x + padX, yClamp + 14);
-
-    doc.setFont(FONT, 'normal'); doc.setFontSize(10); doc.setTextColor(...COLORS.text);
-    return { cx: x + padX, cy: yClamp + 14 + padY, ny: yClamp + boxH + 10, innerH: contentH };
-  }
-  function drawClamp(x, y, maxW, maxH, text) {
-    const lines = wrap(text, maxW);
-    let used = 0, lastY = y;
-    for (let i = 0; i < lines.length; i++) {
-      if (used + lineH > maxH) {
-        // agrega “…” si no cupo todo
-        if (i > 0) {
-          const prev = lines[i - 1];
-          doc.text((prev.length > 1 ? prev.slice(0, prev.length - 1) : prev) + '…', x, lastY);
-        }
-        return;
-      }
-      lastY = y + used + lineH;
-      doc.text(lines[i], x, lastY);
-      used += lineH;
-    }
-  }
-  function fechaStr(ts) {
-    try {
-      if (ts && typeof ts.toDate === 'function') ts = ts.toDate();
-      else if (ts && typeof ts.seconds === 'number') ts = new Date(ts.seconds * 1000 + Math.floor((ts.nanoseconds || 0) / 1e6));
-      else if (!(ts instanceof Date)) ts = new Date(ts);
-      return ts.toLocaleString('es-MX', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-    } catch { return ''; }
-  }
-
-  // 5) Encabezado
-  (function header(){
-    const headY = 18, headH = 50;
-    doc.setFillColor(240,245,255);
-    doc.roundedRect(18, headY, W - 36, headH, 9, 9, 'F');
-    doc.setTextColor(11,27,43); doc.setFont(FONT, 'bold'); doc.setFontSize(12);
-    doc.text('KodRx — Receta médica digital', Mx, headY + 30);
-  })();
-
-  let yL = 18 + 50 + 12; // debajo del header
-  let yR = yL;
-
-  // 6) MÉDICO
-  {
-    const s = sectionBox(leftX, yL, colW, 92, 'MÉDICO');
-    const prefijo = (nom, gen) => {
-      if (!nom) return '—';
-      const g = String(gen || '').toLowerCase();
-      return (g.startsWith('f') ? 'Dra. ' : 'Dr. ') + nom;
-    };
-    doc.setFont(FONT, 'bold'); doc.setFontSize(10);
-    drawClamp(s.cx, s.cy, colW - 16, 26, prefijo(r.medico.nombre, r.medico.genero));
-
-    doc.setFont(FONT, 'normal'); doc.setFontSize(9); doc.setTextColor(...COLORS.sub);
-    let cy = s.cy + 28;
-    drawClamp(s.cx, cy, colW - 16, 14, `Cédula: ${r.medico.cedula || '—'}   Esp: ${r.medico.especialidad || '—'}`); cy += 14;
-    drawClamp(s.cx, cy, colW - 16, 14, `Tel: ${r.medico.telefono || '—'}`); cy += 14;
-    drawClamp(s.cx, cy, colW - 16, 28, `Dirección: ${r.medico.direccion || '—'}`);
-    yL = s.ny;
-  }
-
-  // 7) PACIENTE + ID + FECHA
-  {
-    const s = sectionBox(leftX, yL, colW, 114, 'PACIENTE');
-    doc.setFont(FONT, 'bold'); doc.setFontSize(10); doc.setTextColor(...COLORS.text);
-    drawClamp(s.cx, s.cy, colW - 16, 24, String(r.paciente.nombre || '—'));
-
-    doc.setFont(FONT, 'normal'); doc.setFontSize(9); doc.setTextColor(...COLORS.sub);
-    let cy = s.cy + 26;
-    drawClamp(s.cx, cy, colW - 16, 14, `Fecha: ${fechaStr(r.timestamp)}`); cy += 14;
-    drawClamp(s.cx, cy, colW - 16, 14, `ID: ${r.id || '—'}`); cy += 18;
-
-    const label = (lbl, val) => `${lbl}: ${String(val ?? '—')}`;
-    drawClamp(s.cx, cy, colW - 16, 14, `${label('Edad', r.paciente.edad)}   ${label('Sexo', r.paciente.sexo)}`); cy += 14;
-    drawClamp(s.cx, cy, colW - 16, 14, `${label('Peso', r.paciente.peso)}   ${label('Talla', r.paciente.talla)}`); cy += 14;
-    drawClamp(s.cx, cy, colW - 16, 14, `${label('Temp', r.paciente.temperatura)}   ${label('PA', r.paciente.presion)}   ${label('IMC', r.paciente.imc)}`);
-    yL = s.ny;
-  }
-
-   // 8) OBSERVACIONES + DIAGNÓSTICO (proporcional, evita cortes feos)
-{
-  const SEP = 28;
-  const MIN_OBS = 64, MIN_DX = 64;
-
-  const leftSpace    = Math.max(0, availYMax - yL);
-  const contentSpace = Math.max(0, leftSpace - SEP);
-
-  const obsText  = String(r.observaciones ?? '—');
-  const dxText   = String(r.diagnostico   ?? '—');
-  const obsLines = wrap(obsText, colW - 16).length || 1;
-  const dxLines  = wrap(dxText,  colW - 16).length || 1;
-
-  const idealObsH = Math.max(MIN_OBS, obsLines * lineH + 6);
-  const idealDxH  = Math.max(MIN_DX,  dxLines  * lineH + 6);
-
-  const sumW   = obsLines + dxLines;
-  let allocObs = sumW ? Math.round(contentSpace * (obsLines / sumW)) : Math.floor(contentSpace/2);
-  let allocDx  = contentSpace - allocObs;
-
-  // respeta mínimos y no excedas lo ideal
-  allocObs = Math.min(Math.max(allocObs, MIN_OBS), idealObsH);
-  allocDx  = Math.min(Math.max(allocDx,  MIN_DX),  idealDxH);
-
-  // si aún sobra/rebasa, recorta OBS primero (puedes invertir si prefieres)
-  if (allocObs + allocDx > contentSpace) {
-    const over = allocObs + allocDx - contentSpace;
-    allocObs = Math.max(MIN_OBS, allocObs - over);
-  }
-
-  const sObs = sectionBox(leftX, yL, colW, allocObs, 'OBSERVACIONES');
-  doc.setFont(FONT,'normal'); doc.setFontSize(9); doc.setTextColor(...COLORS.text);
-  drawClamp(sObs.cx, sObs.cy, colW - 16, sObs.innerH, obsText);
-  yL = sObs.ny;
-
-  // separador
-  doc.setDrawColor(...COLORS.stPanel); doc.setLineWidth(0.8);
-  const midY = yL - 2 + SEP / 2;
-  doc.line(leftX + 6, midY, leftX + colW - 6, midY);
-  yL = yL - 2 + SEP + 6;
-
-  const sDx = sectionBox(leftX, yL, colW, Math.min(allocDx, availYMax - yL), 'DIAGNÓSTICO');
-  drawClamp(sDx.cx, sDx.cy, colW - 16, sDx.innerH, dxText);
-  yL = sDx.ny;
-}
-
-
- 
-  // 9) MEDICAMENTOS (columna derecha)
-  {
-    const medsTxt = (Array.isArray(r.medicamentos) && r.medicamentos.length)
-      ? r.medicamentos.map((m, i) => `${i + 1}. ${m.nombre}\n   Dosis: ${m.dosis}\n   Duración: ${m.duracion}`).join('\n\n')
-      : '—';
-
-    const lines = wrap(medsTxt, colW - 16);
-    const need  = Math.max(100, lines.length * lineH + 6);
-
-    const s = sectionBox(rightX, yR, colW, Math.min(need, Math.max(100, availYMax - yR)), 'MEDICAMENTOS');
-    doc.setFont(FONT, 'normal'); doc.setFontSize(9); doc.setTextColor(...COLORS.text);
-    drawClamp(s.cx, s.cy, colW - 16, s.innerH, medsTxt);
-    yR = s.ny;
-  }
-
-  // 10) QR Receta (tarjeta centrada)
-  {
-    const box = 120, pad = 10;
-    let y = yR;
-    const x = rightX + (colW - box) / 2;
-    if (qrs?.main) {
-      doc.setDrawColor(...COLORS.brand); doc.setLineWidth(2.2);
-      doc.roundedRect(x, y, box, box, 10, 10, 'S');
-      doc.addImage(qrs.main, 'PNG', x + pad, y + pad, box - 2 * pad, box - 2 * pad, undefined, 'FAST');
-      doc.setTextColor(...COLORS.brand); doc.setFont(FONT, 'bold'); doc.setFontSize(9.5);
-      doc.text('Receta', x + box / 2, y + box + 12, { align: 'center' });
-      yR = y + box + 20;
-    }
-  }
-
-  // 11) Código de barras (ID) — tarjeta simple
-  {
-    const JsBarcodeFn = (window.JsBarcode || window.JsBarcode?.default);
-    if (JsBarcodeFn && r.id) {
-      const cv = document.createElement('canvas'); cv.width = 300; cv.height = 40;
-      try {
-        JsBarcodeFn(cv, String(r.id), { format: 'CODE128', width: 2, height: 32, margin: 4, displayValue: false });
-        const barUrl = cv.toDataURL('image/png');
-
-        let imgW = Math.min(colW - 20, 300), imgH = 40 * (imgW / 300);
-        let x = rightX + (colW - imgW) / 2;
-        let y = yR + 6;
-
-        doc.setFillColor(...COLORS.bgPanel); doc.setDrawColor(...COLORS.stPanel); doc.setLineWidth(0.8);
-        doc.roundedRect(rightX, y, colW, imgH + 26, 8, 8, 'FD');
-        doc.addImage(barUrl, 'PNG', x, y + 8, imgW, imgH, undefined, 'FAST');
-        doc.setFont(FONT, 'bold'); doc.setFontSize(9); doc.setTextColor(...COLORS.sub);
-        doc.text('Código de barras (ID)', rightX + colW / 2, y + imgH + 20, { align: 'center' });
-        yR = y + imgH + 36;
-      } catch {}
-    }
-  }
-
-// 12) HASH (altura dinámica) + 13) Blockchain (evita montonarse)
-{
-  const hashLabel = r.hash ? `hash (BC): ${r.hash}` : 'hash (local): —';
-  const hashLines = wrap(hashLabel, colW - 16).length || 1;
-  const hashNeed  = Math.max(56, hashLines * lineH + 12);
-
-  const mini = 90, pad = 8, qrCaptionH = 38; // “Blockchain”, “Bloque …”, leyenda
-  const qrReserve = (qrs?.chain) ? (mini + qrCaptionH + 12) : 0;
-
-  // Si no cabe todo en orden natural (HASH → QR), dibuja QR primero
-  if (qrs?.chain && (yR + hashNeed + qrReserve > availYMax)) {
-    const qrX = rightX + colW - mini;
-    let qrY = yR + 6;
-    if (qrY + mini + qrCaptionH > availYMax) qrY = Math.max(yR + 6, availYMax - mini - qrCaptionH);
-
-    doc.setDrawColor(...COLORS.brand); doc.setLineWidth(2.0);
-    doc.roundedRect(qrX, qrY, mini, mini, 8, 8, 'S');
-    doc.addImage(qrs.chain, 'PNG', qrX + pad, qrY + pad, mini - 2*pad, mini - 2*pad, undefined, 'FAST');
-
-    doc.setTextColor(...COLORS.brand); doc.setFont(FONT,'bold'); doc.setFontSize(9);
-    doc.text('Blockchain', qrX + mini/2, qrY + mini + 12, { align: 'center' });
-
-    const bn = (r.bloque != null) ? String(r.bloque)
-            : (r.blockchain?.block != null) ? String(r.blockchain.block) : '—';
-    doc.setTextColor(...COLORS.text); doc.setFont(FONT,'bold'); doc.setFontSize(10);
-    doc.text('Bloque: ' + bn, qrX + mini/2, qrY + mini + 26, { align: 'center' });
-
-    doc.setTextColor(...COLORS.sub); doc.setFont(FONT,'normal'); doc.setFontSize(8.5);
-    doc.text('Para consultar bloque visitar kodrx.app', qrX + mini/2, qrY + mini + 38, { align: 'center' });
-
-    yR = qrY + mini + qrCaptionH + 10; // respiro
-
-    const remaining = Math.max(44, availYMax - yR);
-    const s = sectionBox(rightX, yR, colW, Math.min(hashNeed, remaining), 'HASH');
-    doc.setFont(FONT,'normal'); doc.setFontSize(9.8); doc.setTextColor(...COLORS.sub);
-    drawClamp(s.cx, s.cy, colW - 16, s.innerH, hashLabel);
-    yR = s.ny;
-
-  } else {
-    // Cabe en orden natural: HASH → Blockchain
-    const s = sectionBox(rightX, yR, colW, hashNeed, 'HASH');
-    doc.setFont(FONT,'normal'); doc.setFontSize(9.8); doc.setTextColor(...COLORS.sub);
-    drawClamp(s.cx, s.cy, colW - 16, s.innerH, hashLabel);
-    yR = s.ny;
-
-    if (qrs?.chain) {
-      const qrX = rightX + colW - mini;
-      let qrY = yR + 6;
-      if (qrY + mini + qrCaptionH > availYMax) qrY = Math.max(yR + 6, availYMax - mini - qrCaptionH);
-
-      doc.setDrawColor(...COLORS.brand); doc.setLineWidth(2.0);
-      doc.roundedRect(qrX, qrY, mini, mini, 8, 8, 'S');
-      doc.addImage(qrs.chain, 'PNG', qrX + pad, qrY + pad, mini - 2*pad, mini - 2*pad, undefined, 'FAST');
-
-      doc.setTextColor(...COLORS.brand); doc.setFont(FONT,'bold'); doc.setFontSize(9);
-      doc.text('Blockchain', qrX + mini/2, qrY + mini + 12, { align: 'center' });
-
-      const bn = (r.bloque != null) ? String(r.bloque)
-              : (r.blockchain?.block != null) ? String(r.blockchain.block) : '—';
-      doc.setTextColor(...COLORS.text); doc.setFont(FONT,'bold'); doc.setFontSize(10);
-      doc.text('Bloque: ' + bn, qrX + mini/2, qrY + mini + 26, { align: 'center' });
-
-      doc.setTextColor(...COLORS.sub); doc.setFont(FONT,'normal'); doc.setFontSize(8.5);
-      doc.text('Para consultar bloque visitar kodrx.app', qrX + mini/2, qrY + mini + 38, { align: 'center' });
-
-      yR = qrY + mini + qrCaptionH + 10;
-    }
-  }
-}
-
-
-  // 14) Footer
-  (function footer(){
-    doc.setFillColor(...COLORS.brand);
-    doc.rect(18, H - 18 - footerH, W - 36, footerH, 'F');
-    doc.setTextColor(255,255,255); doc.setFont(FONT, 'bold'); doc.setFontSize(10.5);
-    doc.text('Creada con KodRx. Tecnología que verifica, salud que protege.', W / 2, H - 22, { align: 'center' });
-  })();
-
-  // 15) Salida
-  const filename = `receta_${r.id || 'sin-id'}.pdf`;
-  if (mode === 'print') {
-    try { doc.autoPrint(); doc.output('dataurlnewwindow'); } catch { doc.save(filename); }
-  } else if (mode === 'open') {
-    const url = doc.output('bloburl'); window.open(url, '_blank');
-  } else {
-    doc.save(filename);
-  }
-};
-
-  /* ================== Botones ================== */
-  function bindButtons(){
-    const btnD=document.getElementById('btnDescargar');
-    const btnP=document.getElementById('btnImprimir');
-    const btnB=document.getElementById('btnVolver');
-    const onPDF=(mode)=>async (e)=>{
-      e?.preventDefault?.();
-      if(!window.RECETA_ACTUAL) await renderOnce();
-      const r=window.RECETA_ACTUAL||{}; const qrs=window.QRS||await getQRSources(r);
-      await window.generarPDF(r,qrs,{mode});
-    };
-    if(btnD && !btnD.__b){ btnD.type='button'; btnD.disabled=false; btnD.addEventListener('click',onPDF('save'),{capture:true}); btnD.__b=true; }
-    if(btnP && !btnP.__b){ btnP.type='button'; btnP.disabled=false; btnP.addEventListener('click',onPDF('print'),{capture:true}); btnP.__b=true; }
-    if(btnB && !btnB.__b){
-      btnB.type='button';
-      btnB.addEventListener('click',(e)=>{ e.preventDefault(); if(history.length>1) history.back(); else location.href='/medico/panel.html'; },{capture:true});
-      btnB.__b=true;
-    }
-  }
-
-  /* ================== Boot ================== */
-  function start(){
-    try{ renderOnce(); }catch(e){}
-    try{ bindButtons(); }catch(e){ console.warn('bindButtons err',e); }
-  }
-  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', start, {once:true});
-  else start();
-})();
-</script>
-
