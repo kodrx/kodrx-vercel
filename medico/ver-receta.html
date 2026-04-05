@@ -817,25 +817,33 @@
         const wrap = (t, w) => doc.splitTextToSize(String(t ?? '—'), w);
         const lineH = 11;
 
-        function sectionBox(x, y, w, contentH, title) {
-          const padX = 10, padY = 10, titleH = 18, boxH = contentH + padY * 2 + titleH;
-          const yClamp = Math.min(y, availYMax - boxH);
+      function sectionBox(x, y, w, contentH, title) {
+  const padX = 10;
+  const padY = 10;
+  const titleH = 18;
+  const boxH = contentH + padY * 2 + titleH;
 
-          doc.setFillColor(...COLORS.bgPanel);
-          doc.setDrawColor(...COLORS.stPanel);
-          doc.setLineWidth(0.8);
-          doc.roundedRect(x, yClamp, w, boxH, 8, 8, 'FD');
+  doc.setFillColor(...COLORS.bgPanel);
+  doc.setDrawColor(...COLORS.stPanel);
+  doc.setLineWidth(0.8);
+  doc.roundedRect(x, y, w, boxH, 8, 8, 'FD');
 
-          doc.setTextColor(...COLORS.label);
-          doc.setFont(FONT, 'bold');
-          doc.setFontSize(10.5);
-          doc.text(title, x + padX, yClamp + 14);
+  doc.setTextColor(...COLORS.label);
+  doc.setFont(FONT, 'bold');
+  doc.setFontSize(10.5);
+  doc.text(title, x + padX, y + 14);
 
-          doc.setFont(FONT, 'normal');
-          doc.setFontSize(10);
-          doc.setTextColor(...COLORS.text);
-          return { cx: x + padX, cy: yClamp + 14 + padY, ny: yClamp + boxH + 10, innerH: contentH };
-        }
+  doc.setFont(FONT, 'normal');
+  doc.setFontSize(10);
+  doc.setTextColor(...COLORS.text);
+
+  return {
+    cx: x + padX,
+    cy: y + 14 + padY,
+    ny: y + boxH + 10,
+    innerH: contentH
+  };
+}
 
         function drawClamp(x, y, maxW, maxH, text) {
           const lines = wrap(text, maxW);
@@ -919,54 +927,73 @@
         }
 
         {
-          const SEP = 16;
-          const MIN_IND = 56, MIN_OBS = 56, MIN_DX = 56;
+  const SEP = 12;
+  const MIN_IND = 48;
+  const MIN_OBS = 48;
+  const MIN_DX  = 48;
 
-          const leftSpace = Math.max(0, availYMax - yL);
-          const contentSpace = Math.max(0, leftSpace - (SEP * 2));
+  const indText = String(r.indicaciones ?? '—');
+  const obsText = String(r.observaciones ?? '—');
+  const dxText  = String(r.diagnostico ?? '—');
 
-          const indText = String(r.indicaciones ?? '—');
-          const obsText = String(r.observaciones ?? '—');
-          const dxText = String(r.diagnostico ?? '—');
+  const indNeed = Math.max(MIN_IND, (wrap(indText, colW - 16).length || 1) * lineH + 8);
+  const obsNeed = Math.max(MIN_OBS, (wrap(obsText, colW - 16).length || 1) * lineH + 8);
+  const dxNeed  = Math.max(MIN_DX,  (wrap(dxText,  colW - 16).length || 1) * lineH + 8);
 
-          const indLines = wrap(indText, colW - 16).length || 1;
-          const obsLines = wrap(obsText, colW - 16).length || 1;
-          const dxLines = wrap(dxText, colW - 16).length || 1;
+  let remaining = Math.max(0, availYMax - yL);
+  const separatorsTotal = SEP * 2;
 
-          const totalLines = indLines + obsLines + dxLines;
+  if (remaining > separatorsTotal + 30) {
+    let usable = remaining - separatorsTotal;
 
-          let allocInd = Math.max(MIN_IND, Math.round(contentSpace * (indLines / totalLines)));
-          let allocObs = Math.max(MIN_OBS, Math.round(contentSpace * (obsLines / totalLines)));
-          let allocDx = Math.max(MIN_DX, contentSpace - allocInd - allocObs);
+    let allocInd = Math.min(indNeed, usable);
+    usable -= allocInd;
 
-          const overflow = allocInd + allocObs + allocDx - contentSpace;
-          if (overflow > 0) allocDx = Math.max(MIN_DX, allocDx - overflow);
+    let allocObs = Math.min(obsNeed, Math.max(0, usable));
+    usable -= allocObs;
 
-          const sInd = sectionBox(leftX, yL, colW, allocInd, 'INDICACIONES');
-          doc.setFont(FONT, 'normal');
-          doc.setFontSize(9);
-          doc.setTextColor(...COLORS.text);
-          drawClamp(sInd.cx, sInd.cy, colW - 16, sInd.innerH, indText);
-          yL = sInd.ny;
+    let allocDx = Math.min(dxNeed, Math.max(0, usable));
 
-          doc.setDrawColor(...COLORS.stPanel);
-          doc.setLineWidth(0.8);
-          let midY = yL - 2 + SEP / 2;
-          doc.line(leftX + 6, midY, leftX + colW - 6, midY);
-          yL = yL - 2 + SEP + 6;
+    if (allocInd < MIN_IND) allocInd = Math.min(MIN_IND, remaining);
+    if (allocObs < MIN_OBS && (remaining - allocInd - SEP) > 30) {
+      allocObs = Math.min(MIN_OBS, remaining - allocInd - SEP);
+    }
+    if (allocDx < MIN_DX && (remaining - allocInd - allocObs - SEP * 2) > 30) {
+      allocDx = Math.min(MIN_DX, remaining - allocInd - allocObs - SEP * 2);
+    }
 
-          const sObs = sectionBox(leftX, yL, colW, allocObs, 'OBSERVACIONES');
-          drawClamp(sObs.cx, sObs.cy, colW - 16, sObs.innerH, obsText);
-          yL = sObs.ny;
+    if (allocInd > 30) {
+      const sInd = sectionBox(leftX, yL, colW, allocInd, 'INDICACIONES');
+      doc.setFont(FONT, 'normal');
+      doc.setFontSize(9);
+      doc.setTextColor(...COLORS.text);
+      drawClamp(sInd.cx, sInd.cy, colW - 16, sInd.innerH, indText);
+      yL = sInd.ny;
+    }
 
-          midY = yL - 2 + SEP / 2;
-          doc.line(leftX + 6, midY, leftX + colW - 6, midY);
-          yL = yL - 2 + SEP + 6;
+    if (allocObs > 30 && yL + SEP < availYMax) {
+      yL += SEP;
+      const sObs = sectionBox(leftX, yL, colW, allocObs, 'OBSERVACIONES');
+      doc.setFont(FONT, 'normal');
+      doc.setFontSize(9);
+      doc.setTextColor(...COLORS.text);
+      drawClamp(sObs.cx, sObs.cy, colW - 16, sObs.innerH, obsText);
+      yL = sObs.ny;
+    }
 
-          const sDx = sectionBox(leftX, yL, colW, Math.min(allocDx, availYMax - yL), 'DIAGNÓSTICO');
-          drawClamp(sDx.cx, sDx.cy, colW - 16, sDx.innerH, dxText);
-          yL = sDx.ny;
-        }
+    if (allocDx > 30 && yL + SEP < availYMax) {
+      yL += SEP;
+      const spaceForDx = Math.max(30, availYMax - yL);
+      const finalDx = Math.min(allocDx, spaceForDx);
+      const sDx = sectionBox(leftX, yL, colW, finalDx, 'DIAGNÓSTICO');
+      doc.setFont(FONT, 'normal');
+      doc.setFontSize(9);
+      doc.setTextColor(...COLORS.text);
+      drawClamp(sDx.cx, sDx.cy, colW - 16, sDx.innerH, dxText);
+      yL = sDx.ny;
+    }
+  }
+}
 
         {
           const medsTxt = (Array.isArray(r.medicamentos) && r.medicamentos.length)
