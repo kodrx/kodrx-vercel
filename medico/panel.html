@@ -203,7 +203,37 @@ return (window.__fs = { collection, addDoc, updateDoc, setDoc, getDoc, doc, serv
     if (form.requestSubmit) form.requestSubmit(); else form.dispatchEvent(new Event('submit', {cancelable:true}));
   }
   window.generarReceta = window.generarReceta || generarReceta;
+function makeSelladoPayload(refId, recetaData, medicamentos){
+  const recetaResumen = medicamentos
+    .map(m => `${m.nombre} ${m.dosis} por ${m.duracion}`)
+    .join(', ');
 
+  return {
+    receta: recetaResumen,
+    medico: recetaData.medicoNombre || '',
+    cedula: recetaData.medicoCedula || '',
+    medicamentos,
+    iniciales: medicamentos.map(x => x.ini),
+    idReceta: refId,
+    timestamp: Math.floor(Date.now() / 1000)
+  };
+}
+
+function queueSelladoPendiente(refId, recetaData, medicamentos){
+  try {
+    const payload = makeSelladoPayload(refId, recetaData, medicamentos);
+
+    sessionStorage.setItem('kodrx_sellado_pendiente', JSON.stringify({
+      idReceta: refId,
+      payload,
+      at: Date.now()
+    }));
+
+    console.log('[panel] sellado pendiente en sessionStorage:', refId);
+  } catch (e) {
+    console.warn('[panel] no se pudo guardar sellado pendiente:', e);
+  }
+}
   // === SUBMIT (ÚNICO handler) ===
   async function kodrxSubmit(e){
     e?.preventDefault?.();
@@ -270,45 +300,16 @@ const medicamentos = [...document.querySelectorAll('#medicamentosContainer .medi
 
       const medsIniciales = medicamentos.map(x=>x.ini).join('-');
 
-      // 4) Documento de receta
-      const recetaData = {
- 
-  nombrePaciente,                     // tu campo actual
-  pacienteNombre: nombrePaciente,     // alias para el historial
-
-  edad, sexo, peso, talla, imc, temperatura, presion,
-  observaciones, diagnostico, indicaciones,
-  medicamentos, medsIniciales,
-
-  medicoNombre: m.nombre || usr.displayName || '',
-  medicoGenero: m.genero || '',
-  medicoCedula: m.cedula || '',
-  medicoEspecialidad: m.especialidad || 'General',
-  medicoTelefono: m.telefono || '',
-  medicoDomicilio,
-
-  medicoUid: usr.uid,
-  medicoEmail: usr.email || '',
-  correo: usr.email || '',
-
- 
-  createdAt: serverTimestamp(),
-
-
-  timestamp: (Timestamp?.now?.() ?? new Date()),
-
-  blockchain: { status:'pendiente' },
-  hash: null, 
-  bloque: null
-};
+    // 4 Documento de receta
+      
       const ref = await addDoc(collection(window.db, 'recetas'), recetaData);
-      console.log('[panel] receta creada:', ref.id);
+console.log('[panel] receta creada:', ref.id);
 
-      // 🔹 ESPEJO PÚBLICO MÍNIMO (sin datos sensibles)
+//  ESPEJO PÚBLICO MÍNIMO (sin datos sensibles)
 try {
   const recetaPublica = {
     recetaId: ref.id,
-     medicoUid: recetaData.medicoUid || '',
+    medicoUid: recetaData.medicoUid || '',
 
     medico: {
       nombre: recetaData.medicoNombre || '',
@@ -329,10 +330,10 @@ try {
           duracion: m.duracion || ''
         }))
       : [],
-    indicaciones, 
+
+    indicaciones,
     estado: 'vigente',
     surtidoParcial: false,
-
     hash: null,
     bloque: null,
 
@@ -341,79 +342,16 @@ try {
   };
 
   await setDoc(doc(window.db, 'recetas_publicas', ref.id), recetaPublica);
-
   console.log('[panel] receta_publica creada:', ref.id);
 } catch (e) {
   console.warn('[panel] error creando receta_publica:', e);
 }
-// 5) Sellado vía proxy (no bloqueante)
-try {
-  const recetaResumen = medicamentos.map(m => `${m.nombre} ${m.dosis} por ${m.duracion}`).join(', ');
-  const payload = {
-    receta: recetaResumen,
-    medico: recetaData.medicoNombre || '',
-    cedula: recetaData.medicoCedula || '',
-    medicamentos,
-    iniciales: medicamentos.map(x => x.ini),
-    idReceta: ref.id,
-    timestamp: Math.floor(Date.now() / 1000)
-  };
 
-  const resp = await fetch('/api/bloques', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload)
-  });
+// 5 Encolar sellado y seguir inmediato
+queueSelladoPendiente(ref.id, recetaData, medicamentos);
 
-  let raw = {};
-  try { raw = await resp.json(); } catch {}
-  console.log('[BC][raw]', raw);
 
-  const toNum = v =>
-    (typeof v === 'number' && Number.isFinite(v))
-      ? v
-      : (/^\d+$/.test(String(v ?? '')) ? Number(v) : NaN);
-
-  const block = [raw?.bloque?.index, raw?.index, raw?.bloqueIndex, raw?.block]
-    .map(toNum)
-    .find(Number.isFinite);
-
-  const hash = raw?.bloque?.hash || raw?.hash || raw?.blockHash || raw?.txid || null;
-
-  const updates = {};
-  if (resp.ok && Number.isFinite(block) && hash) {
-    updates.blockchain = { status: 'ok', block, hash, at: serverTimestamp() };
-    updates.bloque = block;
-    updates.hash = hash;
-  } else if (raw?.url || raw?.consultaUrl) {
-    updates.urlBlockchain = raw.url || raw.consultaUrl;
-    updates.blockchain = { status: 'simulado' };
-  }
-
-  if (Object.keys(updates).length) {
-    try {
-      // privada
-      await updateDoc(doc(window.db, 'recetas', ref.id), updates);
-
-      // pública: solo reflejar lo necesario
-      const publicUpdates = {};
-      if ('blockchain' in updates) publicUpdates.blockchain = updates.blockchain;
-      if ('bloque' in updates) publicUpdates.bloque = updates.bloque;
-      if ('hash' in updates) publicUpdates.hash = updates.hash;
-      if ('urlBlockchain' in updates) publicUpdates.urlBlockchain = updates.urlBlockchain;
-
-      if (Object.keys(publicUpdates).length) {
-        await updateDoc(doc(window.db, 'recetas_publicas', ref.id), publicUpdates);
-      }
-
-      console.log('[BC] actualizado en recetas y recetas_publicas:', ref.id, publicUpdates);
-    } catch (e) {
-      console.warn('[BC] Firestore update falló (privada o pública):', e?.message || e);
-    }
-  }
-} catch (e) {
-  console.error('[BC] error /api/bloques:', e?.message || e);
-}
+      
       // 6) Redirección
       const goto = new URL(VER_RECETA_PATH, location.origin);
       goto.searchParams.set('id', ref.id);
