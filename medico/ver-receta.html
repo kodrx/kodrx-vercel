@@ -637,17 +637,45 @@
 
       window.getQRSources = getQRSources;
 
-      async function renderOnce() {
-  // 🔹 1. intenta cargar desde cache (instantáneo)
-  cargarRecetaDesdeCache();
+function cargarRecetaDesdeCache() {
+  try {
+    const raw = sessionStorage.getItem('kodrx_receta_cache');
+    if (!raw) return false;
 
-  // 🔹 2. si no hay datos, entonces sí va a Firestore
+    const parsed = JSON.parse(raw);
+    const currentId = new URLSearchParams(location.search).get('id');
+
+    if (!currentId || parsed.id !== currentId) return false;
+
+    window.RECETA_ACTUAL = {
+      id: parsed.id,
+      ...(parsed.data || {})
+    };
+
+    console.log('[ver] receta cargada desde cache:', currentId);
+    return true;
+  } catch (e) {
+    console.warn('[ver] no se pudo cargar cache:', e);
+    return false;
+  }
+}
+      
+      async function renderOnce() {
+  try {
+    cargarRecetaDesdeCache();
+  } catch (e) {
+    console.warn('[ver] cache error:', e);
+  }
+
   if (!window.RECETA_ACTUAL) {
     await hydrateIfNeeded();
   }
 
   const r0 = window.RECETA_ACTUAL;
-  if (!r0) return;
+  if (!r0) {
+    console.warn('[ver] no hay RECETA_ACTUAL');
+    return;
+  }
 
   const r = window.RECETA_ACTUAL = normalize(r0);
 
