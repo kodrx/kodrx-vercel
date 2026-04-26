@@ -638,17 +638,18 @@
       window.getQRSources = getQRSources;
 
       async function renderOnce() {
-        for (let i = 0; i < 100; i++) {
-          if (window.RECETA_ACTUAL) break;
-          await sleep(60);
-        }
+  // 🔹 1. intenta cargar desde cache (instantáneo)
+  cargarRecetaDesdeCache();
 
-        await hydrateIfNeeded();
+  // 🔹 2. si no hay datos, entonces sí va a Firestore
+  if (!window.RECETA_ACTUAL) {
+    await hydrateIfNeeded();
+  }
 
-        const r0 = window.RECETA_ACTUAL;
-        if (!r0) return;
+  const r0 = window.RECETA_ACTUAL;
+  if (!r0) return;
 
-        const r = window.RECETA_ACTUAL = normalize(r0);
+  const r = window.RECETA_ACTUAL = normalize(r0);
 
         const pref = (n, g) => !n ? '—' : (String(g || '').toLowerCase().startsWith('f') ? 'Dra. ' : 'Dr. ') + n;
 
