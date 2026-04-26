@@ -825,10 +825,10 @@ async function procesarSelladoPendiente(){
         console.log('[ver][BC actualizado]', currentId);
 
         // 🔹 refrescar UI
-        window.RECETA_ACTUAL = {
-          ...(window.RECETA_ACTUAL || {}),
-          ...updates
-        };
+      window.RECETA_ACTUAL = normalize({
+  ...(window.RECETA_ACTUAL || {}),
+  ...updates
+});
 
         updateBadgeFromReceta(window.RECETA_ACTUAL);
 
@@ -1304,18 +1304,34 @@ async function procesarSelladoPendiente(){
         }
       }
 
-      function start() {
-        try { renderOnce(); } catch {}
-        try { bindButtons(); } catch (e) { console.warn('bindButtons err', e); }
-        try { procesarSelladoPendiente(); } catch (e) {}
+    async function start() {
+  try {
+    await renderOnce();
+  } catch (e) {
+    console.warn('[ver] renderOnce error:', e);
+  }
 
-      }
+  try {
+    bindButtons();
+  } catch (e) {
+    console.warn('[ver] bindButtons error:', e);
+  }
 
-      if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', start, { once: true });
-      } else {
-        start();
-      }
+  try {
+    await procesarSelladoPendiente();
+
+    // repinta una vez más por si blockchain actualizó datos en caliente
+    await renderOnce();
+  } catch (e) {
+    console.warn('[ver] procesarSelladoPendiente error:', e);
+  }
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', start, { once: true });
+} else {
+  start();
+}
     })();
   </script>
 </body>
