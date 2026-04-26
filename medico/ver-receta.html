@@ -1333,7 +1333,7 @@ async function procesarSelladoPendiente(){
         }
       }
 
-    async function start() {
+async function start() {
   try {
     await renderOnce();
   } catch (e) {
@@ -1348,9 +1348,6 @@ async function procesarSelladoPendiente(){
 
   try {
     await procesarSelladoPendiente();
-
-    // repinta una vez más por si blockchain actualizó datos en caliente
-    await renderOnce();
   } catch (e) {
     console.warn('[ver] procesarSelladoPendiente error:', e);
   }
