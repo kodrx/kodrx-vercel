@@ -300,12 +300,38 @@ const medicamentos = [...document.querySelectorAll('#medicamentosContainer .medi
 
       const medsIniciales = medicamentos.map(x=>x.ini).join('-');
 
-    // 4 Documento de receta
-      
-      const ref = await addDoc(collection(window.db, 'recetas'), recetaData);
+   // 4) Documento de receta
+const recetaData = {
+  nombrePaciente,
+  pacienteNombre: nombrePaciente,
+
+  edad, sexo, peso, talla, imc, temperatura, presion,
+  observaciones, diagnostico, indicaciones,
+  medicamentos, medsIniciales,
+
+  medicoNombre: m.nombre || usr.displayName || '',
+  medicoGenero: m.genero || '',
+  medicoCedula: m.cedula || '',
+  medicoEspecialidad: m.especialidad || 'General',
+  medicoTelefono: m.telefono || '',
+  medicoDomicilio,
+
+  medicoUid: usr.uid,
+  medicoEmail: usr.email || '',
+  correo: usr.email || '',
+
+  createdAt: serverTimestamp(),
+  timestamp: (Timestamp?.now?.() ?? new Date()),
+
+  blockchain: { status:'pendiente' },
+  hash: null,
+  bloque: null
+};
+
+const ref = await addDoc(collection(window.db, 'recetas'), recetaData);
 console.log('[panel] receta creada:', ref.id);
 
-//  ESPEJO PÚBLICO MÍNIMO (sin datos sensibles)
+// espejo público
 try {
   const recetaPublica = {
     recetaId: ref.id,
@@ -347,16 +373,15 @@ try {
   console.warn('[panel] error creando receta_publica:', e);
 }
 
-// 5 Encolar sellado y seguir inmediato
+// encolar sellado
 queueSelladoPendiente(ref.id, recetaData, medicamentos);
 
+// redirección
+const goto = new URL(VER_RECETA_PATH, location.origin);
+goto.searchParams.set('id', ref.id);
+location.href = goto.href;
 
       
-      // 6) Redirección
-      const goto = new URL(VER_RECETA_PATH, location.origin);
-      goto.searchParams.set('id', ref.id);
-      location.href = goto.href;
-
     }catch(err){
       console.error('[panel] error al guardar receta', err);
       alert('No se pudo generar la receta. Revisa los campos e intenta de nuevo.');
