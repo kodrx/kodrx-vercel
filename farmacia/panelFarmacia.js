@@ -13,5 +13,24 @@ btnHist?.addEventListener('click', (e)=>{
   location.href = '/farmacia/historial.html';
 });
 
-// btnLogout ya lo tienes enlazado a cerrarSesion()
+btnLogout?.addEventListener('click', async (e) => {
+  e.preventDefault();
+
+  try {
+    console.log('[farmacia] cerrando sesión...');
+
+    const { auth } = await import('/firebase-init.js');
+    const { signOut } = await import('https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js');
+
+    sessionStorage.clear();
+    localStorage.removeItem('kodrx.lastUser');
+
+    await signOut(auth);
+
+    window.location.replace('/acceso.html');
+  } catch (err) {
+    console.error('[farmacia logout error]', err);
+    alert('No se pudo cerrar sesión');
+  }
+});
 
