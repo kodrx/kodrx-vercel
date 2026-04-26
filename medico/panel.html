@@ -376,6 +376,21 @@ try {
 // encolar sellado
 queueSelladoPendiente(ref.id, recetaData, medicamentos);
 
+      try {
+  sessionStorage.setItem('kodrx_receta_cache', JSON.stringify({
+    id: ref.id,
+    data: {
+      id: ref.id,
+      ...recetaData
+    },
+    at: Date.now()
+  }));
+
+  console.log('[panel] receta cacheada para render inmediato:', ref.id);
+} catch (e) {
+  console.warn('[panel] no se pudo cachear receta:', e);
+}
+
 // redirección
 const goto = new URL(VER_RECETA_PATH, location.origin);
 goto.searchParams.set('id', ref.id);
