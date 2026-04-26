@@ -755,7 +755,102 @@
       }
 
       window.renderOnce = renderOnce;
+async function procesarSelladoPendiente(){
+  try {
+    const raw = sessionStorage.getItem('kodrx_sellado_pendiente');
+    if (!raw) return;
 
+    const data = JSON.parse(raw);
+
+    const currentId = new URLSearchParams(location.search).get('id');
+    if (!currentId || data.idReceta !== currentId) return;
+
+    console.log('[ver] procesando sellado pendiente:', currentId);
+
+    // 🔹 limpiar para evitar doble ejecución
+    sessionStorage.removeItem('kodrx_sellado_pendiente');
+
+    const resp = await fetch('/api/bloques', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data.payload)
+    });
+
+    let res = {};
+    try { res = await resp.json(); } catch {}
+
+    console.log('[ver][BC raw]', res);
+
+    const toNum = v =>
+      (typeof v === 'number' && Number.isFinite(v))
+        ? v
+        : (/^\d+$/.test(String(v ?? '')) ? Number(v) : NaN);
+
+    const block = [res?.bloque?.index, res?.index, res?.bloqueIndex, res?.block]
+      .map(toNum)
+      .find(Number.isFinite);
+
+    const hash = res?.bloque?.hash || res?.hash || res?.blockHash || res?.txid || null;
+
+    const updates = {};
+
+    if (resp.ok && Number.isFinite(block) && hash) {
+      updates.blockchain = { status: 'ok', block, hash, at: new Date() };
+      updates.bloque = block;
+      updates.hash = hash;
+    } else if (res?.url || res?.consultaUrl) {
+      updates.urlBlockchain = res.url || res.consultaUrl;
+      updates.blockchain = { status: 'simulado' };
+    }
+
+    if (Object.keys(updates).length) {
+      try {
+        const core = await import('/firebase-init.js');
+        const fs = await import('https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js');
+
+        // privada
+        await fs.updateDoc(fs.doc(core.db, 'recetas', currentId), updates);
+
+        // pública
+        const publicUpdates = {};
+        if ('blockchain' in updates) publicUpdates.blockchain = updates.blockchain;
+        if ('bloque' in updates) publicUpdates.bloque = updates.bloque;
+        if ('hash' in updates) publicUpdates.hash = updates.hash;
+        if ('urlBlockchain' in updates) publicUpdates.urlBlockchain = updates.urlBlockchain;
+
+        if (Object.keys(publicUpdates).length) {
+          await fs.updateDoc(fs.doc(core.db, 'recetas_publicas', currentId), publicUpdates);
+        }
+
+        console.log('[ver][BC actualizado]', currentId);
+
+        // 🔹 refrescar UI
+        window.RECETA_ACTUAL = {
+          ...(window.RECETA_ACTUAL || {}),
+          ...updates
+        };
+
+        updateBadgeFromReceta(window.RECETA_ACTUAL);
+
+        if (updates.bloque) {
+          await setChainQR(updates.bloque);
+        }
+
+        if (updates.hash) {
+          const txt = `hash (BC): ${updates.hash}`;
+          const el = document.getElementById('hashTexto');
+          if (el) el.textContent = txt;
+        }
+
+      } catch (e) {
+        console.warn('[ver][BC update error]', e);
+      }
+    }
+
+  } catch (e) {
+    console.error('[ver][BC error]', e);
+  }
+}
       window.generarPDF = async function generarPDF(rIn, qrsIn, { mode = 'save' } = {}) {
         const jsPDF = await (window.ensureJsPDF ? window.ensureJsPDF() : (window.jspdf?.jsPDF));
         const { jsPDF: Cls } = window.jspdf || {};
@@ -1212,6 +1307,8 @@
       function start() {
         try { renderOnce(); } catch {}
         try { bindButtons(); } catch (e) { console.warn('bindButtons err', e); }
+        try { procesarSelladoPendiente(); } catch (e) {}
+
       }
 
       if (document.readyState === 'loading') {
