@@ -71,8 +71,7 @@ function itemHTML(r, myUid){
       <div class="hx-meta"><b>Surtido:</b> ${surt}</div>
     </div>
     <div class="hx-actions" style="display:flex;gap:8px;align-items:flex-start">
-      <a class="hx-btn" href="/verificar.html?id=${encodeURIComponent(r.id)}" target="_blank" rel="noopener">Ver pública</a>
-      <a class="hx-btn" href="/medico/ver-receta.html?id=${encodeURIComponent(r.id)}" target="_blank" rel="noopener">Ver completa</a>
+      <a class="hx-btn" href="/farmacia/verificador.html?id=${encodeURIComponent(r.id)}" target="_blank" rel="noopener">Ver receta / surtir</a>
     </div>
   </div>`;
 }
