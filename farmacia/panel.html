@@ -8,20 +8,173 @@
   <link rel="stylesheet" href="/estilos/global.css" />
   <script src="/componentes/header.js" defer></script>
 
-</head>
-<body>
-  <header class="top">
-    <div id="nombre-farmacia">Farmacia</div>
-    
-  </header>
+  <style>
+    .farmacia-panel {
+      max-width: 980px;
+      margin: 36px auto;
+      padding: 0 18px;
+    }
 
-  <main class="wrap" style="max-width:860px;margin:20px auto">
-    <h1>Panel de Farmacia</h1>
-    <div class="grid" style="display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))">
-      <a class="btn" href="/farmacia/verificador.html" style="text-align:center">Escanear receta</a>
-      <a class="btn" href="/farmacia/historial.html"  style="text-align:center">Historial</a>
-      <a class="btn" href="/farmacia/recetas-externas.html"  style="text-align:center">Recetas Externas</a>
-       <button id="btnLogout" type="button">Cerrar sesión</button>
+    .farmacia-hero {
+      background: #ffffff;
+      border: 1px solid #e5e7eb;
+      border-radius: 22px;
+      padding: 28px;
+      box-shadow: 0 14px 35px rgba(0,0,0,0.06);
+      margin-bottom: 22px;
+    }
+
+    .farmacia-label {
+      font-size: 12px;
+      font-weight: 800;
+      color: #0ea5e9;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .farmacia-title {
+      font-size: 32px;
+      margin: 0 0 8px;
+      color: #0f172a;
+    }
+
+    .farmacia-name {
+      font-size: 18px;
+      font-weight: 800;
+      color: #003b73;
+      margin-bottom: 10px;
+    }
+
+    .farmacia-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: #dcfce7;
+      color: #166534;
+      padding: 7px 12px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .farmacia-dot {
+      width: 8px;
+      height: 8px;
+      background: #22c55e;
+      border-radius: 50%;
+    }
+
+    .farmacia-grid {
+      display: grid;
+      gap: 18px;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    }
+
+    .farmacia-card {
+      background: #ffffff;
+      border: 1px solid #e5e7eb;
+      border-radius: 20px;
+      padding: 24px;
+      text-decoration: none;
+      color: #0f172a;
+      box-shadow: 0 10px 28px rgba(0,0,0,0.05);
+      transition: .2s ease;
+      min-height: 150px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .farmacia-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 16px 36px rgba(0,0,0,0.09);
+      border-color: #0ea5e9;
+    }
+
+    .farmacia-icon {
+      font-size: 30px;
+      margin-bottom: 14px;
+    }
+
+    .farmacia-card h2 {
+      font-size: 20px;
+      margin: 0 0 8px;
+    }
+
+    .farmacia-card p {
+      margin: 0;
+      color: #64748b;
+      font-size: 14px;
+      line-height: 1.45;
+    }
+
+    .logout-area {
+      margin-top: 22px;
+      text-align: right;
+    }
+
+    #btnLogout {
+      border: 1px solid #cbd5e1;
+      background: #ffffff;
+      color: #334155;
+      padding: 11px 18px;
+      border-radius: 12px;
+      cursor: pointer;
+      font-weight: 700;
+    }
+
+    #btnLogout:hover {
+      background: #f1f5f9;
+    }
+  </style>
+</head>
+
+<body>
+  <main class="farmacia-panel">
+    <section class="farmacia-hero">
+      <div class="farmacia-label">Centro operativo</div>
+
+      <h1 class="farmacia-title">Panel de Farmacia</h1>
+
+      <div class="farmacia-name" id="nombre-farmacia">
+        Farmacia
+      </div>
+
+      <div class="farmacia-status">
+        <span class="farmacia-dot"></span>
+        Sistema operativo
+      </div>
+    </section>
+
+    <section class="farmacia-grid">
+      <a class="farmacia-card" href="/farmacia/verificador.html">
+        <div>
+          <div class="farmacia-icon">📷</div>
+          <h2>Escanear receta</h2>
+          <p>Validar recetas KodRx mediante QR y registrar surtido.</p>
+        </div>
+      </a>
+
+      <a class="farmacia-card" href="/farmacia/historial.html">
+        <div>
+          <div class="farmacia-icon">🕘</div>
+          <h2>Historial</h2>
+          <p>Consultar recetas surtidas y actividad reciente.</p>
+        </div>
+      </a>
+
+      <a class="farmacia-card" href="/farmacia/recetas-externas.html">
+        <div>
+          <div class="farmacia-icon">📄</div>
+          <h2>Recetas externas</h2>
+          <p>Revisar, clasificar y gestionar recetas impresas o escaneadas.</p>
+        </div>
+      </a>
+    </section>
+
+    <div class="logout-area">
+      <button id="btnLogout" type="button">Cerrar sesión</button>
     </div>
   </main>
 
