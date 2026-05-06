@@ -41,12 +41,11 @@ form.addEventListener("submit", async (e) => {
     return;
   }
 
-  const archivo = document.getElementById("archivoReceta").files[0];
-
-  if (!archivo) {
-    alert("Debes subir una receta escaneada.");
-    return;
-  }
+const archivoUrl = document.getElementById("archivoUrl").value.trim();
+if (!archivoUrl) {
+  alert("Debes ingresar la URL de la receta.");
+  return;
+}
 
   try {
     const pacienteNombre = document.getElementById("pacienteNombre").value.trim();
@@ -55,11 +54,11 @@ form.addEventListener("submit", async (e) => {
     const canalRecepcion = document.getElementById("canalRecepcion").value;
     const folioInterno = document.getElementById("folioInterno").value.trim();
 
-    const archivoPath = `recetas_externas/${usuarioActual.uid}/${Date.now()}_${archivo.name}`;
-    const archivoRef = ref(storage, archivoPath);
-
-    await uploadBytes(archivoRef, archivo);
-    const archivoUrl = await getDownloadURL(archivoRef);
+archivoUrl,
+archivoNombre: "receta externa demo",
+archivoTipo: archivoUrl.toLowerCase().includes(".pdf")
+  ? "application/pdf"
+  : "image/jpeg",
 
     await addDoc(collection(db, "recetas_externas"), {
       farmaciaUid: usuarioActual.uid,
