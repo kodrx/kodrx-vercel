@@ -17,20 +17,14 @@ import {
   orderBy
 } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
 
-import {
-  getStorage,
-  ref,
-  uploadBytes,
-  getDownloadURL
-} from "https://www.gstatic.com/firebasejs/12.2.1/firebase-storage.js";
-    const { auth } = await import('/firebase-init.js');
+
 
 
 
 const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
+const { auth } = await import('/firebase-init.js');
 const db = getFirestore(app);
-const storage = getStorage(app);
+
 
 let usuarioActual = null;
 
