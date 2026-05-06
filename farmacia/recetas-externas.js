@@ -23,11 +23,8 @@ import {
   uploadBytes,
   getDownloadURL
 } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-storage.js";
+    const { auth } = await import('/firebase-init.js');
 
-/* 
-  Dev:
-  Aquí debes pegar el mismo firebaseConfig que ya usa KodRx.
-*/
 
 
 const app = initializeApp(firebaseConfig);
