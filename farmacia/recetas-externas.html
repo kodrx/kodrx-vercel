@@ -1,1 +1,238 @@
-1
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>KodRx | Recetas externas</title>
+
+  <link rel="stylesheet" href="/estilos/global.css" />
+
+  <style>
+    .rx-layout {
+      display: grid;
+      grid-template-columns: 1fr 1.2fr;
+      gap: 24px;
+      margin-top: 24px;
+    }
+
+    .rx-card {
+      background: #ffffff;
+      border-radius: 18px;
+      padding: 24px;
+      box-shadow: 0 12px 30px rgba(0,0,0,0.08);
+      border: 1px solid #e5e7eb;
+    }
+
+    .rx-form-group {
+      margin-bottom: 14px;
+    }
+
+    .rx-form-group label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 6px;
+      color: #0f172a;
+    }
+
+    .rx-form-group input,
+    .rx-form-group select,
+    .rx-form-group textarea {
+      width: 100%;
+      padding: 11px 12px;
+      border-radius: 10px;
+      border: 1px solid #cbd5e1;
+      font-size: 14px;
+    }
+
+    .rx-button {
+      background: #003b73;
+      color: white;
+      border: none;
+      border-radius: 12px;
+      padding: 12px 18px;
+      cursor: pointer;
+      font-weight: 700;
+      width: 100%;
+      margin-top: 8px;
+    }
+
+    .rx-button.secondary {
+      background: #0f172a;
+    }
+
+    .rx-list-item {
+      border: 1px solid #e5e7eb;
+      border-radius: 14px;
+      padding: 14px;
+      margin-bottom: 12px;
+      cursor: pointer;
+      background: #f8fafc;
+    }
+
+    .rx-list-item:hover {
+      background: #eef6ff;
+    }
+
+    .rx-status {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      background: #e2e8f0;
+      color: #334155;
+      margin-top: 6px;
+    }
+
+    .rx-preview {
+      width: 100%;
+      min-height: 420px;
+      border: 1px solid #cbd5e1;
+      border-radius: 16px;
+      overflow: hidden;
+      background: #f8fafc;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .rx-preview img,
+    .rx-preview iframe {
+      width: 100%;
+      height: 420px;
+      object-fit: contain;
+      border: none;
+    }
+
+    .rx-checklist label {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 14px;
+    }
+
+    .rx-hidden {
+      display: none;
+    }
+
+    @media (max-width: 900px) {
+      .rx-layout {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <main class="contenedor">
+    <section class="encabezado">
+      <h1>Verificación asistida de recetas impresas</h1>
+      <p>Recepción, revisión y trazabilidad de recetas externas escaneadas.</p>
+    </section>
+
+    <div class="rx-layout">
+      <section class="rx-card">
+        <h2>Nueva receta externa</h2>
+
+        <form id="formRecetaExterna">
+          <div class="rx-form-group">
+            <label>Nombre del paciente</label>
+            <input type="text" id="pacienteNombre" required />
+          </div>
+
+          <div class="rx-form-group">
+            <label>Nombre del médico</label>
+            <input type="text" id="medicoNombre" required />
+          </div>
+
+          <div class="rx-form-group">
+            <label>Fecha de receta</label>
+            <input type="date" id="fechaReceta" />
+          </div>
+
+          <div class="rx-form-group">
+            <label>Canal de recepción</label>
+            <select id="canalRecepcion">
+              <option value="WhatsApp">WhatsApp</option>
+              <option value="Web">Web</option>
+              <option value="Mostrador">Mostrador</option>
+              <option value="App">App</option>
+            </select>
+          </div>
+
+          <div class="rx-form-group">
+            <label>Folio interno</label>
+            <input type="text" id="folioInterno" placeholder="Ej. FD-0001" />
+          </div>
+
+          <div class="rx-form-group">
+            <label>Archivo de receta</label>
+            <input type="file" id="archivoReceta" accept="image/*,.pdf" required />
+          </div>
+
+          <button class="rx-button" type="submit">
+            Guardar receta externa
+          </button>
+        </form>
+      </section>
+
+      <section class="rx-card">
+        <h2>Recetas pendientes</h2>
+        <div id="listaRecetasExternas">
+          <p>Cargando recetas...</p>
+        </div>
+      </section>
+    </div>
+
+    <section id="panelRevision" class="rx-card rx-hidden" style="margin-top:24px;">
+      <h2>Revisión asistida</h2>
+
+      <div class="rx-layout">
+        <div>
+          <h3>Documento recibido</h3>
+          <div class="rx-preview" id="visorReceta"></div>
+        </div>
+
+        <div>
+          <input type="hidden" id="recetaIdActiva" />
+
+          <div class="rx-form-group">
+            <label>Estado de revisión</label>
+            <select id="estadoRevision">
+              <option value="pendiente">Pendiente</option>
+              <option value="aprobada">Aprobada para surtido</option>
+              <option value="rechazada">Rechazada</option>
+              <option value="sospechosa">Sospechosa</option>
+              <option value="requiere_validacion">Requiere validación adicional</option>
+            </select>
+          </div>
+
+          <div class="rx-checklist">
+            <h3>Checklist</h3>
+
+            <label><input type="checkbox" id="medicoVisible" /> Nombre del médico visible</label>
+            <label><input type="checkbox" id="cedulaVisible" /> Cédula visible</label>
+            <label><input type="checkbox" id="pacienteVisible" /> Nombre del paciente visible</label>
+            <label><input type="checkbox" id="fechaVisible" /> Fecha visible</label>
+            <label><input type="checkbox" id="medicamentoLegible" /> Medicamento y dosis legibles</label>
+            <label><input type="checkbox" id="firmaVisible" /> Firma o sello visible</label>
+            <label><input type="checkbox" id="recetaVencida" /> Receta vencida</label>
+            <label><input type="checkbox" id="datosInconsistentes" /> Datos inconsistentes</label>
+          </div>
+
+          <div class="rx-form-group">
+            <label>Observaciones</label>
+            <textarea id="observaciones" rows="5" placeholder="Escribe el motivo del dictamen o notas internas..."></textarea>
+          </div>
+
+          <button class="rx-button secondary" id="guardarRevision">
+            Guardar dictamen
+          </button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script type="module" src="/farmacia/recetas-externas.js"></script>
+</body>
+</html>
