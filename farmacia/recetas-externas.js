@@ -52,7 +52,7 @@ if (!archivoUrl) {
     const medicoNombre = document.getElementById("medicoNombre").value.trim();
     const fechaReceta = document.getElementById("fechaReceta").value;
     const canalRecepcion = document.getElementById("canalRecepcion").value;
-    const folioInterno = document.getElementById("folioInterno").value.trim();
+    const folioInterno = `REX-${new Date().getFullYear()}-${Date.now()}`;
 
 await addDoc(collection(db, "recetas_externas"), {
   farmaciaUid: usuarioActual.uid,
