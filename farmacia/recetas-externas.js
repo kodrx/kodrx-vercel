@@ -29,12 +29,13 @@ import {
   Aquí debes pegar el mismo firebaseConfig que ya usa KodRx.
 */
 const firebaseConfig = {
-  apiKey: "TU_API_KEY",
-  authDomain: "TU_AUTH_DOMAIN",
-  projectId: "TU_PROJECT_ID",
-  storageBucket: "TU_STORAGE_BUCKET",
-  messagingSenderId: "TU_MESSAGING_SENDER_ID",
-  appId: "TU_APP_ID"
+  apiKey: "AIzaSyBIjaOe4HcGNDk0xrqen8etBv0RyjyOJHw",
+  authDomain: "kodrx-105b9.firebaseapp.com",
+  databaseURL: "https://kodrx-105b9-default-rtdb.firebaseio.com",
+  projectId: "kodrx-105b9",
+  storageBucket: "kodrx-105b9.firebasestorage.app",
+  messagingSenderId: "239675098141",
+  appId: "1:239675098141:web:152ae3741b0ac79db7f2f4"
 };
 
 const app = initializeApp(firebaseConfig);
@@ -50,10 +51,10 @@ const panelRevision = document.getElementById("panelRevision");
 const visorReceta = document.getElementById("visorReceta");
 
 onAuthStateChanged(auth, async (user) => {
-  if (!user) {
-    window.location.href = "/acceso.html";
-    return;
-  }
+if (!user) {
+  alert("Inicia sesión como farmacia para acceder a este módulo.");
+  return;
+}
 
   usuarioActual = user;
   await cargarRecetasExternas();
