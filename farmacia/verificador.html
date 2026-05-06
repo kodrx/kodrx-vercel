@@ -5,35 +5,213 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Verificador de Receta - KodRx</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="stylesheet" href="/estilos/global.css?v=20251024" />
 
+  <link rel="stylesheet" href="/estilos/global.css?v=20251024" />
   <script src="/componentes/header.js" defer></script>
 
+  <style>
+    .verificador-wrap {
+      max-width: 980px;
+      margin: 36px auto;
+      padding: 0 18px;
+    }
+
+    .verificador-hero {
+      background: #ffffff;
+      border: 1px solid #e5e7eb;
+      border-radius: 22px;
+      padding: 28px;
+      box-shadow: 0 14px 35px rgba(0,0,0,0.06);
+      margin-bottom: 22px;
+    }
+
+    .verificador-label {
+      font-size: 12px;
+      font-weight: 800;
+      color: #0ea5e9;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .verificador-title {
+      font-size: 32px;
+      margin: 0 0 8px;
+      color: #0f172a;
+    }
+
+    .verificador-desc {
+      color: #64748b;
+      margin: 0;
+      font-size: 15px;
+      line-height: 1.5;
+    }
+
+    .scan-card {
+      background: #ffffff;
+      border: 1px solid #e5e7eb;
+      border-radius: 22px;
+      padding: 28px;
+      box-shadow: 0 14px 35px rgba(0,0,0,0.06);
+    }
+
+    .scan-card h2 {
+      margin: 0 0 8px;
+      font-size: 24px;
+      color: #0f172a;
+    }
+
+    .scan-card p {
+      margin: 0 0 20px;
+      color: #64748b;
+    }
+
+    .camera-box {
+      background: #f8fafc;
+      border: 1px dashed #cbd5e1;
+      border-radius: 18px;
+      padding: 16px;
+      margin-bottom: 18px;
+      text-align: center;
+    }
+
+    #cam,
+    #ovl {
+      width: 100%;
+      max-width: 520px;
+      border-radius: 16px;
+      margin: 0 auto;
+      display: block;
+    }
+
+    .scan-actions {
+      display: grid;
+      gap: 12px;
+      grid-template-columns: 1fr;
+      margin-top: 18px;
+    }
+
+    .manual-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .kodrx-btn {
+      border: none;
+      background: #003b73;
+      color: #ffffff;
+      padding: 13px 18px;
+      border-radius: 12px;
+      cursor: pointer;
+      font-weight: 800;
+      font-size: 14px;
+    }
+
+    .kodrx-btn:hover {
+      background: #00509e;
+    }
+
+    .kodrx-btn.secondary {
+      background: #0f172a;
+    }
+
+    .kodrx-btn.ghost {
+      background: #ffffff;
+      color: #003b73;
+      border: 1px solid #cbd5e1;
+    }
+
+    #manual {
+      width: 100%;
+      padding: 12px 14px;
+      border-radius: 12px;
+      border: 1px solid #cbd5e1;
+      font-size: 14px;
+    }
+
+    .scan-status {
+      margin-top: 18px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: #dcfce7;
+      color: #166534;
+      padding: 7px 12px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .scan-dot {
+      width: 8px;
+      height: 8px;
+      background: #22c55e;
+      border-radius: 50%;
+    }
+
+    #detalleUI {
+      max-width: 980px;
+      margin: 36px auto;
+      padding: 0 18px;
+    }
+
+    @media (max-width: 700px) {
+      .manual-row {
+        grid-template-columns: 1fr;
+      }
+
+      .verificador-title {
+        font-size: 26px;
+      }
+    }
+  </style>
 </head>
 
-
 <body>
-<section id="scanUI" hidden>
-  <video id="cam" autoplay muted playsinline style="width:100%;max-width:420px;border-radius:12px"></video>
+  <section id="scanUI" class="verificador-wrap" hidden>
+    <div class="verificador-hero">
+      <div class="verificador-label">Validación farmacéutica</div>
+      <h1 class="verificador-title">Verificador de receta</h1>
+      <p class="verificador-desc">
+        Escanea el QR de una receta KodRx o ingresa manualmente el ID para consultar su estado y registrar el surtido.
+      </p>
+    </div>
 
-  <div style="margin:8px 0">
-    <button id="btnScan">Iniciar cámara</button>
-    <input id="manual" placeholder="Pega URL o ID" style="width:60%">
-    <button id="btnAbrir">Abrir</button>
-  </div>
+    <div class="scan-card">
+      <h2>Escaneo QR</h2>
+      <p>Usa la cámara del dispositivo o carga una imagen con el QR de la receta.</p>
 
-  <input id="fileQR" type="file" accept="image/*" capture="environment" style="display:none">
-  <button id="btnFoto">Escanear foto</button>
-  <!-- Canvas para overlay de marco verde (debug visual) -->
-  <canvas id="ovl" style="display:block;max-width:420px;width:100%;border-radius:12px;margin-top:6px"></canvas>
-</section>
+      <div class="camera-box">
+        <video id="cam" autoplay muted playsinline></video>
+        <canvas id="ovl"></canvas>
+      </div>
 
-<section id="detalleUI" hidden>
-  <div id="detalleReceta">Cargando…</div>
-</section>
+      <div class="scan-actions">
+        <button id="btnScan" class="kodrx-btn">Iniciar cámara</button>
+
+        <div class="manual-row">
+          <input id="manual" placeholder="Pega URL o ID de receta" />
+          <button id="btnAbrir" class="kodrx-btn ghost">Abrir</button>
+        </div>
+
+        <input id="fileQR" type="file" accept="image/*" capture="environment" style="display:none">
+        <button id="btnFoto" class="kodrx-btn secondary">Escanear foto</button>
+      </div>
+
+      <div class="scan-status">
+        <span class="scan-dot"></span>
+        Sistema listo para escaneo
+      </div>
+    </div>
+  </section>
+
+  <section id="detalleUI" hidden>
+    <div id="detalleReceta">Cargando…</div>
+  </section>
 </body>
-<!-- jsQR local; ponle id para que el loader pueda “esperarlo” -->
+<!-- jsQR local;  -->
 <script defer src="/vendor/jsqr.min.js" id="jsqr-lib"></script>
 
 
