@@ -127,7 +127,9 @@ async function cargarRecetasExternas() {
       item.innerHTML = `
         <strong>${data.pacienteNombre || "Paciente sin nombre"}</strong>
         <p>${data.medicoNombre || "Médico no capturado"}</p>
-        <span class="rx-status">${formatearEstado(data.estadoRevision)}</span>
+       <span class="rx-status ${data.estadoRevision}">
+  ${formatearEstado(data.estadoRevision)}
+</span>
       `;
 
       item.addEventListener("click", () => abrirRevision(docSnap.id, data));
