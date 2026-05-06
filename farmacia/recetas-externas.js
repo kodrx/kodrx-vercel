@@ -1,11 +1,10 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
-import {
-  getAuth,
-  onAuthStateChanged
-} from "https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js";
+import { auth, db } from '/firebase-init.js';
 
 import {
-  getFirestore,
+  onAuthStateChanged
+} from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js';
+
+import {
   collection,
   addDoc,
   getDocs,
@@ -15,16 +14,7 @@ import {
   query,
   where,
   orderBy
-} from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
-
-
-
-
-
-const app = initializeApp(firebaseConfig);
-const { auth } = await import('/firebase-init.js');
-const db = getFirestore(app);
-
+} from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js';
 
 let usuarioActual = null;
 
