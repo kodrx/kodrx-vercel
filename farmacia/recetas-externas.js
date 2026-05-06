@@ -54,49 +54,40 @@ if (!archivoUrl) {
     const canalRecepcion = document.getElementById("canalRecepcion").value;
     const folioInterno = document.getElementById("folioInterno").value.trim();
 
-archivoUrl,
-archivoNombre: "receta externa demo",
-archivoTipo: archivoUrl.toLowerCase().includes(".pdf")
-  ? "application/pdf"
-  : "image/jpeg",
+await addDoc(collection(db, "recetas_externas"), {
+  farmaciaUid: usuarioActual.uid,
+  farmaciaEmail: usuarioActual.email,
 
-    await addDoc(collection(db, "recetas_externas"), {
-      farmaciaUid: usuarioActual.uid,
-      farmaciaEmail: usuarioActual.email,
-      farmaciaNombre: usuarioActual.displayName || "Farmacia KodRx",
+  pacienteNombre,
+  medicoNombre,
+  fechaReceta,
+  canalRecepcion,
+  folioInterno,
 
-      pacienteNombre,
-      medicoNombre,
-      fechaReceta,
-      canalRecepcion,
-      folioInterno,
+  archivoUrl,
+  archivoNombre: "receta externa demo",
+  archivoTipo: archivoUrl.toLowerCase().includes(".pdf")
+    ? "application/pdf"
+    : "image/jpeg",
 
-      archivoUrl,
-      archivoNombre: archivo.name,
-      archivoTipo: archivo.type,
-      archivoPath,
+  estadoRevision: "pendiente",
 
-      estadoRevision: "pendiente",
+  checklist: {
+    medicoVisible: false,
+    cedulaVisible: false,
+    pacienteVisible: false,
+    fechaVisible: false,
+    medicamentoLegible: false,
+    firmaVisible: false,
+    recetaVencida: false,
+    datosInconsistentes: false
+  },
 
-      checklist: {
-        medicoVisible: false,
-        cedulaVisible: false,
-        pacienteVisible: false,
-        fechaVisible: false,
-        medicamentoLegible: false,
-        firmaVisible: false,
-        recetaVencida: false,
-        datosInconsistentes: false
-      },
+  observaciones: "",
 
-      observaciones: "",
-      revisadoPorUid: null,
-      revisadoPorEmail: null,
-
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-      revisadoAt: null
-    });
+  createdAt: serverTimestamp(),
+  updatedAt: serverTimestamp()
+});
 
     alert("Receta externa guardada correctamente.");
     form.reset();
