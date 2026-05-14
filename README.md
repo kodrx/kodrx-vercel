@@ -133,7 +133,7 @@ KodRx cuenta actualmente con los siguientes roles:
 
 ---
 
-# 📋 Flujo operativo
+#  Flujo operativo
 
 ```text
 Médico emite receta
@@ -213,7 +213,7 @@ Actualmente cuenta con:
 
 ---
 
-# 📄Licencia
+# Licencia
 
 Proyecto privado en desarrollo.
 
