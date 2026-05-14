@@ -4,69 +4,225 @@
 
 <h1 align="center">KodRx</h1>
 
-> KodRx es una plataforma digital de emisión y verificación de recetas médicas con autenticidad basada en la nube.  
-> Diseñado para ser simple, seguro y accesible para médicos, farmacias y pacientes.
+# KodRx
+
+<p align="center">
+  <img src="/assets/logo.png" width="180" alt="KodRx Logo" />
+</p>
+
+<p align="center">
+  <strong>Infraestructura digital para la trazabilidad de recetas médicas</strong>
+</p>
+
+<p align="center">
+  Plataforma de emisión, validación y seguimiento operativo de recetas médicas digitales,
+  diseñada para médicos, farmacias e instituciones de salud.
+</p>
 
 ---
 
-## 🚀 ¿Qué hace esta aplicación?
+#  Descripción
 
-- Permite a médicos registrar recetas médicas desde un formulario web.
-- Genera un **código QR** que contiene un enlace único a la receta.
-- Las farmacias pueden escanear el QR y **verificar la receta online**.
-- Toda la información se guarda en tiempo real usando **Firebase Realtime Database**.
-- Visual con los colores y branding oficial de KodRx.
+KodRx es una plataforma enfocada en la digitalización y trazabilidad operativa de recetas médicas.
 
----
+El sistema permite a médicos emitir recetas digitales verificables mediante QR, mientras que las farmacias pueden validar, registrar surtidos parciales o completos y mantener un historial verificable de dispensación.
 
-## 🛠 Tecnologías utilizadas
+KodRx incorpora mecanismos de autenticidad y trazabilidad basados en:
 
-- 🔥 **Firebase** (Realtime Database)
-- 🧠 **JavaScript Vanilla**
-- 🌐 **HTML5 + CSS3**
-- 📦 **Vercel** para hosting
-- 📄 **GitHub** como repositorio de despliegue
-- 📱 **QRServer API** para generar el código QR
+* Verificación mediante QR
+* Identificadores únicos de receta
+* Registro de surtido farmacéutico
+* Historial de dispensación
+* Estructura de sellado tipo blockchain
+* Validación cruzada entre actores del ecosistema
+
+La plataforma está diseñada para evolucionar hacia esquemas de interoperabilidad sanitaria y modelos institucionales de validación operativa.
 
 ---
 
-## 📥 Cómo usar este repositorio
+# Funcionalidades principales
 
-1. Clona este repositorio o descarga el ZIP.
-2. Sube el contenido a tu propio hosting (recomendado: [Vercel](https://vercel.com)).
-3. Abre `index.html` para emitir recetas médicas.
-4. Escanea el QR generado para abrir `verificar.html?id=...` y ver los detalles de la receta.
+##  Módulo médico
 
-> La receta se almacena en Firebase y se puede consultar desde cualquier dispositivo con conexión a Internet.
-
----
-
-## 📸 Vista previa
-
-### Formulario de emisión
-![Formulario KodRx](https://via.placeholder.com/600x300?text=Formulario+de+receta+KodRx)
-
-### Verificación vía QR
-![Verificación KodRx](https://via.placeholder.com/600x300?text=Vista+de+receta+verificada)
+* Emisión de recetas médicas digitales
+* Generación automática de QR verificable
+* Generación de PDF listo para impresión
+* Historial de recetas emitidas
+* Vista pública y privada de recetas
+* Integración de indicaciones médicas
+* Firma lógica mediante hash y bloque
 
 ---
 
-## 📌 Personalización
+##  Módulo farmacia
 
-Puedes editar:
-- Los campos del formulario en `index.html`
-- El diseño visual en las etiquetas `<style>`
-- Conectar tu propio proyecto de Firebase modificando el bloque `firebaseConfig`
+* Escaneo de recetas mediante cámara
+* Lectura de QR desde navegador
+* Validación operativa de recetas
+* Registro de surtido total o parcial
+* Bloqueo automático de medicamentos ya surtidos
+* Historial de dispensación por farmacia
+* Trazabilidad de quién surtió cada medicamento
 
 ---
 
-## 📄 Licencia
+##  Seguridad y trazabilidad
 
-Este proyecto es de uso privado para el desarrollo inicial de la plataforma **KodRx**.  
-Para cualquier consulta o propuesta, contactar al administrador del proyecto.
+* Identificadores únicos por receta
+* Hash de verificación
+* Registro tipo blockchain
+* Separación de vistas públicas y privadas
+* Restricción de acceso por roles
+* Validación de médicos y farmacias
+* Control de cuentas suspendidas
+
+---
+
+##  Vista pública
+
+Las recetas cuentan con una vista pública diseñada para:
+
+* Verificar autenticidad
+* Validar estado de la receta
+* Consultar medicamentos e indicaciones
+* Revisar sellado blockchain
+
+La vista pública excluye datos clínicos sensibles.
+
+---
+
+#  Arquitectura del sistema
+
+## Frontend
+
+* HTML5
+* CSS3
+* JavaScript Vanilla
+
+## Backend / Infraestructura
+
+* Firebase Authentication
+* Firebase Firestore
+* Firebase Hosting / Vercel
+* DigitalOcean (servicios auxiliares)
+
+## Generación documental
+
+* jsPDF
+* html2canvas
+* Generación dinámica de PDFs
+
+## Verificación
+
+* QR Codes
+* Hashing estructurado
+* Verificación blockchain-style
+
+---
+
+#  Roles del sistema
+
+KodRx cuenta actualmente con los siguientes roles:
+
+| Rol           | Función                      |
+| ------------- | ---------------------------- |
+| Médico        | Emisión de recetas           |
+| Farmacia      | Validación y surtido         |
+| Administrador | Gestión y validación         |
+| Público       | Consulta pública verificable |
+
+---
+
+# 📋 Flujo operativo
+
+```text
+Médico emite receta
+        ↓
+KodRx genera QR + ID + hash
+        ↓
+Paciente presenta receta
+        ↓
+Farmacia escanea QR
+        ↓
+Validación operativa
+        ↓
+Registro de surtido total/parcial
+        ↓
+Historial y trazabilidad
+```
+
+---
+
+#  Roadmap
+
+Las siguientes funcionalidades forman parte del roadmap de evolución de KodRx:
+
+* Interoperabilidad sanitaria
+* Integración con estándares clínicos
+* Integración institucional
+* Dashboard analítico para laboratorios
+* Diagnóstico asistido con IA
+* Integración avanzada de validación farmacéutica
+* Evolución de trazabilidad blockchain
+
+---
+
+#  Consideraciones regulatorias
+
+KodRx está diseñado como una plataforma de trazabilidad y operación digital complementaria.
+
+La plataforma no sustituye mecanismos regulatorios oficiales ni sistemas institucionales de validación sanitaria.
+
+El objetivo de KodRx es facilitar:
+
+* trazabilidad operativa,
+* control de surtido,
+* verificación digital,
+* y continuidad de información dentro del flujo médico-farmacia.
+
+---
+
+#  Estructura del proyecto
+
+```text
+/admin
+/api
+/assets
+/componentes
+/estilos
+/farmacia
+/laboratorio
+/medico
+/vendor
+```
+
+---
+
+#  Estado del proyecto
+
+KodRx se encuentra en etapa funcional avanzada.
+
+Actualmente cuenta con:
+
+* emisión de recetas operativa,
+* validación farmacéutica,
+* trazabilidad de surtido,
+* generación PDF,
+* verificación pública,
+* y arquitectura modular en crecimiento.
+
+---
+
+# 📄Licencia
+
+Proyecto privado en desarrollo.
+
+Todos los derechos reservados.
+
+KodRx® es una marca registrada.
 
 ---
 
 <p align="center">
-  Hecho con 💚 por el equipo fundador de <strong>KodRx</strong>
+  Desarrollado por el equipo fundador de <strong>KodRx</strong>
 </p>
