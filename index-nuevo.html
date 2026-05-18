@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>KodRx | Trazabilidad digital para recetas médicas</title>
+  <meta name="description" content="KodRx es una plataforma digital para emisión, validación y trazabilidad operativa de recetas médicas con QR, control farmacéutico y verificación tecnológica." />
+
+  <meta property="og:title" content="KodRx | Trazabilidad digital para recetas médicas" />
+  <meta property="og:description" content="Infraestructura digital para emisión, validación y seguimiento operativo de recetas médicas." />
+  <meta property="og:image" content="https://kodrx.app/assets/logo.png" />
+  <meta property="og:url" content="https://kodrx.app/" />
+  <meta property="og:type" content="website" />
+
+  <link rel="canonical" href="https://kodrx.app/" />
+  <link rel="stylesheet" href="/estilos/global.css" />
+
+  <style>
+    :root {
+      --brand: #0b5bd3;
+      --brand-dark: #063a83;
+      --ink: #0f172a;
+      --muted: #64748b;
+      --bg: #f5f8fc;
+      --card: #ffffff;
+      --border: #dce6f2;
+      --mint: #1fd3c3;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+    }
+
+    a { color: inherit; text-decoration: none; }
+
+    .nav {
+      width: 100%;
+      background: #073b78;
+      color: #fff;
+      padding: 18px 24px;
+    }
+
+    .nav-inner {
+      max-width: 1120px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 900;
+      font-size: 1.35rem;
+    }
+
+    .brand img {
+      width: 38px;
+      height: 38px;
+      object-fit: contain;
+    }
+
+    .nav-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 11px 16px;
+      border-radius: 12px;
+      font-weight: 800;
+      border: 1px solid transparent;
+      cursor: pointer;
+      font-size: .95rem;
+    }
+
+    .btn-primary {
+      background: var(--brand);
+      color: #fff;
+    }
+
+    .btn-light {
+      background: rgba(255,255,255,.12);
+      color: #fff;
+      border-color: rgba(255,255,255,.28);
+    }
+
+    .btn-ghost {
+      background: #fff;
+      color: var(--brand-dark);
+      border-color: var(--border);
+    }
+
+    .hero {
+      background:
+        radial-gradient(circle at top right, rgba(31, 211, 195, .28), transparent 32%),
+        linear-gradient(135deg, #073b78 0%, #05264d 100%);
+      color: #fff;
+      padding: 80px 24px 90px;
+    }
+
+    .hero-inner {
+      max-width: 1120px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1.2fr .8fr;
+      gap: 40px;
+      align-items: center;
+    }
+
+    .eyebrow {
+      color: #8ceee7;
+      font-weight: 900;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      font-size: .78rem;
+      margin-bottom: 16px;
+    }
+
+    h1 {
+      font-size: clamp(2.2rem, 5vw, 4.4rem);
+      line-height: 1.02;
+      margin: 0 0 20px;
+      letter-spacing: -.04em;
+    }
+
+    .hero p {
+      color: rgba(255,255,255,.86);
+      font-size: clamp(1rem, 2vw, 1.2rem);
+      line-height: 1.7;
+      margin: 0 0 28px;
+      max-width: 680px;
+    }
+
+    .hero-actions {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .hero-card {
+      background: rgba(255,255,255,.1);
+      border: 1px solid rgba(255,255,255,.16);
+      border-radius: 28px;
+      padding: 26px;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 20px 50px rgba(0,0,0,.18);
+    }
+
+    .hero-card img {
+      width: 100%;
+      border-radius: 22px;
+      display: block;
+    }
+
+    .section {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 64px 24px;
+    }
+
+    .section h2 {
+      font-size: clamp(1.7rem, 3vw, 2.5rem);
+      margin: 0 0 14px;
+      letter-spacing: -.03em;
+    }
+
+    .section-lead {
+      color: var(--muted);
+      line-height: 1.7;
+      font-size: 1.05rem;
+      max-width: 850px;
+      margin: 0 0 28px;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 18px;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 18px;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 22px;
+      padding: 24px;
+      box-shadow: 0 12px 30px rgba(15, 23, 42, .05);
+    }
+
+    .card h3 {
+      margin: 0 0 10px;
+      color: var(--brand-dark);
+      font-size: 1.15rem;
+    }
+
+    .card p, .card li {
+      color: var(--muted);
+      line-height: 1.65;
+      font-size: .98rem;
+    }
+
+    .card ul {
+      padding-left: 20px;
+      margin: 10px 0 0;
+    }
+
+    .steps {
+      counter-reset: step;
+      display: grid;
+      gap: 14px;
+    }
+
+    .step {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 20px;
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 16px;
+      align-items: start;
+    }
+
+    .step::before {
+      counter-increment: step;
+      content: counter(step);
+      width: 38px;
+      height: 38px;
+      border-radius: 12px;
+      display: grid;
+      place-items: center;
+      background: var(--brand);
+      color: #fff;
+      font-weight: 900;
+    }
+
+    .step b {
+      display: block;
+      margin-bottom: 4px;
+      color: var(--ink);
+    }
+
+    .step span {
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    .trust-band {
+      background: #071b34;
+      color: #fff;
+    }
+
+    .trust-band .section-lead,
+    .trust-band p,
+    .trust-band li {
+      color: rgba(255,255,255,.78);
+    }
+
+    .trust-band .card {
+      background: rgba(255,255,255,.08);
+      border-color: rgba(255,255,255,.14);
+    }
+
+    .trust-band .card h3 {
+      color: #8ceee7;
+    }
+
+    .note {
+      background: #eef6ff;
+      border: 1px solid #cfe2ff;
+      color: #16406f;
+      border-radius: 18px;
+      padding: 18px 20px;
+      line-height: 1.7;
+      font-size: .95rem;
+    }
+
+    .cta {
+      text-align: center;
+      background: linear-gradient(135deg, var(--brand), #06b6d4);
+      color: #fff;
+      border-radius: 28px;
+      padding: 48px 28px;
+    }
+
+    .cta h2 { margin-bottom: 12px; }
+    .cta p {
+      color: rgba(255,255,255,.88);
+      max-width: 760px;
+      margin: 0 auto 24px;
+      line-height: 1.7;
+    }
+
+    footer {
+      text-align: center;
+      padding: 28px 20px;
+      color: var(--muted);
+      font-size: .92rem;
+    }
+
+    @media (max-width: 900px) {
+      .hero-inner, .grid-3, .grid-2 {
+        grid-template-columns: 1fr;
+      }
+
+      .hero {
+        padding-top: 54px;
+      }
+
+      .nav-inner {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <header class="nav">
+    <div class="nav-inner">
+      <a class="brand" href="/">
+        <img src="/assets/logo.png" alt="KodRx" onerror="this.style.display='none'">
+        <span>KodRx</span>
+      </a>
+
+      <nav class="nav-actions" aria-label="Acciones principales">
+        <a class="btn btn-light" href="/verificar.html">Verificar receta</a>
+        <a class="btn btn-primary" href="/acceso.html">Acceso a la plataforma</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="hero-inner">
+        <div>
+          <div class="eyebrow">Recetas médicas digitales verificables</div>
+          <h1>Infraestructura digital para la trazabilidad de recetas médicas.</h1>
+          <p>
+            KodRx permite emitir, validar y dar seguimiento operativo a recetas médicas digitales mediante QR,
+            control farmacéutico, historial de surtido y verificación tecnológica.
+          </p>
+
+          <div class="hero-actions">
+            <a class="btn btn-primary" href="/acceso.html">Solicitar acceso</a>
+            <a class="btn btn-light" href="/verificar.html">Verificar una receta</a>
+          </div>
+        </div>
+
+        <div class="hero-card">
+          <img src="/img/diagramaweb.png" alt="Flujo digital de verificación de recetas médicas con KodRx">
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>¿Qué es KodRx?</h2>
+      <p class="section-lead">
+        KodRx es una plataforma healthtech para la emisión y validación operativa de recetas médicas.
+        Su objetivo es reducir falsificaciones, mejorar la trazabilidad entre médicos y farmacias,
+        y registrar el ciclo de vida de una receta desde su emisión hasta su dispensación.
+      </p>
+
+      <div class="grid-3">
+        <article class="card">
+          <h3>Emisión médica</h3>
+          <p>
+            Los médicos generan recetas digitales con identificador único, QR verificable,
+            medicamentos, indicaciones y datos profesionales del prescriptor.
+          </p>
+        </article>
+
+        <article class="card">
+          <h3>Validación farmacéutica</h3>
+          <p>
+            Las farmacias pueden escanear la receta, revisar los datos necesarios para surtir
+            y registrar dispensación total o parcial.
+          </p>
+        </article>
+
+        <article class="card">
+          <h3>Trazabilidad tecnológica</h3>
+          <p>
+            Cada receta puede incorporar hash, bloque y registro verificable para fortalecer
+            autenticidad, auditoría y seguimiento operativo.
+          </p>
+        </article>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>Cómo funciona</h2>
+      <p class="section-lead">
+        KodRx estructura el flujo médico-farmacia para que cada receta pueda ser consultada,
+        validada y trazada de forma clara.
+      </p>
+
+      <div class="steps">
+        <div class="step">
+          <div>
+            <b>El médico emite la receta</b>
+            <span>La receta se genera desde un panel médico con datos clínicos, medicamentos e indicaciones.</span>
+          </div>
+        </div>
+
+        <div class="step">
+          <div>
+            <b>KodRx genera QR e identificador único</b>
+            <span>La receta queda asociada a un ID verificable y puede imprimirse o consultarse digitalmente.</span>
+          </div>
+        </div>
+
+        <div class="step">
+          <div>
+            <b>La farmacia escanea y valida</b>
+            <span>El módulo farmacéutico permite consultar la receta, revisar medicamentos y registrar surtido.</span>
+          </div>
+        </div>
+
+        <div class="step">
+          <div>
+            <b>El sistema conserva trazabilidad</b>
+            <span>Se registra quién surtió, cuándo, qué medicamento fue surtido y si fue parcial o total.</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="trust-band">
+      <div class="section">
+        <h2>Diseñado para médicos, farmacias e instituciones</h2>
+        <p class="section-lead">
+          KodRx no solo genera recetas digitales. Construye una capa operativa para documentar,
+          verificar y dar seguimiento al proceso de prescripción y dispensación.
+        </p>
+
+        <div class="grid-3">
+          <article class="card">
+            <h3>Médicos</h3>
+            <ul>
+              <li>Recetas digitales con QR</li>
+              <li>Historial de emisión</li>
+              <li>PDF listo para impresión</li>
+              <li>Validación de identidad profesional</li>
+            </ul>
+          </article>
+
+          <article class="card">
+            <h3>Farmacias</h3>
+            <ul>
+              <li>Escaneo desde navegador</li>
+              <li>Surtido total o parcial</li>
+              <li>Medicamentos bloqueados si ya fueron surtidos</li>
+              <li>Historial de dispensación</li>
+            </ul>
+          </article>
+
+          <article class="card">
+            <h3>Instituciones</h3>
+            <ul>
+              <li>Trazabilidad operativa</li>
+              <li>Registro verificable</li>
+              <li>Datos estructurados</li>
+              <li>Base para interoperabilidad futura</li>
+            </ul>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>Seguridad, privacidad y verificación</h2>
+      <p class="section-lead">
+        KodRx separa la información pública de la información privada. La vista pública permite verificar
+        autenticidad sin exponer datos clínicos sensibles del paciente.
+      </p>
+
+      <div class="grid-2">
+        <article class="card">
+          <h3>Vista pública</h3>
+          <p>
+            Permite validar la existencia de la receta, consultar medicamentos e indicaciones,
+            y revisar el estado tecnológico de la verificación.
+          </p>
+        </article>
+
+        <article class="card">
+          <h3>Vista operativa</h3>
+          <p>
+            Los usuarios autorizados pueden acceder a funciones específicas según su rol:
+            médico, farmacia o administración.
+          </p>
+        </article>
+      </div>
+
+      <div style="margin-top:18px" class="note">
+        KodRx está diseñado como una plataforma de trazabilidad y operación digital complementaria.
+        No sustituye mecanismos regulatorios oficiales ni sistemas institucionales de validación sanitaria.
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="cta">
+        <h2>Construyendo el futuro de la receta médica digital</h2>
+        <p>
+          KodRx se encuentra en fase funcional avanzada, con módulos de emisión médica,
+          verificación pública, validación farmacéutica y trazabilidad de surtido.
+        </p>
+        <div class="hero-actions" style="justify-content:center">
+          <a class="btn btn-ghost" href="/acceso.html">Acceso a la plataforma</a>
+          <a class="btn btn-light" href="/verificar.html">Verificar receta</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    © KodRx 2026 | Plataforma digital de recetas verificadas con trazabilidad tecnológica.
+  </footer>
+</body>
+</html>
