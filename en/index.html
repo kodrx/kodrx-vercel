@@ -17,7 +17,324 @@
   <link rel="alternate" hreflang="es" href="https://kodrx.app/" />
   <link rel="alternate" hreflang="en" href="https://kodrx.app/en/" />
   <link rel="stylesheet" href="/estilos/global.css" />
+ <link rel="stylesheet" href="/estilos/global.css" />
 
+  <style>
+    :root {
+      --brand: #0b5bd3;
+      --brand-dark: #063a83;
+      --ink: #0f172a;
+      --muted: #64748b;
+      --bg: #f5f8fc;
+      --card: #ffffff;
+      --border: #dce6f2;
+      --mint: #1fd3c3;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+    }
+
+    a { color: inherit; text-decoration: none; }
+
+    .nav {
+      width: 100%;
+      background: #073b78;
+      color: #fff;
+      padding: 18px 24px;
+    }
+
+    .nav-inner {
+      max-width: 1120px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 900;
+      font-size: 1.35rem;
+    }
+
+    .brand img {
+      width: 38px;
+      height: 38px;
+      object-fit: contain;
+    }
+
+    .nav-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 11px 16px;
+      border-radius: 12px;
+      font-weight: 800;
+      border: 1px solid transparent;
+      cursor: pointer;
+      font-size: .95rem;
+    }
+
+    .btn-primary {
+      background: var(--brand);
+      color: #fff;
+    }
+
+    .btn-light {
+      background: rgba(255,255,255,.12);
+      color: #fff;
+      border-color: rgba(255,255,255,.28);
+    }
+
+    .btn-ghost {
+      background: #fff;
+      color: var(--brand-dark);
+      border-color: var(--border);
+    }
+
+    .hero {
+      background:
+        radial-gradient(circle at top right, rgba(31, 211, 195, .28), transparent 32%),
+        linear-gradient(135deg, #073b78 0%, #05264d 100%);
+      color: #fff;
+      padding: 80px 24px 90px;
+    }
+
+    .hero-inner {
+      max-width: 1120px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1.2fr .8fr;
+      gap: 40px;
+      align-items: center;
+    }
+
+    .eyebrow {
+      color: #8ceee7;
+      font-weight: 900;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      font-size: .78rem;
+      margin-bottom: 16px;
+    }
+
+    h1 {
+      font-size: clamp(2.2rem, 5vw, 4.4rem);
+      line-height: 1.02;
+      margin: 0 0 20px;
+      letter-spacing: -.04em;
+    }
+
+    .hero p {
+      color: rgba(255,255,255,.86);
+      font-size: clamp(1rem, 2vw, 1.2rem);
+      line-height: 1.7;
+      margin: 0 0 28px;
+      max-width: 680px;
+    }
+
+    .hero-actions {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .hero-card {
+      background: rgba(255,255,255,.1);
+      border: 1px solid rgba(255,255,255,.16);
+      border-radius: 28px;
+      padding: 26px;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 20px 50px rgba(0,0,0,.18);
+    }
+
+    .hero-card img {
+      width: 100%;
+      border-radius: 22px;
+      display: block;
+    }
+
+    .section {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 64px 24px;
+    }
+
+    .section h2 {
+      font-size: clamp(1.7rem, 3vw, 2.5rem);
+      margin: 0 0 14px;
+      letter-spacing: -.03em;
+    }
+
+    .section-lead {
+      color: var(--muted);
+      line-height: 1.7;
+      font-size: 1.05rem;
+      max-width: 850px;
+      margin: 0 0 28px;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 18px;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 18px;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 22px;
+      padding: 24px;
+      box-shadow: 0 12px 30px rgba(15, 23, 42, .05);
+    }
+
+    .card h3 {
+      margin: 0 0 10px;
+      color: var(--brand-dark);
+      font-size: 1.15rem;
+    }
+
+    .card p, .card li {
+      color: var(--muted);
+      line-height: 1.65;
+      font-size: .98rem;
+    }
+
+    .card ul {
+      padding-left: 20px;
+      margin: 10px 0 0;
+    }
+
+    .steps {
+      counter-reset: step;
+      display: grid;
+      gap: 14px;
+    }
+
+    .step {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 20px;
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 16px;
+      align-items: start;
+    }
+
+    .step::before {
+      counter-increment: step;
+      content: counter(step);
+      width: 38px;
+      height: 38px;
+      border-radius: 12px;
+      display: grid;
+      place-items: center;
+      background: var(--brand);
+      color: #fff;
+      font-weight: 900;
+    }
+
+    .step b {
+      display: block;
+      margin-bottom: 4px;
+      color: var(--ink);
+    }
+
+    .step span {
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    .trust-band {
+      background: #071b34;
+      color: #fff;
+    }
+
+    .trust-band .section-lead,
+    .trust-band p,
+    .trust-band li {
+      color: rgba(255,255,255,.78);
+    }
+
+    .trust-band .card {
+      background: rgba(255,255,255,.08);
+      border-color: rgba(255,255,255,.14);
+    }
+
+    .trust-band .card h3 {
+      color: #8ceee7;
+    }
+
+    .note {
+      background: #eef6ff;
+      border: 1px solid #cfe2ff;
+      color: #16406f;
+      border-radius: 18px;
+      padding: 18px 20px;
+      line-height: 1.7;
+      font-size: .95rem;
+    }
+
+    .cta {
+      text-align: center;
+      background: linear-gradient(135deg, var(--brand), #06b6d4);
+      color: #fff;
+      border-radius: 28px;
+      padding: 48px 28px;
+    }
+
+    .cta h2 { margin-bottom: 12px; }
+    .cta p {
+      color: rgba(255,255,255,.88);
+      max-width: 760px;
+      margin: 0 auto 24px;
+      line-height: 1.7;
+    }
+
+    footer {
+      text-align: center;
+      padding: 28px 20px;
+      color: var(--muted);
+      font-size: .92rem;
+    }
+
+    @media (max-width: 900px) {
+      .hero-inner, .grid-3, .grid-2 {
+        grid-template-columns: 1fr;
+      }
+
+      .hero {
+        padding-top: 54px;
+      }
+
+      .nav-inner {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+    }
+  </style>
   <!-- Puedes reutilizar el mismo CSS interno del index español -->
 </head>
 
