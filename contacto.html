@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>KodRx | Contacto institucional</title>
+  <meta name="description" content="Contacta al equipo de KodRx para colaboraciones, pilotos, instituciones de salud, farmacias, médicos y proyectos de trazabilidad médica digital." />
+
+  <meta property="og:title" content="KodRx | Contacto institucional" />
+  <meta property="og:description" content="Conecta con KodRx para explorar pilotos, colaboración institucional y trazabilidad digital de recetas médicas." />
+  <meta property="og:image" content="https://kodrx.app/assets/logo.png" />
+  <meta property="og:url" content="https://kodrx.app/contacto.html" />
+  <meta property="og:type" content="website" />
+
+  <link rel="canonical" href="https://kodrx.app/contacto.html" />
+  <link rel="stylesheet" href="/estilos/global.css" />
+
+  <style>
+    :root {
+      --brand: #0b5bd3;
+      --brand-dark: #05264d;
+      --ink: #0f172a;
+      --muted: #64748b;
+      --bg: #f5f8fc;
+      --card: #ffffff;
+      --border: #dce6f2;
+      --mint: #1fd3c3;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .nav {
+      width: 100%;
+      background: #073b78;
+      color: #fff;
+      padding: 18px 24px;
+    }
+
+    .nav-inner {
+      max-width: 1120px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 900;
+      font-size: 1.35rem;
+    }
+
+    .brand img {
+      width: 38px;
+      height: 38px;
+      object-fit: contain;
+    }
+
+    .nav-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 11px 16px;
+      border-radius: 12px;
+      font-weight: 800;
+      border: 1px solid transparent;
+      cursor: pointer;
+      font-size: .95rem;
+    }
+
+    .btn-primary {
+      background: var(--brand);
+      color: #fff;
+    }
+
+    .btn-light {
+      background: rgba(255,255,255,.12);
+      color: #fff;
+      border-color: rgba(255,255,255,.28);
+    }
+
+    .btn-ghost {
+      background: #fff;
+      color: var(--brand-dark);
+      border-color: var(--border);
+    }
+
+    .hero {
+      background:
+        radial-gradient(circle at top right, rgba(31, 211, 195, .28), transparent 32%),
+        linear-gradient(135deg, #073b78 0%, #05264d 100%);
+      color: #fff;
+      padding: 78px 24px 94px;
+    }
+
+    .hero-inner {
+      max-width: 1120px;
+      margin: 0 auto;
+    }
+
+    .eyebrow {
+      color: #8ceee7;
+      font-weight: 900;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      font-size: .78rem;
+      margin-bottom: 16px;
+    }
+
+    h1 {
+      font-size: clamp(2.2rem, 5vw, 4.2rem);
+      line-height: 1.04;
+      margin: 0 0 20px;
+      letter-spacing: -.04em;
+      max-width: 900px;
+    }
+
+    .hero p {
+      color: rgba(255,255,255,.86);
+      font-size: clamp(1rem, 2vw, 1.18rem);
+      line-height: 1.7;
+      margin: 0;
+      max-width: 760px;
+    }
+
+    .wrap {
+      max-width: 1120px;
+      margin: -48px auto 0;
+      padding: 0 24px 70px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1.05fr .95fr;
+      gap: 20px;
+      align-items: stretch;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 28px;
+      box-shadow: 0 14px 35px rgba(15, 23, 42, .06);
+    }
+
+    .card h2 {
+      margin: 0 0 12px;
+      color: var(--brand-dark);
+      font-size: 1.55rem;
+      letter-spacing: -.02em;
+    }
+
+    .card p,
+    .card li {
+      color: var(--muted);
+      line-height: 1.7;
+      font-size: 1rem;
+    }
+
+    .contact-list {
+      display: grid;
+      gap: 14px;
+      margin-top: 20px;
+    }
+
+    .contact-item {
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 16px;
+      background: #fbfdff;
+    }
+
+    .contact-item b {
+      display: block;
+      margin-bottom: 6px;
+      color: var(--ink);
+    }
+
+    .contact-item a {
+      color: var(--brand);
+      font-weight: 800;
+      overflow-wrap: anywhere;
+    }
+
+    .note {
+      background: #eef6ff;
+      border: 1px solid #cfe2ff;
+      color: #16406f;
+      border-radius: 18px;
+      padding: 18px 20px;
+      line-height: 1.7;
+      font-size: .95rem;
+      margin-top: 18px;
+    }
+
+    .form-card {
+      background:
+        radial-gradient(circle at top right, rgba(31, 211, 195, .18), transparent 35%),
+        #ffffff;
+    }
+
+    .field {
+      width: 100%;
+      padding: 14px 16px;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      font-size: 1rem;
+      margin-bottom: 12px;
+      outline: none;
+      font-family: inherit;
+      background: #fff;
+    }
+
+    .field:focus {
+      border-color: var(--brand);
+      box-shadow: 0 0 0 4px rgba(11,91,211,.12);
+    }
+
+    textarea.field {
+      min-height: 140px;
+      resize: vertical;
+    }
+
+    .small {
+      color: var(--muted);
+      font-size: .88rem;
+      line-height: 1.55;
+      margin-top: 10px;
+    }
+
+    .topics {
+      margin-top: 26px;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+    }
+
+    .topic {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 20px;
+    }
+
+    .topic h3 {
+      margin: 0 0 8px;
+      color: var(--brand-dark);
+      font-size: 1.05rem;
+    }
+
+    footer {
+      text-align: center;
+      padding: 28px 20px;
+      color: var(--muted);
+      font-size: .92rem;
+    }
+
+    @media (max-width: 900px) {
+      .grid,
+      .topics {
+        grid-template-columns: 1fr;
+      }
+
+      .nav-inner {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .hero {
+        padding-top: 54px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <header class="nav">
+    <div class="nav-inner">
+      <a class="brand" href="/">
+        <img src="/assets/logo.png" alt="KodRx" onerror="this.style.display='none'">
+        <span>KodRx</span>
+      </a>
+
+      <nav class="nav-actions" aria-label="Acciones principales">
+        <a class="btn btn-light" href="/">Inicio</a>
+        <a class="btn btn-light" href="/consulta.html">Verificar receta</a>
+        <a class="btn btn-primary" href="/acceso.html">Acceso a la plataforma</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="hero-inner">
+        <div class="eyebrow">Contacto institucional</div>
+        <h1>Conversemos sobre trazabilidad médica digital.</h1>
+        <p>
+          KodRx busca colaborar con médicos, farmacias, instituciones de salud y actores del ecosistema
+          healthtech interesados en la evolución de la receta médica electrónica.
+        </p>
+      </div>
+    </section>
+
+    <section class="wrap">
+      <div class="grid">
+        <article class="card">
+          <h2>Contacto directo</h2>
+          <p>
+            Si deseas conocer KodRx, explorar un piloto, solicitar una demostración o proponer una colaboración,
+            puedes contactar al equipo fundador por los siguientes canales.
+          </p>
+
+          <div class="contact-list">
+            <div class="contact-item">
+              <b>Correo institucional</b>
+              <a href="mailto:contacto@kodrx.app?subject=Contacto%20institucional%20KodRx">contacto@kodrx.app</a>
+            </div>
+
+            <div class="contact-item">
+              <b>Dirección ejecutiva</b>
+              <a href="mailto:ceo@kodrx.app?subject=Inter%C3%A9s%20en%20KodRx">ceo@kodrx.app</a>
+            </div>
+
+            <div class="contact-item">
+              <b>LinkedIn</b>
+              <a href="https://www.linkedin.com/company/kodrx" target="_blank" rel="noopener">KodRx en LinkedIn</a>
+            </div>
+          </div>
+
+          <div class="note">
+            KodRx se encuentra en etapa funcional avanzada. Actualmente se exploran pilotos, alianzas y
+            conversaciones institucionales relacionadas con trazabilidad, validación operativa e interoperabilidad sanitaria.
+          </div>
+        </article>
+
+        <article class="card form-card">
+          <h2>Enviar mensaje</h2>
+          <p>
+            Por ahora este formulario abre tu cliente de correo con el mensaje preparado.
+            Más adelante podrá conectarse a un formulario institucional automatizado.
+          </p>
+
+          <input id="nombre" class="field" type="text" placeholder="Nombre" />
+          <input id="organizacion" class="field" type="text" placeholder="Organización / institución" />
+          <input id="correo" class="field" type="email" placeholder="Correo electrónico" />
+          <select id="interes" class="field">
+            <option value="">Tipo de interés</option>
+            <option value="Piloto institucional">Piloto institucional</option>
+            <option value="Médico">Médico</option>
+            <option value="Farmacia">Farmacia</option>
+            <option value="Laboratorio">Laboratorio</option>
+            <option value="Gobierno / institución pública">Gobierno / institución pública</option>
+            <option value="Colaboración tecnológica">Colaboración tecnológica</option>
+            <option value="Otro">Otro</option>
+          </select>
+          <textarea id="mensaje" class="field" placeholder="Mensaje"></textarea>
+
+          <button class="btn btn-primary" style="width:100%" onclick="enviarMensaje()">
+            Contactar al equipo KodRx
+          </button>
+
+          <p class="small">
+            Al enviar, se abrirá tu aplicación de correo con la información capturada.
+          </p>
+        </article>
+      </div>
+
+      <div class="topics">
+        <article class="topic">
+          <h3>Pilotos y adopción</h3>
+          <p>Exploración de pruebas controladas con médicos, farmacias o instituciones.</p>
+        </article>
+
+        <article class="topic">
+          <h3>Interoperabilidad</h3>
+          <p>Conversaciones sobre integración futura, datos estructurados y flujos sanitarios interoperables.</p>
+        </article>
+
+        <article class="topic">
+          <h3>Trazabilidad</h3>
+          <p>Validación tecnológica, historial de surtido y control operativo de recetas médicas.</p>
+        </article>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    © KodRx 2026 | Plataforma digital de recetas verificadas con trazabilidad tecnológica.
+  </footer>
+
+  <script>
+    function enviarMensaje() {
+      const nombre = document.getElementById('nombre').value.trim();
+      const organizacion = document.getElementById('organizacion').value.trim();
+      const correo = document.getElementById('correo').value.trim();
+      const interes = document.getElementById('interes').value.trim();
+      const mensaje = document.getElementById('mensaje').value.trim();
+
+      const subject = encodeURIComponent('Contacto institucional KodRx');
+
+      const body = encodeURIComponent(
+`Nombre: ${nombre || '—'}
+Organización: ${organizacion || '—'}
+Correo: ${correo || '—'}
+Tipo de interés: ${interes || '—'}
+
+Mensaje:
+${mensaje || '—'}`
+      );
+
+      window.location.href = `mailto:contacto@kodrx.app?subject=${subject}&body=${body}`;
+    }
+  </script>
+</body>
+</html>
