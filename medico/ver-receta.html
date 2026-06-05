@@ -787,17 +787,23 @@ function cargarRecetaDesdeCache() {
 async function procesarSelladoPendiente(){
   try {
     const raw = sessionStorage.getItem('kodrx_sellado_pendiente');
-    if (!raw) return;
+    if (!raw) {
+      console.log('[ver][BC] no hay sellado pendiente');
+      return;
+    }
 
     const data = JSON.parse(raw);
 
     const currentId = new URLSearchParams(location.search).get('id');
     if (!currentId || data.idReceta !== currentId) return;
 
-    console.log('[ver] procesando sellado pendiente:', currentId);
+    if (!data?.payload?.idReceta || !data?.payload?.receta) {
+      console.warn('[ver][BC] payload inválido:', data);
+      return;
+    }
 
-    // 🔹 limpiar para evitar doble ejecución
-    sessionStorage.removeItem('kodrx_sellado_pendiente');
+    console.log('[ver] procesando sellado pendiente:', currentId);
+    console.log('[ver][BC payload]', data.payload);
 
     const resp = await fetch('/api/bloques', {
       method: 'POST',
@@ -852,7 +858,10 @@ async function procesarSelladoPendiente(){
         }
 
         console.log('[ver][BC actualizado]', currentId);
-
+sessionStorage.removeItem('kodrx_sellado_pendiente');
+sessionStorage.removeItem('kodrx_receta_cache');
+console.log('[ver][BC] pendiente limpiado');
+        
         // 🔹 refrescar UI
       window.RECETA_ACTUAL = normalize({
   ...(window.RECETA_ACTUAL || {}),
