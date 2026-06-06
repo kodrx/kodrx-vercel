@@ -870,9 +870,14 @@ console.log('[ver][BC] pendiente limpiado');
 
         updateBadgeFromReceta(window.RECETA_ACTUAL);
 
-        if (updates.bloque) {
-          await setChainQR(updates.bloque);
-        }
+if (updates.bloque) {
+  await setChainQR(updates.bloque);
+
+  // refresca fuentes QR para PDF e impresión
+  if (window.getQRSources && window.RECETA_ACTUAL) {
+    window.QRS = await window.getQRSources(window.RECETA_ACTUAL);
+  }
+}
 
         if (updates.hash) {
           const txt = `hash (BC): ${updates.hash}`;
@@ -922,9 +927,14 @@ console.log('[ver][BC] pendiente limpiado');
         };
 
         const r = adapt(rIn || {});
-        const qrs = (qrsIn && (qrsIn.main || qrsIn.chain))
-          ? qrsIn
-          : (window.QRS || (window.getQRSources ? await window.getQRSources(r) : {}));
+        const qrsBase = (qrsIn && (qrsIn.main || qrsIn.chain))
+  ? qrsIn
+  : (window.QRS || {});
+
+const qrs = {
+  ...qrsBase,
+  ...(window.getQRSources ? await window.getQRSources(r) : {})
+};
 
         const doc = new Cls({ unit: 'pt', format: 'letter', compress: true });
         const W = doc.internal.pageSize.getWidth();
