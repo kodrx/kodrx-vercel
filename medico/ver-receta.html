@@ -829,7 +829,7 @@ async function procesarSelladoPendiente(){
 
     const updates = {};
 
-    if (resp.ok && Number.isFinite(block) && hash) {
+if ((resp.ok || resp.status === 201) && Number.isFinite(block) && hash) {
       updates.blockchain = { status: 'ok', block, hash, at: new Date() };
       updates.bloque = block;
       updates.hash = hash;
