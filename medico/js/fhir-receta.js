@@ -67,12 +67,24 @@ export function recetaToFHIR(receta) {
   };
 }
 
-function normalizarSexoFHIR(sexo) {
-  if (!sexo) return "unknown";
-  const s = String(sexo).toLowerCase();
-
-  if (s.includes("masculino") || s === "hombre" || s === "m") return "male";
-  if (s.includes("femenino") || s === "mujer" || s === "f") return "female";
-
-  return "unknown";
+{
+  fullUrl: `urn:uuid:patient-${recetaId}`,
+  resource: {
+    resourceType: "Patient",
+    id: `patient-${recetaId}`,
+    name: [
+      {
+        text:
+          receta.paciente?.nombre ||
+          receta.nombrePaciente ||
+          receta.pacienteNombre ||
+          "Paciente KodRx"
+      }
+    ],
+    gender: normalizarSexoFHIR(
+      receta.paciente?.sexo ||
+      receta.sexo ||
+      receta.pacienteSexo
+    )
+  }
 }
