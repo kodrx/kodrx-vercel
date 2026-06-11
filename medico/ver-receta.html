@@ -11,7 +11,8 @@
       doc, updateDoc, serverTimestamp
     } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
     import { recetaToFHIR } from './js/fhir-receta.js';
-    
+
+    window.recetaToFHIR = recetaToFHIR;
     window.db = db;
     window.__fs = { doc, updateDoc, serverTimestamp };
   </script>
@@ -341,7 +342,7 @@
         <button id="btnVolver" type="button" class="btn">Regresar</button>
         <button id="btnDescargar" type="button" class="btn primary">Descargar PDF</button>
         <button id="btnImprimir" type="button" class="btn">Imprimir</button>
-        <button id="btnDescargarFHIR">  Descargar FHIR JSON</button>
+        <button id="btnDescargarFHIR" type="button" class="btn">Descargar FHIR JSON</button>
       </section>
 
       <div class="receta-header">
@@ -507,7 +508,7 @@
         };
       }
 function descargarFHIR(receta) {
-  const bundle = recetaToFHIR(receta);
+ const bundle = window.recetaToFHIR(receta);
 
   const blob = new Blob(
     [JSON.stringify(bundle, null, 2)],
@@ -1370,7 +1371,20 @@ const qrs = {
         }
       }
 
-      document.getElementById("btnDescargarFHIR")?.addEventListener("click", () => {
+     document.getElementById("btnDescargarFHIR")?.addEventListener("click", async (e) => {
+  e.preventDefault();
+
+  if (!window.RECETA_ACTUAL) {
+    await renderOnce();
+  }
+
+  const receta = window.RECETA_ACTUAL;
+
+  if (!receta) {
+    alert("La receta aún no se ha cargado.");
+    return;
+  }
+
   descargarFHIR(receta);
 });
       
