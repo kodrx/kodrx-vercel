@@ -81,6 +81,7 @@ export function recetaToFHIR(receta) {
   }));
   
 const observacionesFHIR = crearObservacionesFHIR(receta, recetaId);
+const conditionFHIR = crearConditionFHIR(receta, recetaId);
   
   return {
     resourceType: "Bundle",
@@ -91,7 +92,8 @@ const observacionesFHIR = crearObservacionesFHIR(receta, recetaId);
   patientResource,
   practitionerResource,
   ...medicamentosFHIR,
-  ...observacionesFHIR
+  ...observacionesFHIR,
+  conditionFHIR
 ].filter(Boolean)
   };
 }
@@ -285,4 +287,51 @@ function extraerNumero(valor) {
     .match(/[\d.]+/);
 
   return limpio ? Number(limpio[0]) : null;
+}
+function crearConditionFHIR(receta, recetaId) {
+  const diagnostico =
+    receta.diagnostico ||
+    receta.dx ||
+    receta.condition ||
+    "";
+
+  if (!diagnostico) return null;
+
+  const authoredOn = receta.fecha || new Date().toISOString();
+
+  return {
+    fullUrl: `urn:uuid:condition-${recetaId}`,
+    resource: {
+      resourceType: "Condition",
+      id: `condition-${recetaId}`,
+      clinicalStatus: {
+        coding: [
+          {
+            system: "http://terminology.hl7.org/CodeSystem/condition-clinical",
+            code: "active",
+            display: "Active"
+          }
+        ]
+      },
+      verificationStatus: {
+        coding: [
+          {
+            system: "http://terminology.hl7.org/CodeSystem/condition-ver-status",
+            code: "unconfirmed",
+            display: "Unconfirmed"
+          }
+        ]
+      },
+      code: {
+        text: diagnostico
+      },
+      subject: {
+        reference: `Patient/patient-${recetaId}`
+      },
+      recorder: {
+        reference: `Practitioner/practitioner-${recetaId}`
+      },
+      recordedDate: authoredOn
+    }
+  };
 }
