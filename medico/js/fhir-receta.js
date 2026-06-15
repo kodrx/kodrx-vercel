@@ -79,17 +79,20 @@ export function recetaToFHIR(receta) {
       ]
     }
   }));
-
+  
+const observacionesFHIR = crearObservacionesFHIR(receta, recetaId);
+  
   return {
     resourceType: "Bundle",
     type: "collection",
     id: `kodrx-receta-${recetaId}`,
     timestamp: new Date().toISOString(),
     entry: [
-      patientResource,
-      practitionerResource,
-      ...medicamentosFHIR
-    ].filter(Boolean)
+  patientResource,
+  practitionerResource,
+  ...medicamentosFHIR,
+  ...observacionesFHIR
+].filter(Boolean)
   };
 }
 
@@ -102,4 +105,184 @@ function normalizarSexoFHIR(sexo) {
   if (s === "f" || s === "femenino" || s === "mujer") return "female";
 
   return "unknown";
+}
+function crearObservacionesFHIR(receta, recetaId) {
+  const paciente = receta.paciente || {};
+
+  const peso = paciente.peso ?? receta.peso;
+  const talla = paciente.talla ?? receta.talla;
+  const temperatura = paciente.temperatura ?? receta.temperatura;
+  const presion = paciente.presion ?? receta.presion;
+  const imc = paciente.imc ?? receta.imc;
+
+  const authoredOn = receta.fecha || new Date().toISOString();
+
+  return [
+    crearObservationSimple({
+      recetaId,
+      id: "peso",
+      code: "29463-7",
+      display: "Body weight",
+      value: extraerNumero(peso),
+      unit: "kg",
+      system: "http://unitsofmeasure.org",
+      codeUnit: "kg",
+      authoredOn
+    }),
+
+    crearObservationSimple({
+      recetaId,
+      id: "talla",
+      code: "8302-2",
+      display: "Body height",
+      value: extraerNumero(talla),
+      unit: "cm",
+      system: "http://unitsofmeasure.org",
+      codeUnit: "cm",
+      authoredOn
+    }),
+
+    crearObservationSimple({
+      recetaId,
+      id: "temperatura",
+      code: "8310-5",
+      display: "Body temperature",
+      value: extraerNumero(temperatura),
+      unit: "°C",
+      system: "http://unitsofmeasure.org",
+      codeUnit: "Cel",
+      authoredOn
+    }),
+
+    crearObservationSimple({
+      recetaId,
+      id: "imc",
+      code: "39156-5",
+      display: "Body mass index",
+      value: extraerNumero(imc),
+      unit: "kg/m2",
+      system: "http://unitsofmeasure.org",
+      codeUnit: "kg/m2",
+      authoredOn
+    }),
+
+    crearObservationTexto({
+      recetaId,
+      id: "presion-arterial",
+      code: "85354-9",
+      display: "Blood pressure panel",
+      text: presion,
+      authoredOn
+    })
+  ].filter(Boolean);
+}
+
+function crearObservationSimple({
+  recetaId,
+  id,
+  code,
+  display,
+  value,
+  unit,
+  system,
+  codeUnit,
+  authoredOn
+}) {
+  if (value === null || value === undefined || Number.isNaN(value)) return null;
+
+  return {
+    fullUrl: `urn:uuid:observation-${recetaId}-${id}`,
+    resource: {
+      resourceType: "Observation",
+      id: `observation-${recetaId}-${id}`,
+      status: "final",
+      category: [
+        {
+          coding: [
+            {
+              system: "http://terminology.hl7.org/CodeSystem/observation-category",
+              code: "vital-signs",
+              display: "Vital Signs"
+            }
+          ]
+        }
+      ],
+      code: {
+        coding: [
+          {
+            system: "http://loinc.org",
+            code,
+            display
+          }
+        ],
+        text: display
+      },
+      subject: {
+        reference: `Patient/patient-${recetaId}`
+      },
+      effectiveDateTime: authoredOn,
+      valueQuantity: {
+        value,
+        unit,
+        system,
+        code: codeUnit
+      }
+    }
+  };
+}
+
+function crearObservationTexto({
+  recetaId,
+  id,
+  code,
+  display,
+  text,
+  authoredOn
+}) {
+  if (!text) return null;
+
+  return {
+    fullUrl: `urn:uuid:observation-${recetaId}-${id}`,
+    resource: {
+      resourceType: "Observation",
+      id: `observation-${recetaId}-${id}`,
+      status: "final",
+      category: [
+        {
+          coding: [
+            {
+              system: "http://terminology.hl7.org/CodeSystem/observation-category",
+              code: "vital-signs",
+              display: "Vital Signs"
+            }
+          ]
+        }
+      ],
+      code: {
+        coding: [
+          {
+            system: "http://loinc.org",
+            code,
+            display
+          }
+        ],
+        text: display
+      },
+      subject: {
+        reference: `Patient/patient-${recetaId}`
+      },
+      effectiveDateTime: authoredOn,
+      valueString: String(text)
+    }
+  };
+}
+
+function extraerNumero(valor) {
+  if (valor === null || valor === undefined || valor === "") return null;
+
+  const limpio = String(valor)
+    .replace(",", ".")
+    .match(/[\d.]+/);
+
+  return limpio ? Number(limpio[0]) : null;
 }
