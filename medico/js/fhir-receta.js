@@ -82,6 +82,7 @@ export function recetaToFHIR(receta) {
   
 const observacionesFHIR = crearObservacionesFHIR(receta, recetaId);
 const conditionFHIR = crearConditionFHIR(receta, recetaId);
+const provenanceFHIR = crearProvenanceFHIR(receta, recetaId);
   
   return {
     resourceType: "Bundle",
@@ -94,6 +95,7 @@ const conditionFHIR = crearConditionFHIR(receta, recetaId);
   ...medicamentosFHIR,
   ...observacionesFHIR,
   conditionFHIR
+  provenanceFHIR
 ].filter(Boolean)
   };
 }
@@ -332,6 +334,66 @@ function crearConditionFHIR(receta, recetaId) {
         reference: `Practitioner/practitioner-${recetaId}`
       },
       recordedDate: authoredOn
+    }
+  };
+}
+function crearProvenanceFHIR(receta, recetaId) {
+
+  const hash =
+    receta.hash ||
+    receta.blockchain?.hash ||
+    null;
+
+  const bloque =
+    receta.bloque ||
+    receta.blockchain?.block ||
+    null;
+
+  const fecha =
+    receta.fecha ||
+    new Date().toISOString();
+
+  return {
+    fullUrl: `urn:uuid:provenance-${recetaId}`,
+    resource: {
+      resourceType: "Provenance",
+
+      id: `provenance-${recetaId}`,
+
+      recorded: fecha,
+
+      target: [
+        {
+          reference: `Patient/patient-${recetaId}`
+        }
+      ],
+
+      agent: [
+        {
+          who: {
+            reference: `Practitioner/practitioner-${recetaId}`
+          }
+        }
+      ],
+
+      extension: [
+
+        ...(hash ? [{
+          url: "https://kodrx.app/fhir/hash",
+          valueString: hash
+        }] : []),
+
+        ...(bloque ? [{
+          url: "https://kodrx.app/fhir/block",
+          valueInteger: Number(bloque)
+        }] : []),
+
+        [{
+          url: "https://kodrx.app/fhir/recetaId",
+          valueString: recetaId
+        }]
+
+      ].flat()
     }
   };
 }
