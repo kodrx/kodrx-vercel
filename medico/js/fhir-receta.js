@@ -89,12 +89,12 @@ const provenanceFHIR = crearProvenanceFHIR(receta, recetaId);
     type: "collection",
     id: `kodrx-receta-${recetaId}`,
     timestamp: new Date().toISOString(),
-    entry: [
+ entry: [
   patientResource,
   practitionerResource,
   ...medicamentosFHIR,
   ...observacionesFHIR,
-  conditionFHIR
+  conditionFHIR,
   provenanceFHIR
 ].filter(Boolean)
   };
