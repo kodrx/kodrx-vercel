@@ -376,17 +376,17 @@ function crearProvenanceFHIR(receta, recetaId) {
       extension: [
 
         ...(hash ? [{
-          url: "https://kodrx.app/fhir/hash",
+          url: "https://kodrx.app/fhir/StructureDefinition/hash",
           valueString: hash
         }] : []),
 
         ...(bloque ? [{
-          url: "https://kodrx.app/fhir/block",
+          url: "https://kodrx.app/fhir/StructureDefinition/block",
           valueInteger: Number(bloque)
         }] : []),
 
         [{
-          url: "https://kodrx.app/fhir/recetaId",
+          url: "https://kodrx.app/fhir/StructureDefinition/recetaId",
           valueString: recetaId
         }]
 
