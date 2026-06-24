@@ -339,33 +339,7 @@ function crearConditionFHIR(receta, recetaId) {
   };
 }
 function crearProvenanceFHIR(receta, recetaId) {
-function crearTargetsProvenance(receta, recetaId) {
-  const medicamentos = receta.medicamentos || [];
-  const paciente = receta.paciente || {};
 
-  const tienePeso = paciente.peso ?? receta.peso;
-  const tieneTalla = paciente.talla ?? receta.talla;
-  const tieneTemperatura = paciente.temperatura ?? receta.temperatura;
-  const tieneIMC = paciente.imc ?? receta.imc;
-  const tienePresion = paciente.presion ?? receta.presion;
-  const tieneDiagnostico = receta.diagnostico || receta.dx || receta.condition;
-
-  return [
-    { reference: `Patient/patient-${recetaId}` },
-    { reference: `Practitioner/practitioner-${recetaId}` },
-
-    ...medicamentos.map((_, idx) => ({
-      reference: `MedicationRequest/medicationrequest-${recetaId}-${idx + 1}`
-    })),
-
-    tienePeso ? { reference: `Observation/observation-${recetaId}-peso` } : null,
-    tieneTalla ? { reference: `Observation/observation-${recetaId}-talla` } : null,
-    tieneTemperatura ? { reference: `Observation/observation-${recetaId}-temperatura` } : null,
-    tieneIMC ? { reference: `Observation/observation-${recetaId}-imc` } : null,
-    tienePresion ? { reference: `Observation/observation-${recetaId}-presion-arterial` } : null,
-    tieneDiagnostico ? { reference: `Condition/condition-${recetaId}` } : null
-  ].filter(Boolean);
-}
   const hash =
     receta.hash ||
     receta.blockchain?.hash ||
@@ -419,4 +393,31 @@ function crearTargetsProvenance(receta, recetaId) {
       ].flat()
     }
   };
+}
+function crearTargetsProvenance(receta, recetaId) {
+  const medicamentos = receta.medicamentos || [];
+  const paciente = receta.paciente || {};
+
+  const tienePeso = paciente.peso ?? receta.peso;
+  const tieneTalla = paciente.talla ?? receta.talla;
+  const tieneTemperatura = paciente.temperatura ?? receta.temperatura;
+  const tieneIMC = paciente.imc ?? receta.imc;
+  const tienePresion = paciente.presion ?? receta.presion;
+  const tieneDiagnostico = receta.diagnostico || receta.dx || receta.condition;
+
+  return [
+    { reference: `Patient/patient-${recetaId}` },
+    { reference: `Practitioner/practitioner-${recetaId}` },
+
+    ...medicamentos.map((_, idx) => ({
+      reference: `MedicationRequest/medicationrequest-${recetaId}-${idx + 1}`
+    })),
+
+    tienePeso ? { reference: `Observation/observation-${recetaId}-peso` } : null,
+    tieneTalla ? { reference: `Observation/observation-${recetaId}-talla` } : null,
+    tieneTemperatura ? { reference: `Observation/observation-${recetaId}-temperatura` } : null,
+    tieneIMC ? { reference: `Observation/observation-${recetaId}-imc` } : null,
+    tienePresion ? { reference: `Observation/observation-${recetaId}-presion-arterial` } : null,
+    tieneDiagnostico ? { reference: `Condition/condition-${recetaId}` } : null
+  ].filter(Boolean);
 }
