@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>KodRx FHIR Implementation Guide</title>
+
+  <meta name="description" content="KodRx FHIR Implementation Guide v1.0. Representación interoperable de recetas médicas verificables usando FHIR R4 y trazabilidad KodRx." />
+
+  <style>
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f4f7fb;
+      color: #111827;
+      line-height: 1.6;
+    }
+
+    header {
+      background: #0b5bd3;
+      color: white;
+      padding: 48px 20px;
+      text-align: center;
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: clamp(30px, 5vw, 48px);
+    }
+
+    header p {
+      max-width: 760px;
+      margin: 14px auto 0;
+      font-size: 18px;
+      opacity: 0.95;
+    }
+
+    main {
+      max-width: 1040px;
+      margin: 0 auto;
+      padding: 32px 20px 56px;
+    }
+
+    section {
+      background: white;
+      border: 1px solid #dbe3ef;
+      border-radius: 16px;
+      padding: 24px;
+      margin-bottom: 20px;
+      box-shadow: 0 10px 24px rgba(15, 23, 42, 0.04);
+    }
+
+    h2 {
+      margin-top: 0;
+      color: #0b1b2b;
+      font-size: 24px;
+    }
+
+    h3 {
+      margin-bottom: 8px;
+      color: #0b1b2b;
+    }
+
+    code, pre {
+      background: #f1f5f9;
+      border-radius: 10px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+
+    code {
+      padding: 2px 6px;
+    }
+
+    pre {
+      padding: 16px;
+      overflow-x: auto;
+      font-size: 14px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 14px;
+    }
+
+    .pill {
+      display: inline-block;
+      padding: 6px 12px;
+      border-radius: 999px;
+      background: #e8f1ff;
+      color: #0b5bd3;
+      font-weight: 700;
+      font-size: 13px;
+      margin: 4px 6px 4px 0;
+    }
+
+    .resource {
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 14px;
+      background: #fafafa;
+    }
+
+    .resource strong {
+      color: #0b5bd3;
+    }
+
+    footer {
+      text-align: center;
+      color: #6b7280;
+      padding: 24px;
+      font-size: 14px;
+    }
+
+    a {
+      color: #0b5bd3;
+      font-weight: 700;
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <h1>KodRx FHIR Implementation Guide</h1>
+    <p>
+      Perfil técnico v1.0 para representar recetas médicas verificables usando FHIR R4,
+      recursos clínicos estándar y trazabilidad KodRx.
+    </p>
+  </header>
+
+  <main>
+    <section>
+      <h2>Resumen</h2>
+      <p>
+        KodRx representa una receta médica como un <strong>FHIR Bundle</strong>
+        que contiene datos clínicos estructurados y una capa de trazabilidad verificable
+        mediante <strong>Provenance</strong>, hash y bloque.
+      </p>
+
+      <p>
+        Este perfil no reemplaza FHIR. Define cómo KodRx utiliza FHIR R4 para expresar
+        una receta médica digital verificable.
+      </p>
+
+      <div>
+        <span class="pill">FHIR R4</span>
+        <span class="pill">Prescription</span>
+        <span class="pill">Provenance</span>
+        <span class="pill">Verified Bundle</span>
+        <span class="pill">KodRx v1.0</span>
+      </div>
+    </section>
+
+    <section>
+      <h2>Nombre del perfil</h2>
+
+      <pre>KodRx Verified Prescription Bundle v1.0</pre>
+
+      <p>
+        Tipo actual:
+        <code>Bundle.type = collection</code>
+      </p>
+
+      <p>
+        En futuras versiones podrá evolucionar a <code>Bundle.type = document</code>
+        incorporando un recurso <code>Composition</code>.
+      </p>
+    </section>
+
+    <section>
+      <h2>Recursos soportados</h2>
+
+      <div class="grid">
+        <div class="resource">
+          <strong>Patient</strong>
+          <p>Representa al paciente de la receta.</p>
+        </div>
+
+        <div class="resource">
+          <strong>Practitioner</strong>
+          <p>Representa al médico emisor y su cédula profesional.</p>
+        </div>
+
+        <div class="resource">
+          <strong>MedicationRequest</strong>
+          <p>Representa cada medicamento prescrito.</p>
+        </div>
+
+        <div class="resource">
+          <strong>Observation</strong>
+          <p>Representa signos vitales como peso, talla, temperatura, IMC y presión arterial.</p>
+        </div>
+
+        <div class="resource">
+          <strong>Condition</strong>
+          <p>Representa el diagnóstico asociado a la receta.</p>
+        </div>
+
+        <div class="resource">
+          <strong>Provenance</strong>
+          <p>Representa la trazabilidad verificable de la receta KodRx.</p>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Recursos obligatorios v1</h2>
+
+      <pre>Bundle
+├── Patient
+├── Practitioner
+├── MedicationRequest mínimo 1
+└── Provenance</pre>
+    </section>
+
+    <section>
+      <h2>Recursos opcionales v1</h2>
+
+      <pre>Observation
+Condition</pre>
+    </section>
+
+    <section>
+      <h2>Extensiones KodRx</h2>
+
+      <p>
+        KodRx utiliza extensiones FHIR personalizadas dentro de
+        <code>Provenance.extension</code>.
+      </p>
+
+      <pre>https://kodrx.app/fhir/StructureDefinition/hash
+https://kodrx.app/fhir/StructureDefinition/block
+https://kodrx.app/fhir/StructureDefinition/recetaId</pre>
+
+      <h3>hash</h3>
+      <p>Hash criptográfico asociado a la receta sellada.</p>
+
+      <h3>block</h3>
+      <p>Número de bloque donde se registró la evidencia de la receta.</p>
+
+      <h3>recetaId</h3>
+      <p>Identificador interno de la receta KodRx.</p>
+    </section>
+
+    <section>
+      <h2>Reglas del perfil KodRx v1</h2>
+
+      <pre>1. Todo Bundle KodRx debe incluir Patient.
+2. Todo Bundle KodRx debe incluir Practitioner.
+3. Todo Bundle KodRx debe incluir al menos un MedicationRequest.
+4. Todo MedicationRequest debe referir al Patient.
+5. Todo MedicationRequest debe referir al Practitioner.
+6. Todo Observation debe referir al Patient.
+7. Todo Condition debe referir al Patient.
+8. Todo Provenance debe apuntar a los recursos clínicos del Bundle.
+9. Todo Provenance debe incluir recetaId.
+10. Si la receta está sellada, Provenance debe incluir hash y block.</pre>
+    </section>
+
+    <section>
+      <h2>Ejemplo mínimo</h2>
+
+      <pre>{
+  "resourceType": "Bundle",
+  "type": "collection",
+  "entry": [
+    {
+      "resource": {
+        "resourceType": "Patient"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Practitioner"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "MedicationRequest"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Provenance"
+      }
+    }
+  ]
+}</pre>
+    </section>
+
+    <section>
+      <h2>Estado</h2>
+
+      <p>
+        Esta guía corresponde a la versión inicial del perfil KodRx FHIR.
+        Su propósito es documentar la primera implementación pública del exportador
+        FHIR de recetas verificables KodRx.
+      </p>
+
+      <pre>Versión: 1.0.0
+FHIR: R4
+Última actualización: Junio 2026
+Estado: Draft técnico</pre>
+    </section>
+  </main>
+
+  <footer>
+    KodRx — Tecnología que verifica, salud que protege.
+  </footer>
+</body>
+</html>
