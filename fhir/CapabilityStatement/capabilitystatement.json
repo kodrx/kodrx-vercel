@@ -1,0 +1,60 @@
+{
+  "resourceType": "CapabilityStatement",
+  "id": "kodrx-capabilitystatement",
+  "url": "https://kodrx.app/fhir/CapabilityStatement/capabilitystatement",
+  "version": "1.0.0",
+  "name": "KodRxCapabilityStatement",
+  "title": "KodRx FHIR Capability Statement",
+  "status": "draft",
+  "experimental": false,
+  "date": "2026-06-24",
+  "publisher": "KodRx",
+  "description": "CapabilityStatement for the KodRx FHIR R4 implementation focused on verified digital prescriptions with provenance and traceability.",
+  "kind": "capability",
+  "fhirVersion": "4.0.1",
+  "format": [
+    "application/fhir+json",
+    "json"
+  ],
+  "implementationGuide": [
+    "https://kodrx.app/fhir/"
+  ],
+  "rest": [
+    {
+      "mode": "server",
+      "documentation": "KodRx currently provides FHIR R4 export capabilities for verified prescription Bundles. Full RESTful FHIR server capabilities are planned for future versions.",
+      "resource": [
+        {
+          "type": "Patient",
+          "profile": "http://hl7.org/fhir/StructureDefinition/Patient",
+          "documentation": "Patient resource used to represent the prescription patient."
+        },
+        {
+          "type": "Practitioner",
+          "profile": "http://hl7.org/fhir/StructureDefinition/Practitioner",
+          "documentation": "Practitioner resource used to represent the prescribing clinician."
+        },
+        {
+          "type": "MedicationRequest",
+          "profile": "http://hl7.org/fhir/StructureDefinition/MedicationRequest",
+          "documentation": "MedicationRequest resource used to represent each prescribed medication."
+        },
+        {
+          "type": "Observation",
+          "profile": "http://hl7.org/fhir/StructureDefinition/Observation",
+          "documentation": "Observation resource used to represent vital signs associated with the prescription."
+        },
+        {
+          "type": "Condition",
+          "profile": "http://hl7.org/fhir/StructureDefinition/Condition",
+          "documentation": "Condition resource used to represent the diagnosis associated with the prescription."
+        },
+        {
+          "type": "Provenance",
+          "profile": "http://hl7.org/fhir/StructureDefinition/Provenance",
+          "documentation": "Provenance resource used to represent KodRx traceability, including hash, block and prescription identifier extensions."
+        }
+      ]
+    }
+  ]
+}
