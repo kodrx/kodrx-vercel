@@ -1,0 +1,54 @@
+{
+  "resourceType": "StructureDefinition",
+  "id": "kodrx-receta-id",
+  "url": "https://kodrx.app/fhir/StructureDefinition/recetaId",
+  "version": "1.0.0",
+  "name": "KodRxRecetaIdExtension",
+  "title": "KodRx Prescription ID Extension",
+  "status": "draft",
+  "experimental": false,
+  "date": "2026-06-24",
+  "publisher": "KodRx",
+  "description": "Extension that stores the internal KodRx prescription identifier.",
+  "purpose": "Allows external systems to reference the original KodRx prescription record associated with a FHIR Bundle.",
+  "fhirVersion": "4.0.1",
+  "kind": "complex-type",
+  "abstract": false,
+  "type": "Extension",
+  "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Extension",
+  "derivation": "constraint",
+
+  "context": [
+    {
+      "type": "element",
+      "expression": "Provenance"
+    }
+  ],
+
+  "snapshot": {
+    "element": [
+      {
+        "id": "Extension",
+        "path": "Extension",
+        "short": "KodRx prescription identifier",
+        "definition": "Internal KodRx prescription identifier used to reference the original prescription record."
+      },
+      {
+        "id": "Extension.url",
+        "path": "Extension.url",
+        "fixedUri": "https://kodrx.app/fhir/StructureDefinition/recetaId"
+      },
+      {
+        "id": "Extension.valueString",
+        "path": "Extension.valueString",
+        "min": 1,
+        "max": "1",
+        "type": [
+          {
+            "code": "string"
+          }
+        ]
+      }
+    ]
+  }
+}
