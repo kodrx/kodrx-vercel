@@ -1,0 +1,396 @@
+{
+  "resourceType": "Bundle",
+  "id": "kodrx-example-verified-prescription",
+  "identifier": {
+    "system": "https://kodrx.app/fhir/NamingSystem/prescription-id",
+    "value": "KODRX-EXAMPLE-0001"
+  },
+  "type": "collection",
+  "timestamp": "2026-08-03T15:06:00-06:00",
+  "entry": [
+    {
+      "fullUrl": "urn:uuid:c1406f7c-7bcd-4ce4-81e6-9dc4f7b7e101",
+      "resource": {
+        "resourceType": "Patient",
+        "id": "patient-example-001",
+        "name": [
+          {
+            "text": "Paciente Ejemplo KodRx"
+          }
+        ],
+        "gender": "female"
+      }
+    },
+    {
+      "fullUrl": "urn:uuid:835b357b-4d64-4255-b137-77de0c6d7e10",
+      "resource": {
+        "resourceType": "Practitioner",
+        "id": "practitioner-example-001",
+        "identifier": [
+          {
+            "system": "https://kodrx.app/fhir/NamingSystem/cedula-profesional-mx",
+            "value": "0000000"
+          }
+        ],
+        "name": [
+          {
+            "text": "Dra. Ana Martínez López"
+          }
+        ]
+      }
+    },
+    {
+      "fullUrl": "urn:uuid:89e853b7-26df-4664-934f-3e92dcd04432",
+      "resource": {
+        "resourceType": "MedicationRequest",
+        "id": "medicationrequest-example-001",
+        "status": "active",
+        "intent": "order",
+        "medicationCodeableConcept": {
+          "text": "Paracetamol 500 mg"
+        },
+        "subject": {
+          "reference": "urn:uuid:c1406f7c-7bcd-4ce4-81e6-9dc4f7b7e101"
+        },
+        "authoredOn": "2026-08-03T14:55:00-06:00",
+        "requester": {
+          "reference": "urn:uuid:835b357b-4d64-4255-b137-77de0c6d7e10"
+        },
+        "dosageInstruction": [
+          {
+            "text": "Tomar una tableta cada 8 horas durante 3 días."
+          }
+        ]
+      }
+    },
+    {
+      "fullUrl": "urn:uuid:aea248e6-55b9-4e52-8b64-5bb8febf3fff",
+      "resource": {
+        "resourceType": "Observation",
+        "id": "observation-example-weight",
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                "code": "vital-signs",
+                "display": "Vital Signs"
+              }
+            ]
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "29463-7",
+              "display": "Body weight"
+            }
+          ],
+          "text": "Peso corporal"
+        },
+        "subject": {
+          "reference": "urn:uuid:c1406f7c-7bcd-4ce4-81e6-9dc4f7b7e101"
+        },
+        "effectiveDateTime": "2026-08-03T14:50:00-06:00",
+        "valueQuantity": {
+          "value": 62,
+          "unit": "kg",
+          "system": "http://unitsofmeasure.org",
+          "code": "kg"
+        }
+      }
+    },
+    {
+      "fullUrl": "urn:uuid:53dc5687-0196-4695-8736-fda050a813b5",
+      "resource": {
+        "resourceType": "Observation",
+        "id": "observation-example-height",
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                "code": "vital-signs",
+                "display": "Vital Signs"
+              }
+            ]
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "8302-2",
+              "display": "Body height"
+            }
+          ],
+          "text": "Talla corporal"
+        },
+        "subject": {
+          "reference": "urn:uuid:c1406f7c-7bcd-4ce4-81e6-9dc4f7b7e101"
+        },
+        "effectiveDateTime": "2026-08-03T14:50:00-06:00",
+        "valueQuantity": {
+          "value": 165,
+          "unit": "cm",
+          "system": "http://unitsofmeasure.org",
+          "code": "cm"
+        }
+      }
+    },
+    {
+      "fullUrl": "urn:uuid:00cd72af-1dff-4ac1-8b1e-e85e59881900",
+      "resource": {
+        "resourceType": "Observation",
+        "id": "observation-example-temperature",
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                "code": "vital-signs",
+                "display": "Vital Signs"
+              }
+            ]
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "8310-5",
+              "display": "Body temperature"
+            }
+          ],
+          "text": "Temperatura corporal"
+        },
+        "subject": {
+          "reference": "urn:uuid:c1406f7c-7bcd-4ce4-81e6-9dc4f7b7e101"
+        },
+        "effectiveDateTime": "2026-08-03T14:50:00-06:00",
+        "valueQuantity": {
+          "value": 36.7,
+          "unit": "°C",
+          "system": "http://unitsofmeasure.org",
+          "code": "Cel"
+        }
+      }
+    },
+    {
+      "fullUrl": "urn:uuid:2cc0d8a0-04e2-4643-afb8-45094ecd8ba3",
+      "resource": {
+        "resourceType": "Observation",
+        "id": "observation-example-bmi",
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                "code": "vital-signs",
+                "display": "Vital Signs"
+              }
+            ]
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "39156-5",
+              "display": "Body mass index (BMI) [Ratio]"
+            }
+          ],
+          "text": "Índice de masa corporal"
+        },
+        "subject": {
+          "reference": "urn:uuid:c1406f7c-7bcd-4ce4-81e6-9dc4f7b7e101"
+        },
+        "effectiveDateTime": "2026-08-03T14:50:00-06:00",
+        "valueQuantity": {
+          "value": 22.77,
+          "unit": "kg/m2",
+          "system": "http://unitsofmeasure.org",
+          "code": "kg/m2"
+        }
+      }
+    },
+    {
+      "fullUrl": "urn:uuid:0a785890-54db-4020-bb05-354c80e7b91a",
+      "resource": {
+        "resourceType": "Observation",
+        "id": "observation-example-blood-pressure",
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                "code": "vital-signs",
+                "display": "Vital Signs"
+              }
+            ]
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "85354-9",
+              "display": "Blood pressure panel with all children optional"
+            }
+          ],
+          "text": "Presión arterial"
+        },
+        "subject": {
+          "reference": "urn:uuid:c1406f7c-7bcd-4ce4-81e6-9dc4f7b7e101"
+        },
+        "effectiveDateTime": "2026-08-03T14:50:00-06:00",
+        "component": [
+          {
+            "code": {
+              "coding": [
+                {
+                  "system": "http://loinc.org",
+                  "code": "8480-6",
+                  "display": "Systolic blood pressure"
+                }
+              ],
+              "text": "Presión sistólica"
+            },
+            "valueQuantity": {
+              "value": 118,
+              "unit": "mmHg",
+              "system": "http://unitsofmeasure.org",
+              "code": "mm[Hg]"
+            }
+          },
+          {
+            "code": {
+              "coding": [
+                {
+                  "system": "http://loinc.org",
+                  "code": "8462-4",
+                  "display": "Diastolic blood pressure"
+                }
+              ],
+              "text": "Presión diastólica"
+            },
+            "valueQuantity": {
+              "value": 76,
+              "unit": "mmHg",
+              "system": "http://unitsofmeasure.org",
+              "code": "mm[Hg]"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "fullUrl": "urn:uuid:6b2a3707-a690-4b93-94ff-c09a91e5d308",
+      "resource": {
+        "resourceType": "Condition",
+        "id": "condition-example-001",
+        "clinicalStatus": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
+              "code": "active",
+              "display": "Active"
+            }
+          ]
+        },
+        "verificationStatus": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/condition-ver-status",
+              "code": "confirmed",
+              "display": "Confirmed"
+            }
+          ]
+        },
+        "code": {
+          "text": "Cefalea aguda"
+        },
+        "subject": {
+          "reference": "urn:uuid:c1406f7c-7bcd-4ce4-81e6-9dc4f7b7e101"
+        },
+        "recorder": {
+          "reference": "urn:uuid:835b357b-4d64-4255-b137-77de0c6d7e10"
+        },
+        "recordedDate": "2026-08-03T14:55:00-06:00"
+      }
+    },
+    {
+      "fullUrl": "urn:uuid:ee0334d5-eada-4130-a204-e892668c1cfd",
+      "resource": {
+        "resourceType": "Provenance",
+        "id": "provenance-example-001",
+        "extension": [
+          {
+            "url": "https://kodrx.app/fhir/StructureDefinition/hash",
+            "valueString": "e844eee9305a3a4369fab25cbd6b0f8a22c4ec1be355ab243e2ca8fef9fa078f"
+          },
+          {
+            "url": "https://kodrx.app/fhir/StructureDefinition/block",
+            "valueInteger": 136
+          },
+          {
+            "url": "https://kodrx.app/fhir/StructureDefinition/recetaId",
+            "valueString": "KODRX-EXAMPLE-0001"
+          }
+        ],
+        "target": [
+          {
+            "reference": "urn:uuid:c1406f7c-7bcd-4ce4-81e6-9dc4f7b7e101"
+          },
+          {
+            "reference": "urn:uuid:835b357b-4d64-4255-b137-77de0c6d7e10"
+          },
+          {
+            "reference": "urn:uuid:89e853b7-26df-4664-934f-3e92dcd04432"
+          },
+          {
+            "reference": "urn:uuid:aea248e6-55b9-4e52-8b64-5bb8febf3fff"
+          },
+          {
+            "reference": "urn:uuid:53dc5687-0196-4695-8736-fda050a813b5"
+          },
+          {
+            "reference": "urn:uuid:00cd72af-1dff-4ac1-8b1e-e85e59881900"
+          },
+          {
+            "reference": "urn:uuid:2cc0d8a0-04e2-4643-afb8-45094ecd8ba3"
+          },
+          {
+            "reference": "urn:uuid:0a785890-54db-4020-bb05-354c80e7b91a"
+          },
+          {
+            "reference": "urn:uuid:6b2a3707-a690-4b93-94ff-c09a91e5d308"
+          }
+        ],
+        "recorded": "2026-08-03T15:00:00-06:00",
+        "agent": [
+          {
+            "type": {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/provenance-participant-type",
+                  "code": "author",
+                  "display": "Author"
+                }
+              ]
+            },
+            "who": {
+              "reference": "urn:uuid:835b357b-4d64-4255-b137-77de0c6d7e10"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}
