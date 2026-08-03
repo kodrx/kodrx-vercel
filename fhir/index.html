@@ -117,6 +117,62 @@
       color: #0b5bd3;
       font-weight: 700;
     }
+    .download-box{
+
+    margin-top:24px;
+
+    display:flex;
+
+    gap:14px;
+
+    flex-wrap:wrap;
+
+}
+
+.download-btn{
+
+    background:#0B5BD3;
+    color:white;
+
+    padding:14px 24px;
+
+    border-radius:8px;
+
+    text-decoration:none;
+
+    font-weight:600;
+
+}
+
+.download-btn:hover{
+
+    background:#0848A6;
+
+}
+
+.view-btn{
+
+    background:white;
+
+    color:#0B5BD3;
+
+    border:2px solid #0B5BD3;
+
+    padding:14px 24px;
+
+    border-radius:8px;
+
+    text-decoration:none;
+
+    font-weight:600;
+
+}
+
+.view-btn:hover{
+
+    background:#EEF5FF;
+
+}
   </style>
    <link rel="stylesheet" href="/estilos/global.css" />
   <script src="/componentes/header2.js" defer></script>
@@ -257,11 +313,40 @@ Condition</pre>
     Observation, Condition y Provenance con extensiones de trazabilidad KodRx.
   </p>
 
-  <p>
-    <a href="/fhir/examples/receta-verificada.json">
-      Ver Example Bundle JSON
-    </a>
-  </p>
+  <section>
+
+    <h2>Reference Bundle</h2>
+
+    <p>
+        KodRx publica un <strong>Reference Bundle</strong> basado en FHIR R4
+        que representa una receta médica verificable utilizando datos ficticios.
+    </p>
+
+    <p>
+        Este Bundle constituye la implementación de referencia para desarrolladores
+        que deseen integrar sistemas compatibles con KodRx.
+    </p>
+
+    <div class="download-box">
+
+        <a class="download-btn"
+           href="/fhir/examples/kodrx-reference-bundle-v1.json"
+           download>
+
+            Download Reference Bundle
+
+        </a>
+
+        <a class="view-btn"
+           href="/fhir/examples/kodrx-reference-bundle-v1.json"
+           target="_blank">
+
+            View JSON
+
+        </a>
+
+    </div>
+
 </section>
     <section>
       <h2>Extensiones KodRx</h2>
