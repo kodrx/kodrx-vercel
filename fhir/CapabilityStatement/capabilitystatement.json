@@ -7,52 +7,59 @@
   "title": "KodRx FHIR Capability Statement",
   "status": "draft",
   "experimental": false,
-  "date": "2026-06-24",
+  "date": "2026-08-16",
   "publisher": "KodRx",
-  "description": "CapabilityStatement for the KodRx FHIR R4 implementation focused on verified digital prescriptions with provenance and traceability.",
+
+  "text": {
+    "status": "generated",
+    "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>KodRx FHIR Capability Statement</p><p>Describes the FHIR R4 resources and formats used by the current KodRx verified prescription export implementation.</p></div>"
+  },
+
+  "description": "CapabilityStatement describing the current KodRx FHIR R4 verified prescription export implementation.",
+
   "kind": "capability",
+
+  "software": {
+    "name": "KodRx",
+    "version": "1.0.0"
+  },
+
   "fhirVersion": "4.0.1",
+
   "format": [
     "application/fhir+json",
     "json"
   ],
-  "implementationGuide": [
-    "https://kodrx.app/fhir/"
-  ],
+
   "rest": [
     {
       "mode": "server",
-      "documentation": "KodRx currently provides FHIR R4 export capabilities for verified prescription Bundles. Full RESTful FHIR server capabilities are planned for future versions.",
+      "documentation": "KodRx currently documents the FHIR R4 resources used in verified prescription Bundles. Full RESTful FHIR server interactions are not yet implemented.",
+
       "resource": [
         {
           "type": "Patient",
-          "profile": "http://hl7.org/fhir/StructureDefinition/Patient",
-          "documentation": "Patient resource used to represent the prescription patient."
+          "profile": "http://hl7.org/fhir/StructureDefinition/Patient"
         },
         {
           "type": "Practitioner",
-          "profile": "http://hl7.org/fhir/StructureDefinition/Practitioner",
-          "documentation": "Practitioner resource used to represent the prescribing clinician."
+          "profile": "http://hl7.org/fhir/StructureDefinition/Practitioner"
         },
         {
           "type": "MedicationRequest",
-          "profile": "http://hl7.org/fhir/StructureDefinition/MedicationRequest",
-          "documentation": "MedicationRequest resource used to represent each prescribed medication."
+          "profile": "http://hl7.org/fhir/StructureDefinition/MedicationRequest"
         },
         {
           "type": "Observation",
-          "profile": "http://hl7.org/fhir/StructureDefinition/Observation",
-          "documentation": "Observation resource used to represent vital signs associated with the prescription."
+          "profile": "http://hl7.org/fhir/StructureDefinition/Observation"
         },
         {
           "type": "Condition",
-          "profile": "http://hl7.org/fhir/StructureDefinition/Condition",
-          "documentation": "Condition resource used to represent the diagnosis associated with the prescription."
+          "profile": "http://hl7.org/fhir/StructureDefinition/Condition"
         },
         {
           "type": "Provenance",
-          "profile": "http://hl7.org/fhir/StructureDefinition/Provenance",
-          "documentation": "Provenance resource used to represent KodRx traceability, including hash, block and prescription identifier extensions."
+          "profile": "http://hl7.org/fhir/StructureDefinition/Provenance"
         }
       ]
     }
