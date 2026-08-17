@@ -1,0 +1,72 @@
+{
+  "resourceType": "ImplementationGuide",
+  "id": "kodrx-fhir-r4",
+  "url": "https://kodrx.app/fhir/ImplementationGuide/kodrx-fhir-r4",
+  "version": "1.0.0",
+  "name": "KodRxFHIRImplementationGuide",
+  "title": "KodRx FHIR R4 Implementation Guide",
+  "status": "draft",
+  "experimental": false,
+  "date": "2026-08-17",
+  "publisher": "KodRx",
+
+  "text": {
+    "status": "generated",
+    "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>KodRx FHIR R4 Implementation Guide</p><p>Defines the FHIR R4 interoperability artifacts used by KodRx for verified digital prescriptions.</p></div>"
+  },
+
+  "description": "Implementation Guide defining the FHIR R4 interoperability artifacts used by KodRx for verified digital prescriptions, including prescription identifiers, provenance extensions and the KodRx reference Bundle.",
+
+  "fhirVersion": [
+    "4.0.1"
+  ],
+
+  "packageId": "app.kodrx.fhir.r4",
+
+  "license": "CC0-1.0",
+
+  "definition": {
+    "resource": [
+      {
+        "reference": {
+          "reference": "StructureDefinition/kodrx-hash"
+        },
+        "name": "KodRx Blockchain Hash Extension",
+        "description": "Extension containing the cryptographic hash associated with a verified KodRx prescription.",
+        "exampleBoolean": false
+      },
+      {
+        "reference": {
+          "reference": "StructureDefinition/kodrx-block"
+        },
+        "name": "KodRx Blockchain Block Extension",
+        "description": "Extension containing the blockchain block number associated with a verified KodRx prescription.",
+        "exampleBoolean": false
+      },
+      {
+        "reference": {
+          "reference": "StructureDefinition/kodrx-receta-id"
+        },
+        "name": "KodRx Prescription ID Extension",
+        "description": "Extension containing the originating KodRx prescription identifier.",
+        "exampleBoolean": false
+      },
+      {
+        "reference": {
+          "reference": "NamingSystem/kodrx-prescription-id"
+        },
+        "name": "KodRx Prescription Identifier NamingSystem",
+        "description": "NamingSystem defining the identifier namespace used for KodRx prescriptions.",
+        "exampleBoolean": false
+      },
+      {
+        "reference": {
+          "reference": "Bundle/kodrx-reference-bundle-v1"
+        },
+        "name": "KodRx Reference Bundle v1",
+        "description": "Reference example demonstrating a verified KodRx prescription represented as a FHIR R4 Bundle.",
+        "exampleBoolean": true
+      }
+    ]
+  }
+}
