@@ -1,17 +1,23 @@
 {
   "resourceType": "NamingSystem",
   "id": "kodrx-prescription-id",
+
   "text": {
-  "status": "generated",
-  "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>KodRx Prescription ID NamingSystem</p><p>Defines the identifier namespace used for prescriptions issued by KodRx.</p></div>"
-},
+    "status": "generated",
+    "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>KodRx Prescription ID NamingSystem</p><p>Defines the identifier namespace used for prescriptions issued by KodRx.</p></div>"
+  },
+
   "name": "KodRxPrescriptionId",
+
   "status": "draft",
   "kind": "identifier",
   "date": "2026-08-11",
   "publisher": "KodRx",
+
   "description": "NamingSystem for the unique identifier assigned to prescriptions issued by KodRx.",
+
   "usage": "Used to identify the original KodRx prescription associated with FHIR resources and Bundles.",
+
   "uniqueId": [
     {
       "type": "uri",
