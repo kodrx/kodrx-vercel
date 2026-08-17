@@ -7,14 +7,22 @@
   "title": "KodRx Blockchain Hash Extension",
   "status": "draft",
   "experimental": false,
-  "date": "2026-06-24",
+  "date": "2026-08-16",
   "publisher": "KodRx",
+
+  "text": {
+    "status": "generated",
+    "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>KodRx Blockchain Hash Extension</p><p>Stores the cryptographic hash associated with a KodRx verified prescription.</p></div>"
+  },
+
   "description": "Extension that stores the cryptographic hash associated with a KodRx verified prescription.",
-  "purpose": "Provides verifiable integrity for clinical resources exported by KodRx.",
+  "purpose": "Provides verifiable integrity information for clinical resources exported by KodRx.",
+
   "fhirVersion": "4.0.1",
   "kind": "complex-type",
   "abstract": false,
   "type": "Extension",
+
   "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Extension",
   "derivation": "constraint",
 
@@ -25,7 +33,7 @@
     }
   ],
 
-  "snapshot": {
+  "differential": {
     "element": [
       {
         "id": "Extension",
@@ -39,8 +47,8 @@
         "fixedUri": "https://kodrx.app/fhir/StructureDefinition/hash"
       },
       {
-        "id": "Extension.valueString",
-        "path": "Extension.valueString",
+        "id": "Extension.value[x]",
+        "path": "Extension.value[x]",
         "min": 1,
         "max": "1",
         "type": [
