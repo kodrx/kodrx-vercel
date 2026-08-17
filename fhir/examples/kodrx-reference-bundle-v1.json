@@ -13,6 +13,10 @@
       "resource": {
         "resourceType": "Patient",
         "id": "patient-example-001",
+"text": {
+  "status": "generated",
+  "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Paciente Ejemplo KodRx</p></div>"
+},
         "name": [
           {
             "text": "Paciente Ejemplo KodRx"
@@ -26,6 +30,10 @@
       "resource": {
         "resourceType": "Practitioner",
         "id": "practitioner-example-001",
+"text": {
+  "status": "generated",
+  "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Dra. Ana Martínez López</p></div>"
+},
         "identifier": [
           {
             "system": "https://kodrx.app/fhir/NamingSystem/cedula-profesional-mx",
@@ -44,6 +52,10 @@
       "resource": {
         "resourceType": "MedicationRequest",
         "id": "medicationrequest-example-001",
+"text": {
+  "status": "generated",
+  "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Paracetamol 500 mg. Tomar una tableta cada 8 horas durante 3 días.</p></div>"
+},
         "status": "active",
         "intent": "order",
         "medicationCodeableConcept": {
@@ -68,6 +80,11 @@
       "resource": {
         "resourceType": "Observation",
         "id": "observation-example-weight",
+"performer": [
+  {
+    "reference": "urn:uuid:835b357b-4d64-4255-b137-77de0c6d7e10"
+  }
+],
         "status": "final",
         "category": [
           {
@@ -84,8 +101,7 @@
           "coding": [
             {
               "system": "http://loinc.org",
-              "code": "29463-7",
-              "display": "Body weight"
+              "code": "29463-7"
             }
           ],
           "text": "Peso corporal"
@@ -107,6 +123,11 @@
       "resource": {
         "resourceType": "Observation",
         "id": "observation-example-height",
+"performer": [
+  {
+    "reference": "urn:uuid:835b357b-4d64-4255-b137-77de0c6d7e10"
+  }
+],
         "status": "final",
         "category": [
           {
@@ -123,8 +144,7 @@
           "coding": [
             {
               "system": "http://loinc.org",
-              "code": "8302-2",
-              "display": "Body height"
+              "code": "8302-2"
             }
           ],
           "text": "Talla corporal"
@@ -146,6 +166,11 @@
       "resource": {
         "resourceType": "Observation",
         "id": "observation-example-temperature",
+"performer": [
+  {
+    "reference": "urn:uuid:835b357b-4d64-4255-b137-77de0c6d7e10"
+  }
+],
         "status": "final",
         "category": [
           {
@@ -162,8 +187,7 @@
           "coding": [
             {
               "system": "http://loinc.org",
-              "code": "8310-5",
-              "display": "Body temperature"
+              "code": "8310-5"
             }
           ],
           "text": "Temperatura corporal"
@@ -185,6 +209,11 @@
       "resource": {
         "resourceType": "Observation",
         "id": "observation-example-bmi",
+"performer": [
+  {
+    "reference": "urn:uuid:835b357b-4d64-4255-b137-77de0c6d7e10"
+  }
+],
         "status": "final",
         "category": [
           {
@@ -201,8 +230,7 @@
           "coding": [
             {
               "system": "http://loinc.org",
-              "code": "39156-5",
-              "display": "Body mass index (BMI) [Ratio]"
+              "code": "39156-5"
             }
           ],
           "text": "Índice de masa corporal"
@@ -224,6 +252,11 @@
       "resource": {
         "resourceType": "Observation",
         "id": "observation-example-blood-pressure",
+"performer": [
+  {
+    "reference": "urn:uuid:835b357b-4d64-4255-b137-77de0c6d7e10"
+  }
+],
         "status": "final",
         "category": [
           {
@@ -240,8 +273,7 @@
           "coding": [
             {
               "system": "http://loinc.org",
-              "code": "85354-9",
-              "display": "Blood pressure panel with all children optional"
+              "code": "85354-9"
             }
           ],
           "text": "Presión arterial"
@@ -256,8 +288,7 @@
               "coding": [
                 {
                   "system": "http://loinc.org",
-                  "code": "8480-6",
-                  "display": "Systolic blood pressure"
+                  "code": "8480-6"
                 }
               ],
               "text": "Presión sistólica"
@@ -274,8 +305,7 @@
               "coding": [
                 {
                   "system": "http://loinc.org",
-                  "code": "8462-4",
-                  "display": "Diastolic blood pressure"
+                  "code": "8462-4"
                 }
               ],
               "text": "Presión diastólica"
@@ -295,6 +325,10 @@
       "resource": {
         "resourceType": "Condition",
         "id": "condition-example-001",
+"text": {
+  "status": "generated",
+  "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Cefalea aguda</p></div>"
+},
         "clinicalStatus": {
           "coding": [
             {
@@ -330,6 +364,10 @@
       "resource": {
         "resourceType": "Provenance",
         "id": "provenance-example-001",
+"text": {
+  "status": "generated",
+  "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Provenance KodRx con trazabilidad verificable mediante hash, bloque e identificador de receta.</p></div>"
+},
         "extension": [
           {
             "url": "https://kodrx.app/fhir/StructureDefinition/hash",
