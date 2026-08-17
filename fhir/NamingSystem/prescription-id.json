@@ -1,6 +1,10 @@
 {
   "resourceType": "NamingSystem",
   "id": "kodrx-prescription-id",
+  "text": {
+  "status": "generated",
+  "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>KodRx Prescription ID NamingSystem</p><p>Defines the identifier namespace used for prescriptions issued by KodRx.</p></div>"
+},
   "name": "KodRxPrescriptionId",
   "status": "draft",
   "kind": "identifier",
