@@ -9,6 +9,9 @@
   "experimental": false,
   "date": "2026-08-16",
   "publisher": "KodRx",
+  "implementationGuide": [
+  "https://kodrx.app/fhir/ImplementationGuide/kodrx-fhir-r4"
+],
 
   "text": {
     "status": "generated",
